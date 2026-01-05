@@ -857,8 +857,7 @@ function gen_config(var)
 			fallbackTag = fallback_node_tag,
 			strategy = strategy
 		})
-		if (_node.balancingStrategy == "leastPing" or fallback_node_t
-ag) and not observatory then
+		if (_node.balancingStrategy == "leastPing" or _node.balancingStrategy == "random" or _node.balancingStrategy == "roundRobin") and not observatory then
 				observatory = {
 					subjectSelector = { "blc-" },
 					probeUrl = _node.useCustomProbeUrl and _node.probeUrl or nil,
