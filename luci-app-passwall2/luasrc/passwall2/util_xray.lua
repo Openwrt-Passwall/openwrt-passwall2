@@ -268,7 +268,7 @@ function gen_outbound(flag, node, tag, proxy_table)
 						port = string.gsub(node.hysteria2_hop, ":", "-"),
 						interval = (function()
 								local v = tonumber((node.hysteria2_hop_interval or "30s"):match("^%d+"))
-								return (v and v >= 5) and (v .. "s") or "30s"
+								return (v and v >= 5) and v or 30
 							    end)()
 					} or nil,
 					maxIdleTimeout = (function()
