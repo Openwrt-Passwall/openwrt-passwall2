@@ -535,7 +535,7 @@ run_global() {
 	
 	${run_func} ${V2RAY_ARGS}
 
-	sleep 1s
+	sleep 5s
 
 	netstat -tuln | grep "LISTEN" | grep "${REDIR_PORT}" >/dev/null; REDIR_PORT_STATUS=$?
 	if [ "$REDIR_PORT_STATUS" == 0 ]; then
