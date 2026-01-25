@@ -318,13 +318,13 @@ if (mods:find("REDIRECT") and mods:find("TPROXY")) or (mods:find("nft_redir") an
 	o.rmempty = false
 else
 	local html = string.format([[<div class="cbi-checkbox"><input class="cbi-input-checkbox" type="checkbox" disabled></div><div class="cbi-value-description"><font color="red">%s</font></div>]], translate("Missing components, transparent proxy is unavailable."))
-	o = s:taboption("Proxy", DummyValue, "localhost_proxy", translate("Localhost Proxy"))
+	o = s:taboption("Main", DummyValue, "localhost_proxy", translate("Localhost Proxy"))
 	o.rawhtml = true
 	function o.cfgvalue(self, section)
 		return html
 	end
 
-	o = s:taboption("Proxy", DummyValue, "client_proxy", translate("Client Proxy"))
+	o = s:taboption("Main", DummyValue, "client_proxy", translate("Client Proxy"))
 	o.rawhtml = true
 	function o.cfgvalue(self, section)
 		return html
