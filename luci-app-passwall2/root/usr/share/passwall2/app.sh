@@ -170,7 +170,7 @@ run_xray() {
 				json_add_string "remote_dns_doh_port" "${_doh_port}"
 				json_add_string "remote_dns_doh_url" "${_doh_url}"
 				json_add_string "remote_dns_doh_host" "${_doh_host}"
-				[ -n "$_doh_bootstrap" ] json_add_string "remote_dns_doh_ip" "${_doh_bootstrap}"
+				[ -n "$_doh_bootstrap" ] && json_add_string "remote_dns_doh_ip" "${_doh_bootstrap}"
 			;;
 		esac
 		[ -n "$remote_dns_detour" ] && json_add_string "remote_dns_detour" "${remote_dns_detour}"
