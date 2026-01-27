@@ -91,6 +91,7 @@
 	box-shadow: 0 6px 18px rgba(0,0,0,0.08);
 	max-height: 50vh;
 	overflow: auto;
+	overscroll-behavior: contain;
 }
 .v-dropdown-search, .v-dropdown-custom {
 	width: 100%;
@@ -701,6 +702,25 @@
 			e.preventDefault();
 			v_customEnter(cbid, labelSpan, hiddenInput, searchInput, panel, listContainer, customInput);
 		});
+
+		// 防止 panel 惯性滚动穿透
+		panel.addEventListener('wheel', function (e) {
+			const deltaY = e.deltaY;
+			const scrollTop = panel.scrollTop;
+			const scrollHeight = panel.scrollHeight;
+			const clientHeight = panel.clientHeight;
+			const isAtTop = scrollTop === 0;
+			const isAtBottom = scrollTop + clientHeight >= scrollHeight;
+			if (deltaY < 0 && isAtTop) {
+				e.preventDefault();
+				return;
+			}
+			if (deltaY > 0 && isAtBottom) {
+				e.preventDefault();
+				return;
+			}
+			e.stopPropagation();
+		}, { passive: false });
 	}
 
 	const v_adaptiveControls = new Set();

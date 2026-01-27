@@ -16,6 +16,9 @@ msgstr "連接失敗"
 msgid "Touch Check"
 msgstr "點我檢測"
 
+msgid "Global"
+msgstr "全局"
+
 msgid "Kernel Unsupported"
 msgstr "內核不支持"
 
@@ -400,11 +403,20 @@ msgstr "前置代理節點"
 msgid "Set the node to be used as a pre-proxy. Each rule (including <code>Default</code>) has a separate switch that controls whether this rule uses the pre-proxy or not."
 msgstr "設置用作前置代理的節點。每条規則（包括<code>默認</code>）都有独立開關控制本規則是否使用前置代理。"
 
+msgid "Close (Not use)"
+msgstr "關閉 (不使用)"
+
+msgid "Use default node"
+msgstr "使用默認節點"
+
 msgid "Direct Connection"
 msgstr "直連"
 
-msgid "Blackhole"
-msgstr "黑洞"
+msgid "Blackhole (Block)"
+msgstr "黑洞（屏蔽）"
+
+msgid "Use preproxy node"
+msgstr "使用前置代理節點"
 
 msgid "Default Preproxy"
 msgstr "默認前置代理"
@@ -1837,6 +1849,9 @@ msgstr "請輸入查詢內容！"
 msgid "No results were found!"
 msgstr "未找到任何結果！"
 
+msgid "Rules containing this value:"
+msgstr "所在規則列表："
+
 msgid "Domain/IP Query"
 msgstr "域名/IP 查詢"
 
@@ -1941,6 +1956,9 @@ msgstr "Socks節點：[%s]%s，啟動 %s:%s"
 
 msgid "To enable experimental IPv6 transparent proxy (TProxy), please ensure your node and type support IPv6!"
 msgstr "開啟實驗性IPv6透明代理(TProxy)，請確認您的節點及類型支持IPv6！"
+
+msgid "[%s] process %s error, skip!"
+msgstr "【%s】 進程 %s 錯誤，跳過！"
 
 msgid "Analyzing the node configuration of the Socks service..."
 msgstr "分析 Socks 服務的節點配置..."

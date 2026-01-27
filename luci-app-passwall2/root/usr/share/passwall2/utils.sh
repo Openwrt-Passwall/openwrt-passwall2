@@ -107,6 +107,14 @@ log_i18n() {
 	log ${num} "$(i18n "$@")"
 }
 
+clean_log() {
+	logsnum=$(cat $LOG_FILE 2>/dev/null | wc -l)
+	[ "$logsnum" -gt 1000 ] && {
+		echo "" > $LOG_FILE
+		log_i18n 0 "Log file is too long, clear it!"
+	}
+}
+
 lua_api() {
 	local func=${1}
 	[ -z "${func}" ] && {
@@ -126,8 +134,33 @@ check_host() {
 	return 0
 }
 
+first_type() {
+	[ "${1#/}" != "$1" ] && [ -x "$1" ] && echo "$1" && return
+	for p in "/bin/$1" "/usr/bin/$1" "${TMP_BIN_PATH:-/tmp}/$1"; do
+		[ -x "$p" ] && echo "$p" && return
+	done
+	command -v "$1" 2>/dev/null || command -v "$2" 2>/dev/null
+}
+
 get_enabled_anonymous_secs() {
 	uci -q show "${CONFIG}" | grep "${1}\[.*\.enabled='1'" | cut -d '.' -sf2
+}
+
+get_geoip() {
+	local geoip_code="$1"
+	local geoip_type_flag=""
+	local geoip_path="$(config_t_get global_rules v2ray_location_asset)"
+	geoip_path="${geoip_path%*/}/geoip.dat"
+	[ -e "$geoip_path" ] || { echo ""; return; }
+	case "$2" in
+		"ipv4") geoip_type_flag="-ipv6=false" ;;
+		"ipv6") geoip_type_flag="-ipv4=false" ;;
+	esac
+	if type geoview &> /dev/null; then
+		geoview -input "$geoip_path" -list "$geoip_code" $geoip_type_flag -lowmem=true
+	else
+		echo ""
+	fi
 }
 
 get_host_ip() {
@@ -321,4 +354,35 @@ delete_ip2route() {
 			done
 		done
 	}
+}
+
+ln_run() {
+	local file_func=${1}
+	local ln_name=${2}
+	local output=${3}
+
+	shift 3;
+	if [  "${file_func%%/*}" != "${file_func}" ]; then
+		[ ! -L "${file_func}" ] && {
+			ln -s "${file_func}" "${TMP_BIN_PATH}/${ln_name}" >/dev/null 2>&1
+			file_func="${TMP_BIN_PATH}/${ln_name}"
+		}
+		[ -x "${file_func}" ] || log 1 "$(i18n "%s does not have execute permissions and cannot be started: %s %s" "$(readlink ${file_func})" "${file_func}" "$*")"
+	fi
+	#echo "${file_func} $*" >&2
+	[ -n "${file_func}" ] || log 1 "$(i18n "%s not found, unable to start..." "${ln_name}")"
+	${file_func:-log 1 "${ln_name}"} "$@" >${output} 2>&1 &
+
+	local pid=${!}
+	#sleep 1s
+	#kill -0 ${pid} 2>/dev/null
+	#local status_code=${?}
+	process_count=$(ls $TMP_SCRIPT_FUNC_PATH | grep -v "^_" | wc -l)
+	process_count=$((process_count + 1))
+	echo "${file_func:-log 1 "${ln_name}"} $@ >${output}" > $TMP_SCRIPT_FUNC_PATH/$process_count
+	#return ${status_code}
+}
+
+kill_all() {
+	kill -9 $(pidof "$@") >/dev/null 2>&1
 }

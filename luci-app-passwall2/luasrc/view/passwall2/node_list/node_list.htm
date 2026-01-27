@@ -227,6 +227,7 @@ table td, .table .td {
 	//<![CDATA[
 	let auto_detection_time = "<%=api.uci_get_type("global_other", "auto_detection_time", "0")%>"
 	let show_node_info = "<%=api.uci_get_type("global_other", "show_node_info", "0")%>"
+	var ajaxList = [];
 
 	var ajax = {
 		post: function(url, data, fn_success, timeout, fn_timeout) {
@@ -257,6 +258,7 @@ table td, .table .td {
 					fn_success(xhr, json);
 				}
 			};
+			ajaxList.push(xhr);
 			xhr.send(code);
 		},
 		encode: function(obj) {
@@ -279,17 +281,30 @@ table td, .table .td {
 		}
 	}
 	
+	function ajaxAbortAll() {
+		ajaxList.forEach(xhr => xhr.abort());
+		ajaxList = [];
+	}
+
 	function to_add_node() {
+		ajaxAbortAll();
 		const dom = document.getElementsByClassName("cbi-tab")[0];
 		const current_group = dom.getAttribute("group_name")
 		window.location.href='<%=api.url("add_node")%>?redirect=1&group=' + current_group;
 	}
 	
+	function to_edit_node(cbi_id) {
+		ajaxAbortAll();
+		location.href='<%=api.url("node_config")%>/' + cbi_id;
+	}
+
 	function copy_node(cbi_id) {
+		ajaxAbortAll();
 		window.location.href = '<%=api.url("copy_node")%>' + "?section=" + cbi_id;
 	}
 	
 	function del_node(cbi_id) {
+		ajaxAbortAll();
 		window.location.href = '<%=api.url("delete_select_nodes")%>' + "?redirect=1&ids=" + cbi_id;
 	}
 	
@@ -404,6 +419,7 @@ table td, .table .td {
 								box.remove();
 							}
 							*/
+							ajaxAbortAll();
 							window.location.href = '<%=api.url("node_list")%>';
 						}
 						else {
@@ -420,6 +436,7 @@ table td, .table .td {
 	
 	function set_node(type, config) {
 		if (confirm('<%:Are you sure set this server?%>')==true){
+			ajaxAbortAll();
 			window.location.href = '<%=api.url("set_node")%>?type=' + type + '&config=' + config + '&section=' + section;
 		}
 	}
@@ -798,7 +815,7 @@ table td, .table .td {
 				<input class="btn cbi-button cbi-button-edit" type="button" value="<%:To Top%>" onclick="row_top(this, '{{group}}')" title="<%:To Top%>"/>
 				<input class="btn cbi-button cbi-button-apply" type="button" value="<%:Use%>" id="apply_{{id}}" onclick="open_set_node_div('{{id}}')"/>
 				<input class="btn cbi-button cbi-button-add" type="button" value="<%:Copy%>" onclick="copy_node('{{id}}')"/>
-				<input class="btn cbi-button cbi-button-edit" type="button" value="<%:Edit%>" onclick="location.href='<%=api.url("node_config")%>/{{id}}'" alt="<%:Edit%>" title="<%:Edit%>">
+				<input class="btn cbi-button cbi-button-edit" type="button" value="<%:Edit%>" onclick="to_edit_node('{{id}}')" alt="<%:Edit%>" title="<%:Edit%>">
 				<input class="btn cbi-button cbi-button-remove" type="button" value="<%:Delete%>" onclick="del_node('{{id}}')" alt="<%:Delete%>" title="<%:Delete%>">
 				<span class="drag-handle center" title="<%:Drag to reorder%>">⠿</span>
 			</div>
@@ -843,7 +860,9 @@ table td, .table .td {
 			} else if (protocol == "ssh") {
 				p = "SSH";
 			} else {
-				p = protocol.charAt(0).toUpperCase() + protocol.slice(1);
+				if (protocol && protocol.length > 1) {
+					p = protocol.charAt(0).toUpperCase() + protocol.slice(1);
+				}
 			}
 			if (type == "sing-box") {
 				type = "Sing-Box";

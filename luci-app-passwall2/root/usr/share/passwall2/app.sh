@@ -4,6 +4,7 @@
 
 . /lib/functions.sh
 . /lib/functions/service.sh
+. /usr/share/libubox/jshn.sh
 
 . /usr/share/passwall2/utils.sh
 GLOBAL_ACL_PATH=${TMP_ACL_PATH}/default
@@ -14,6 +15,8 @@ UTIL_XRAY=$LUA_UTIL_PATH/util_xray.lua
 UTIL_NAIVE=$LUA_UTIL_PATH/util_naiveproxy.lua
 UTIL_HYSTERIA2=$LUA_UTIL_PATH/util_hysteria2.lua
 UTIL_TUIC=$LUA_UTIL_PATH/util_tuic.lua
+SINGBOX_BIN=$(first_type $(config_t_get global_app sing_box_file) sing-box)
+XRAY_BIN=$(first_type $(config_t_get global_app xray_file) xray)
 
 check_run_environment() {
 	local prefer_nft=$(config_t_get global_forwarding prefer_nft 1)
@@ -68,78 +71,40 @@ check_run_environment() {
 	fi
 }
 
-first_type() {
-	[ "${1#/}" != "$1" ] && [ -x "$1" ] && echo "$1" && return
-	for p in "/bin/$1" "/usr/bin/$1" "${TMP_BIN_PATH:-/tmp}/$1"; do
-		[ -x "$p" ] && echo "$p" && return
-	done
-	command -v "$1" 2>/dev/null || command -v "$2" 2>/dev/null
-}
-
-ln_run() {
-	local file_func=${1}
-	local ln_name=${2}
-	local output=${3}
-
-	shift 3;
-	if [  "${file_func%%/*}" != "${file_func}" ]; then
-		[ ! -L "${file_func}" ] && {
-			ln -s "${file_func}" "${TMP_BIN_PATH}/${ln_name}" >/dev/null 2>&1
-			file_func="${TMP_BIN_PATH}/${ln_name}"
-		}
-		[ -x "${file_func}" ] || log 1 "$(i18n "%s does not have execute permissions and cannot be started: %s %s" "$(readlink ${file_func})" "${file_func}" "$*")"
-	fi
-	#echo "${file_func} $*" >&2
-	[ -n "${file_func}" ] || log 1 "$(i18n "%s not found, unable to start..." "${ln_name}")"
-	${file_func:-log 1 "${ln_name}"} "$@" >${output} 2>&1 &
-	process_count=$(ls $TMP_SCRIPT_FUNC_PATH | grep -v "^_" | wc -l)
-	process_count=$((process_count + 1))
-	echo "${file_func:-log 1 "${ln_name}"} $@ >${output}" > $TMP_SCRIPT_FUNC_PATH/$process_count
-}
-
-get_geoip() {
-	local geoip_code="$1"
-	local geoip_type_flag=""
-	local geoip_path="$(config_t_get global_rules v2ray_location_asset)"
-	geoip_path="${geoip_path%*/}/geoip.dat"
-	[ -e "$geoip_path" ] || { echo ""; return; }
-	case "$2" in
-		"ipv4") geoip_type_flag="-ipv6=false" ;;
-		"ipv6") geoip_type_flag="-ipv4=false" ;;
-	esac
-	if type geoview &> /dev/null; then
-		geoview -input "$geoip_path" -list "$geoip_code" $geoip_type_flag -lowmem=true
-	else
-		echo ""
-	fi
-}
-
 run_xray() {
 	local flag node redir_port tcp_proxy_way socks_address socks_port socks_username socks_password http_address http_port http_username http_password
 	local dns_listen_port direct_dns_query_strategy remote_dns_protocol remote_dns_udp_server remote_dns_tcp_server remote_dns_doh remote_dns_client_ip remote_dns_detour remote_fakedns remote_dns_query_strategy dns_cache write_ipset_direct
 	local loglevel log_file config_file
-	local _extra_param=""
 	eval_set_val $@
-	local type=$(echo $(config_n_get $node type) | tr 'A-Z' 'a-z')
-	if [ "$type" != "xray" ]; then
-		local bin=$(first_type $(config_t_get global_app xray_file) xray)
-		[ -n "$bin" ] && type="xray"
-	fi
-	[ -z "$type" ] && return 1
 	[ -n "$log_file" ] || local log_file="/dev/null"
 	[ -z "$loglevel" ] && local loglevel=$(config_t_get global loglevel "warning")
-	[ -n "$flag" ] && pgrep -af "$TMP_BIN_PATH" | awk -v P1="${flag}" 'BEGIN{IGNORECASE=1}$0~P1{print $1}' | xargs kill -9 >/dev/null 2>&1
-	[ -n "$flag" ] && _extra_param="${_extra_param} -flag $flag"
-	[ -n "$socks_address" ] && _extra_param="${_extra_param} -local_socks_address $socks_address"
-	[ -n "$socks_port" ] && _extra_param="${_extra_param} -local_socks_port $socks_port"
-	[ -n "$socks_username" ] && [ -n "$socks_password" ] && _extra_param="${_extra_param} -local_socks_username $socks_username -local_socks_password $socks_password"
-	[ -n "$http_address" ] && _extra_param="${_extra_param} -local_http_address $http_address"
-	[ -n "$http_port" ] && _extra_param="${_extra_param} -local_http_port $http_port"
-	[ -n "$http_username" ] && [ -n "$http_password" ] && _extra_param="${_extra_param} -local_http_username $http_username -local_http_password $http_password"
 
+	json_init
+	json_add_string "loglevel" "${loglevel}"
+
+	[ -n "$flag" ] && {
+		pgrep -af "$TMP_BIN_PATH" | awk -v P1="${flag}" 'BEGIN{IGNORECASE=1}$0~P1{print $1}' | xargs kill -9 >/dev/null 2>&1
+		json_add_string "flag" "${flag}"
+	}
+	[ -n "$socks_address" ] && [ -n "$socks_port" ] && {
+		json_add_string "local_socks_address" "${socks_address}"
+		json_add_string "local_socks_port" "${socks_port}"
+		[ -n "$socks_username" ] && [ -n "$socks_password" ] && {
+			json_add_string "local_socks_username" "${socks_username}"
+			json_add_string "local_socks_password" "${socks_password}"
+		}
+	}
+	[ -n "$http_address" ] && [ -n "$http_port" ] && {
+		json_add_string "local_http_address" "${http_address}"
+		json_add_string "local_http_port" "${http_port}"
+		[ -n "$http_username" ] && [ -n "$http_password" ] && {
+			json_add_string "local_http_username" "${http_username}"
+			json_add_string "local_http_password" "${http_password}"
+		}
+	}
 	[ -n "$dns_listen_port" ] && {
-		_extra_param="${_extra_param} -dns_listen_port ${dns_listen_port}"
-		[ -n "$dns_cache" ] && _extra_param="${_extra_param} -dns_cache ${dns_cache}"
+		json_add_string "dns_listen_port" "${dns_listen_port}"
+		[ -n "$dns_cache" ] && json_add_string "dns_cache" "${dns_cache}"
 
 		local _dns=$(get_first_dns AUTO_DNS 53 | sed 's/#/:/g')
 		local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
@@ -164,24 +129,33 @@ run_xray() {
 			run_ipset_dns_server listen_port=${direct_dnsmasq_listen_port} server_dns=${AUTO_DNS} ipset="${direct_ipset}" nftset="${direct_nftset}" config_file=${direct_ipset_conf}
 			DIRECT_DNS_UDP_PORT=${direct_dnsmasq_listen_port}
 			DIRECT_DNS_UDP_SERVER="127.0.0.1"
-			[ -n "${direct_ipset}" ] && _extra_param="${_extra_param} -direct_ipset ${direct_ipset}"
-			[ -n "${direct_nftset}" ] && _extra_param="${_extra_param} -direct_nftset ${direct_nftset}"
+			[ -n "${direct_ipset}" ] && json_add_string "direct_ipset" "${direct_ipset}"
+			[ -n "${direct_nftset}" ] && json_add_string "direct_nftset" "${direct_nftset}"
 		}
-		_extra_param="${_extra_param} -direct_dns_udp_port ${DIRECT_DNS_UDP_PORT} -direct_dns_udp_server ${DIRECT_DNS_UDP_SERVER} -direct_dns_query_strategy ${direct_dns_query_strategy}"
-		
-		DNS_REMOTE_ARGS=""
+		json_add_string "direct_dns_udp_port" "${DIRECT_DNS_UDP_PORT}"
+		json_add_string "direct_dns_udp_server" "${DIRECT_DNS_UDP_SERVER}"
+		json_add_string "direct_dns_query_strategy" "${direct_dns_query_strategy}"
+		[ "$remote_fakedns" = "1" ] && {
+			json_add_string "remote_dns_fake" "1"
+			json_add_string "remote_dns_fake_strategy" "${remote_dns_query_strategy}"
+		}
+		local _json1_arg="$(json_dump)"
+
+		json_init
 		case "$remote_dns_protocol" in
 			udp)
 				local _dns=$(get_first_dns remote_dns_udp_server 53 | sed 's/#/:/g')
 				local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
 				local _dns_port=$(echo ${_dns} | awk -F ':' '{print $2}')
-				DNS_REMOTE_ARGS="-remote_dns_udp_port ${_dns_port} -remote_dns_udp_server ${_dns_address}"
+				json_add_string "remote_dns_udp_port" "${_dns_port}"
+				json_add_string "remote_dns_udp_server" "${_dns_address}"
 			;;
 			tcp)
 				local _dns=$(get_first_dns remote_dns_tcp_server 53 | sed 's/#/:/g')
 				local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
 				local _dns_port=$(echo ${_dns} | awk -F ':' '{print $2}')
-				DNS_REMOTE_ARGS="-remote_dns_tcp_port ${_dns_port} -remote_dns_tcp_server ${_dns_address}"
+				json_add_string "remote_dns_tcp_port" "${_dns_port}"
+				json_add_string "remote_dns_tcp_server" "${_dns_address}"
 			;;
 			doh)
 				local _doh_url=$(echo $remote_dns_doh | awk -F ',' '{print $1}')
@@ -193,70 +167,113 @@ run_xray() {
 				[ -z "${_doh_port}" ] && _doh_port=443
 				local _doh_bootstrap=$(echo $remote_dns_doh | cut -d ',' -sf 2-)
 				[ "${is_ip}" = "true" ] && _doh_bootstrap=${_doh_host}
-				DNS_REMOTE_ARGS="-remote_dns_doh_port ${_doh_port} -remote_dns_doh_url ${_doh_url} -remote_dns_doh_host ${_doh_host}"
-				[ -n "$_doh_bootstrap" ] && DNS_REMOTE_ARGS="${DNS_REMOTE_ARGS} -remote_dns_doh_ip ${_doh_bootstrap}"
+				json_add_string "remote_dns_doh_port" "${_doh_port}"
+				json_add_string "remote_dns_doh_url" "${_doh_url}"
+				json_add_string "remote_dns_doh_host" "${_doh_host}"
+				[ -n "$_doh_bootstrap" ] && json_add_string "remote_dns_doh_ip" "${_doh_bootstrap}"
 			;;
 		esac
-		[ -n "$remote_dns_detour" ] && DNS_REMOTE_ARGS="${DNS_REMOTE_ARGS} -remote_dns_detour ${remote_dns_detour}"
-		[ -n "$remote_dns_query_strategy" ] && DNS_REMOTE_ARGS="${DNS_REMOTE_ARGS} -remote_dns_query_strategy ${remote_dns_query_strategy}"
-		[ -n "$remote_dns_client_ip" ] && DNS_REMOTE_ARGS="${DNS_REMOTE_ARGS} -remote_dns_client_ip ${remote_dns_client_ip}"
-		[ "$remote_fakedns" = "1" ] && _extra_param="${_extra_param} -remote_dns_fake 1 -remote_dns_fake_strategy ${remote_dns_query_strategy}"
+		[ -n "$remote_dns_detour" ] && json_add_string "remote_dns_detour" "${remote_dns_detour}"
+		[ -n "$remote_dns_query_strategy" ] && json_add_string "remote_dns_query_strategy" "${remote_dns_query_strategy}"
+		[ -n "$remote_dns_client_ip" ] && json_add_string "remote_dns_client_ip" "${remote_dns_client_ip}"
+		local _json2_arg="$(json_dump)"
 
 		local independent_dns
 		if [ -z "${independent_dns}" ]; then
-			_extra_param="${_extra_param} ${DNS_REMOTE_ARGS}"
+			local _json2_keys key
+			json_load "${_json2_arg}"
+			json_get_keys _json2_keys
+			for key in ${_json2_keys}; do
+				json_get_var "_json2_$key" "$key"
+			done
+			json_load "${_json1_arg}"
+			for key in ${_json2_keys}; do
+				eval "local _v=\$_json2_$key"
+				json_add_string "$key" "$_v"
+			done
 		else
 			dns_remote_listen_port=$(get_new_port $(expr ${direct_dnsmasq_listen_port:-${dns_listen_port}} + 1) udp)
 			V2RAY_DNS_REMOTE_CONFIG="${TMP_PATH}/${flag}_dns_remote.json"
 			V2RAY_DNS_REMOTE_LOG="${TMP_PATH}/${flag}_dns_remote.log"
 			V2RAY_DNS_REMOTE_LOG="/dev/null"
-			DNS_REMOTE_ARGS="${DNS_REMOTE_ARGS} -dns_out_tag remote -dns_listen_port ${dns_remote_listen_port} -remote_dns_outbound_socks_address 127.0.0.1 -remote_dns_outbound_socks_port ${socks_port}"
-			
-			lua $UTIL_XRAY gen_dns_config ${DNS_REMOTE_ARGS} > $V2RAY_DNS_REMOTE_CONFIG
-			ln_run "$(first_type $(config_t_get global_app ${type}_file) ${type})" ${type} $V2RAY_DNS_REMOTE_LOG run -c "$V2RAY_DNS_REMOTE_CONFIG"
-			_extra_param="${_extra_param} -remote_dns_udp_port ${dns_remote_listen_port} -remote_dns_udp_server 127.0.0.1 -remote_dns_query_strategy ${remote_dns_query_strategy}"
+			json_load "${_json2_arg}"
+			json_add_string "dns_out_tag" "remote"
+			json_add_string "dns_listen_port" "${dns_remote_listen_port}"
+			json_add_string "remote_dns_outbound_socks_address" "127.0.0.1"
+			json_add_string "remote_dns_outbound_socks_port" "${socks_port}"
+			_json2_arg="$(json_dump)"
+			lua $UTIL_XRAY gen_dns_config "${_json2_arg}" > $V2RAY_DNS_REMOTE_CONFIG
+			ln_run "$XRAY_BIN" "xray" $V2RAY_DNS_REMOTE_LOG run -c "$V2RAY_DNS_REMOTE_CONFIG"
+
+			json_load "${_json1_arg}"
+			json_add_string "remote_dns_udp_port" "${dns_remote_listen_port}"
+			json_add_string "remote_dns_udp_server" "127.0.0.1"
+			json_add_string "remote_dns_query_strategy" "${remote_dns_query_strategy}"
 		fi
 	}
+
 	[ -n "${redir_port}" ] && {
-		_extra_param="${_extra_param} -redir_port ${redir_port}"
+		json_add_string "redir_port" "${redir_port}"
 		set_cache_var "node_${node}_redir_port" "${redir_port}"
-		[ -n "${tcp_proxy_way}" ] && _extra_param="${_extra_param} -tcp_proxy_way ${tcp_proxy_way}"
+		[ -n "${tcp_proxy_way}" ] && json_add_string "tcp_proxy_way" "${tcp_proxy_way}"
 	}
 
-	lua $UTIL_XRAY gen_config -node $node -loglevel $loglevel ${_extra_param} > $config_file
-	ln_run "$(first_type $(config_t_get global_app ${type}_file) ${type})" ${type} $log_file run -c "$config_file"
+	json_add_string "node" "${node}"
+
+	local _json_arg="$(json_dump)"
+	lua $UTIL_XRAY gen_config "${_json_arg}" > $config_file
+
+	$XRAY_BIN run -test -c "$config_file" > $log_file; local status=$?
+	if [ "${status}" == 0 ]; then
+		ln_run "$XRAY_BIN" xray $log_file run -c "$config_file"
+	else
+		return ${status}
+	fi
 }
 
 run_singbox() {
 	local flag node redir_port tcp_proxy_way socks_address socks_port socks_username socks_password http_address http_port http_username http_password
 	local dns_listen_port direct_dns_query_strategy remote_dns_protocol remote_dns_udp_server remote_dns_tcp_server remote_dns_doh remote_dns_client_ip remote_dns_detour remote_fakedns remote_dns_query_strategy dns_cache write_ipset_direct
 	local loglevel log_file config_file
-	local _extra_param=""
 	eval_set_val $@
 	local type=$(echo $(config_n_get $node type) | tr 'A-Z' 'a-z')
 	[ -z "$type" ] && return 1
 	[ -n "$log_file" ] || local log_file="/dev/null"
-	_extra_param="${_extra_param} -log 1 -logfile ${log_file}"
-	if [ "$log_file" = "/dev/null" ]; then
-		_extra_param="${_extra_param} -log 0"
-	else
-		_extra_param="${_extra_param} -log 1 -logfile ${log_file}"
-	fi
 	[ -z "$loglevel" ] && local loglevel=$(config_t_get global loglevel "warn")
 	[ "$loglevel" = "warning" ] && loglevel="warn"
-	_extra_param="${_extra_param} -loglevel $loglevel"
-	
-	_extra_param="${_extra_param} -tags $($(first_type $(config_t_get global_app sing_box_file) sing-box) version | grep 'Tags:' | awk '{print $2}')"
-	
-	[ -n "$flag" ] && pgrep -af "$TMP_BIN_PATH" | awk -v P1="${flag}" 'BEGIN{IGNORECASE=1}$0~P1{print $1}' | xargs kill -9 >/dev/null 2>&1
-	[ -n "$flag" ] && _extra_param="${_extra_param} -flag $flag"
-	[ -n "$socks_address" ] && _extra_param="${_extra_param} -local_socks_address $socks_address"
-	[ -n "$socks_port" ] && _extra_param="${_extra_param} -local_socks_port $socks_port"
-	[ -n "$socks_username" ] && [ -n "$socks_password" ] && _extra_param="${_extra_param} -local_socks_username $socks_username -local_socks_password $socks_password"
-	[ -n "$http_address" ] && _extra_param="${_extra_param} -local_http_address $http_address"
-	[ -n "$http_port" ] && _extra_param="${_extra_param} -local_http_port $http_port"
-	[ -n "$http_username" ] && [ -n "$http_password" ] && _extra_param="${_extra_param} -local_http_username $http_username -local_http_password $http_password"
+	local singbox_tag=$($SINGBOX_BIN version | grep 'Tags:' | awk '{print $2}')
 
+	json_init
+	json_add_string "tags" "${singbox_tag}"
+
+	if [ "$log_file" = "/dev/null" ]; then
+		json_add_string "log" "0"
+	else
+		json_add_string "log" "1"
+		json_add_string "logfile" "${log_file}"
+	fi
+	json_add_string "loglevel" "${loglevel}"
+
+	[ -n "$flag" ] && {
+		pgrep -af "$TMP_BIN_PATH" | awk -v P1="${flag}" 'BEGIN{IGNORECASE=1}$0~P1{print $1}' | xargs kill -9 >/dev/null 2>&1
+		json_add_string "flag" "${flag}"
+	}
+	[ -n "$socks_address" ] && [ -n "$socks_port" ] && {
+		json_add_string "local_socks_address" "${socks_address}"
+		json_add_string "local_socks_port" "${socks_port}"
+		[ -n "$socks_username" ] && [ -n "$socks_password" ] && {
+			json_add_string "local_socks_username" "${socks_username}"
+			json_add_string "local_socks_password" "${socks_password}"
+		}
+	}
+	[ -n "$http_address" ] && [ -n "$http_port" ] && {
+		json_add_string "local_http_address" "${http_address}"
+		json_add_string "local_http_port" "${http_port}"
+		[ -n "$http_username" ] && [ -n "$http_password" ] && {
+			json_add_string "local_http_username" "${http_username}"
+			json_add_string "local_http_password" "${http_password}"
+		}
+	}
 	[ -n "$dns_listen_port" ] && {
 		local _dns=$(get_first_dns AUTO_DNS 53 | sed 's/#/:/g')
 		local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
@@ -281,23 +298,27 @@ run_singbox() {
 			run_ipset_dns_server listen_port=${direct_dnsmasq_listen_port} server_dns=${AUTO_DNS} ipset="${direct_ipset}" nftset="${direct_nftset}" config_file=${direct_ipset_conf}
 			DIRECT_DNS_UDP_PORT=${direct_dnsmasq_listen_port}
 			DIRECT_DNS_UDP_SERVER="127.0.0.1"
-			[ -n "${direct_ipset}" ] && _extra_param="${_extra_param} -direct_ipset ${direct_ipset}"
-			[ -n "${direct_nftset}" ] && _extra_param="${_extra_param} -direct_nftset ${direct_nftset}"
+			[ -n "${direct_ipset}" ] && json_add_string "direct_ipset" "${direct_ipset}"
+			[ -n "${direct_nftset}" ] && json_add_string "direct_nftset" "${direct_nftset}"
 		}
-		_extra_param="${_extra_param} -direct_dns_udp_port ${DIRECT_DNS_UDP_PORT} -direct_dns_udp_server ${DIRECT_DNS_UDP_SERVER} -direct_dns_query_strategy ${direct_dns_query_strategy}"
+		json_add_string "direct_dns_udp_port" "${DIRECT_DNS_UDP_PORT}"
+		json_add_string "direct_dns_udp_server" "${DIRECT_DNS_UDP_SERVER}"
+		json_add_string "direct_dns_query_strategy" "${direct_dns_query_strategy}"
 
 		case "$remote_dns_protocol" in
 			udp)
 				local _dns=$(get_first_dns remote_dns_udp_server 53 | sed 's/#/:/g')
 				local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
 				local _dns_port=$(echo ${_dns} | awk -F ':' '{print $2}')
-				_extra_param="${_extra_param} -remote_dns_udp_port ${_dns_port} -remote_dns_udp_server ${_dns_address}"
+				json_add_string "remote_dns_udp_port" "${_dns_port}"
+				json_add_string "remote_dns_udp_server" "${_dns_address}"
 			;;
 			tcp)
 				local _dns=$(get_first_dns remote_dns_tcp_server 53 | sed 's/#/:/g')
 				local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
 				local _dns_port=$(echo ${_dns} | awk -F ':' '{print $2}')
-				_extra_param="${_extra_param} -remote_dns_tcp_port ${_dns_port} -remote_dns_tcp_server ${_dns_address}"
+				json_add_string "remote_dns_tcp_port" "${_dns_port}"
+				json_add_string "remote_dns_tcp_server" "${_dns_address}"
 			;;
 			doh)
 				local _doh_url=$(echo $remote_dns_doh | awk -F ',' '{print $1}')
@@ -309,28 +330,39 @@ run_singbox() {
 				[ -z "${_doh_port}" ] && _doh_port=443
 				local _doh_bootstrap=$(echo $remote_dns_doh | cut -d ',' -sf 2-)
 				[ "${is_ip}" = "true" ] && _doh_bootstrap=${_doh_host}
-				[ -n "$_doh_bootstrap" ] && _extra_param="${_extra_param} -remote_dns_doh_ip ${_doh_bootstrap}"
-				_extra_param="${_extra_param} -remote_dns_doh_port ${_doh_port} -remote_dns_doh_url ${_doh_url} -remote_dns_doh_host ${_doh_host}"
+				[ -n "$_doh_bootstrap" ] && json_add_string "remote_dns_doh_ip" "${_doh_bootstrap}"
+				json_add_string "remote_dns_doh_port" "${_doh_port}"
+				json_add_string "remote_dns_doh_url" "${_doh_url}"
+				json_add_string "remote_dns_doh_host" "${_doh_host}"
 			;;
 		esac
 
-		[ -n "$remote_dns_detour" ] && _extra_param="${_extra_param} -remote_dns_detour ${remote_dns_detour}"
-		[ -n "$remote_dns_query_strategy" ] && _extra_param="${_extra_param} -remote_dns_query_strategy ${remote_dns_query_strategy}"
-		[ -n "$remote_dns_client_ip" ] && _extra_param="${_extra_param} -remote_dns_client_ip ${remote_dns_client_ip}"
+		[ -n "$remote_dns_detour" ] && json_add_string "remote_dns_detour" "${remote_dns_detour}"
+		[ -n "$remote_dns_query_strategy" ] && json_add_string "remote_dns_query_strategy" "${remote_dns_query_strategy}"
+		[ -n "$remote_dns_client_ip" ] && json_add_string "remote_dns_client_ip" "${remote_dns_client_ip}"
 
-		[ -n "$dns_listen_port" ] && _extra_param="${_extra_param} -dns_listen_port ${dns_listen_port}"
-		[ -n "$dns_cache" ] && _extra_param="${_extra_param} -dns_cache ${dns_cache}"
-		[ "$remote_fakedns" = "1" ] && _extra_param="${_extra_param} -remote_dns_fake 1"
+		[ -n "$dns_listen_port" ] && json_add_string "dns_listen_port" "${dns_listen_port}"
+		[ -n "$dns_cache" ] && json_add_string "dns_cache" "${dns_cache}"
+		[ "$remote_fakedns" = "1" ] && json_add_string "remote_dns_fake" "1"
 	}
 
 	[ -n "${redir_port}" ] && {
-		_extra_param="${_extra_param} -redir_port ${redir_port}"
+		json_add_string "redir_port" "${redir_port}"
 		set_cache_var "node_${node}_redir_port" "${redir_port}"
-		[ -n "${tcp_proxy_way}" ] && _extra_param="${_extra_param} -tcp_proxy_way ${tcp_proxy_way}"
+		[ -n "${tcp_proxy_way}" ] && json_add_string "tcp_proxy_way" "${tcp_proxy_way}"
 	}
 
-	lua $UTIL_SINGBOX gen_config -node $node ${_extra_param} > $config_file
-	ln_run "$(first_type $(config_t_get global_app sing_box_file) sing-box)" "sing-box" "${log_file}" run -c "$config_file"
+	json_add_string "node" "${node}"
+
+	local _json_arg="$(json_dump)"
+	lua $UTIL_SINGBOX gen_config "${_json_arg}" > $config_file
+
+	$SINGBOX_BIN check -c "$config_file" > $log_file 2>&1; local status=$?
+	if [ "${status}" == 0 ]; then
+		ln_run "$SINGBOX_BIN" "sing-box" "${log_file}" run -c "$config_file"
+	else
+		return ${status}
+	fi
 }
 
 run_socks() {
@@ -378,93 +410,146 @@ run_socks() {
 	}
 	[ "$bind" != "127.0.0.1" ] && log 1 "$(i18n "Socks node: [%s]%s, starting %s:%s" "${remarks}" "${tmp}" "${bind}" "${socks_port}")"
 
+	json_init
+	json_add_string "node" "${node}"
+	json_add_string "server_host" "${server_host}"
+	json_add_string "server_port" "${server_port}"
 	case "$type" in
 	sing-box)
 		[ "$http_port" != "0" ] && {
 			http_flag=1
 			config_file="${config_file//SOCKS/HTTP_SOCKS}"
-			local _extra_param="-local_http_address $bind -local_http_port $http_port"
+			json_add_string "local_http_address" "${bind}"
+			json_add_string "local_http_port" "${http_port}"
 		}
-		[ -n "$relay_port" ] && _extra_param="${_extra_param} -server_host $server_host -server_port $server_port"
+		[ -z "$relay_port" ] && {
+			json_add_null "server_host"
+			json_add_null "server_port"
+		}
 		[ "${log_file}" != "/dev/null" ] && {
 			local loglevel=$(config_t_get global loglevel "warn")
 			[ "$loglevel" = "warning" ] && loglevel="warn"
-			_extra_param="${_extra_param} -log 1 -loglevel $loglevel -logfile $log_file"
+			json_add_string "log" "1"
+			json_add_string "loglevel" "${loglevel}"
+			json_add_string "logfile" "${log_file}"
 		}
-		[ -n "$no_run" ] && _extra_param="${_extra_param} -no_run 1"
-		lua $UTIL_SINGBOX gen_config -flag SOCKS_$flag -node $node -local_socks_address $bind -local_socks_port $socks_port ${_extra_param} > $config_file
-		[ -n "$no_run" ] || ln_run "$(first_type $(config_t_get global_app sing_box_file) sing-box)" "sing-box" /dev/null run -c "$config_file"
+		[ -n "$no_run" ] && json_add_string "no_run" "1"
+		json_add_string "flag" "SOCKS_${flag}"
+		json_add_string "local_socks_address" "${bind}"
+		json_add_string "local_socks_port" "${socks_port}"
+		local _json_arg="$(json_dump)"
+		lua $UTIL_SINGBOX gen_config "${_json_arg}" > $config_file
+		[ -z "$no_run" ] && ln_run "$SINGBOX_BIN" "sing-box" /dev/null run -c "$config_file"
 	;;
 	xray)
 		[ "$http_port" != "0" ] && {
 			http_flag=1
 			config_file="${config_file//SOCKS/HTTP_SOCKS}"
-			local _extra_param="-local_http_address $bind -local_http_port $http_port"
+			json_add_string "local_http_address" "${bind}"
+			json_add_string "local_http_port" "${http_port}"
 		}
-		[ -n "$relay_port" ] && _extra_param="${_extra_param} -server_host $server_host -server_port $server_port"
-		[ -n "$no_run" ] && _extra_param="${_extra_param} -no_run 1"
-		lua $UTIL_XRAY gen_config -flag SOCKS_$flag -node $node -local_socks_address $bind -local_socks_port $socks_port ${_extra_param} > $config_file
-		[ -n "$no_run" ] || ln_run "$(first_type $(config_t_get global_app xray_file) xray)" "xray" $log_file run -c "$config_file"
+		[ -z "$relay_port" ] && {
+			json_add_null "server_host"
+			json_add_null "server_port"
+		}
+		[ -n "$no_run" ] && json_add_string "no_run" "1"
+		json_add_string "flag" "SOCKS_${flag}"
+		json_add_string "local_socks_address" "${bind}"
+		json_add_string "local_socks_port" "${socks_port}"
+		local _json_arg="$(json_dump)"
+		lua $UTIL_XRAY gen_config "${_json_arg}" > $config_file
+		[ -z "$no_run" ] && ln_run "$XRAY_BIN" "xray" $log_file run -c "$config_file"
 	;;
 	naiveproxy)
-		lua $UTIL_NAIVE gen_config -node $node -run_type socks -local_addr $bind -local_port $socks_port -server_host $server_host -server_port $server_port > $config_file
-		[ -n "$no_run" ] || ln_run "$(first_type naive)" naive $log_file "$config_file"
+		json_add_string "local_addr" "${bind}"
+		json_add_string "local_port" "${socks_port}"
+		json_add_string "run_type" "socks"
+		local _json_arg="$(json_dump)"
+		lua $UTIL_NAIVE gen_config "${_json_arg}" > $config_file
+		[ -z "$no_run" ] && ln_run "$(first_type naive)" naive $log_file "$config_file"
 	;;
 	ssr)
-		lua $UTIL_SS gen_config -node $node -local_addr $bind -local_port $socks_port -server_host $server_host -server_port $server_port > $config_file
-		[ -n "$no_run" ] || ln_run "$(first_type ssr-local)" "ssr-local" $log_file -c "$config_file" -v -u
+		json_add_string "local_addr" "${bind}"
+		json_add_string "local_port" "${socks_port}"
+		local _json_arg="$(json_dump)"
+		lua $UTIL_SS gen_config "${_json_arg}" > $config_file
+		[ -z "$no_run" ] && ln_run "$(first_type ssr-local)" "ssr-local" $log_file -c "$config_file" -v -u
 	;;
 	ss)
-		[ -n "$no_run" ] || {
+		json_add_string "local_addr" "${bind}"
+		json_add_string "local_port" "${socks_port}"
+		json_add_string "mode" "tcp_and_udp"
+		[ -z "$no_run" ] && {
 			local plugin_sh="${config_file%.json}_plugin.sh"
-			local _extra_param="-plugin_sh $plugin_sh"
+			json_add_string "plugin_sh" "${plugin_sh}"
 		}
-		lua $UTIL_SS gen_config -node $node -local_addr $bind -local_port $socks_port -server_host $server_host -server_port $server_port -mode tcp_and_udp ${_extra_param} > $config_file
-		[ -n "$no_run" ] || ln_run "$(first_type ss-local)" "ss-local" $log_file -c "$config_file" -v
+		local _json_arg="$(json_dump)"
+		lua $UTIL_SS gen_config "${_json_arg}" > $config_file
+		[ -z "$no_run" ] && ln_run "$(first_type ss-local)" "ss-local" $log_file -c "$config_file" -v
 	;;
 	ss-rust)
-		local _extra_param
+		json_add_string "local_socks_address" "${bind}"
+		json_add_string "local_socks_port" "${socks_port}"
 		[ "$http_port" != "0" ] && {
 			http_flag=1
 			config_file="${config_file//SOCKS/HTTP_SOCKS}"
-			_extra_param="-local_http_address $bind -local_http_port $http_port"
+			json_add_string "local_http_address" "${bind}"
+			json_add_string "local_http_port" "${http_port}"
 		}
-		[ -n "$no_run" ] || {
+		[ -z "$no_run" ] && {
 			local plugin_sh="${config_file%.json}_plugin.sh"
-			_extra_param="${_extra_param:+$_extra_param }-plugin_sh $plugin_sh"
+			json_add_string "plugin_sh" "${plugin_sh}"
 		}
-		lua $UTIL_SS gen_config -node $node -local_socks_address $bind -local_socks_port $socks_port -server_host $server_host -server_port $server_port ${_extra_param} > $config_file
-		[ -n "$no_run" ] || ln_run "$(first_type sslocal)" "sslocal" $log_file -c "$config_file" -v
+		local _json_arg="$(json_dump)"
+		lua $UTIL_SS gen_config "${_json_arg}" > $config_file
+		[ -z "$no_run" ] && ln_run "$(first_type sslocal)" "sslocal" $log_file -c "$config_file" -v
 	;;
 	hysteria2)
+		json_add_string "local_socks_address" "${bind}"
+		json_add_string "local_socks_port" "${socks_port}"
 		[ "$http_port" != "0" ] && {
 			http_flag=1
 			config_file="${config_file//SOCKS/HTTP_SOCKS}"
-			local _extra_param="-local_http_address $bind -local_http_port $http_port"
+			json_add_string "local_http_address" "${bind}"
+			json_add_string "local_http_port" "${http_port}"
 		}
-		lua $UTIL_HYSTERIA2 gen_config -node $node -local_socks_address $bind -local_socks_port $socks_port -server_host $server_host -server_port $server_port ${_extra_param} > $config_file
-		[ -n "$no_run" ] || ln_run "$(first_type $(config_t_get global_app hysteria_file))" "hysteria" $log_file -c "$config_file" client
+		local _json_arg="$(json_dump)"
+		lua $UTIL_HYSTERIA2 gen_config "${_json_arg}" > $config_file
+		[ -z "$no_run" ] && ln_run "$(first_type $(config_t_get global_app hysteria_file))" "hysteria" $log_file -c "$config_file" client
 	;;
 	tuic)
-		lua $UTIL_TUIC gen_config -node $node -local_addr $bind -local_port $socks_port -server_host $server_host -server_port $server_port > $config_file
-		[ -n "$no_run" ] || ln_run "$(first_type tuic-client)" "tuic-client" $log_file -c "$config_file"
+		json_add_string "local_addr" "${bind}"
+		json_add_string "local_port" "${socks_port}"
+		local _json_arg="$(json_dump)"
+		lua $UTIL_TUIC gen_config "${_json_arg}" > $config_file
+		[ -z "$no_run" ] && ln_run "$(first_type tuic-client)" "tuic-client" $log_file -c "$config_file"
 	;;
 	esac
 
 	# http to socks
 	[ -z "$http_flag" ] && [ "$http_port" != "0" ] && [ -n "$http_config_file" ] && [ "$type" != "sing-box" ] && [ "$type" != "xray" ] && [ "$type" != "socks" ] && {
-		local bin=$(first_type $(config_t_get global_app sing_box_file) sing-box)
-		if [ -n "$bin" ]; then
+		json_init
+		json_add_string "local_http_port" "${http_port}"
+		json_add_string "server_proto" "socks"
+		json_add_string "server_address" "127.0.0.1"
+		json_add_string "server_port" "${socks_port}"
+		json_add_string "server_username" "${_username}"
+		json_add_string "server_password" "${_password}"
+		local _json_arg="$(json_dump)"
+		if [ -n "${SINGBOX_BIN}" ]; then
 			type="sing-box"
-			lua $UTIL_SINGBOX gen_proto_config -local_http_port $http_port -server_proto socks -server_address "127.0.0.1" -server_port $socks_port -server_username $_username -server_password $_password > $http_config_file
-			[ -n "$no_run" ] || ln_run "$bin" ${type} /dev/null run -c "$http_config_file"
-		else
-			bin=$(first_type $(config_t_get global_app xray_file) xray)
-			[ -n "$bin" ] && type="xray"
-			[ -z "$type" ] && return 1
-			lua $UTIL_XRAY gen_proto_config -local_http_port $http_port -server_proto socks -server_address "127.0.0.1" -server_port $socks_port -server_username $_username -server_password $_password > $http_config_file
-			[ -n "$no_run" ] || ln_run "$bin" ${type} /dev/null run -c "$http_config_file"
+			local bin="${SINGBOX_BIN}"
+			local util="${UTIL_SINGBOX}"
+		elif [ -n "${XRAY_BIN}" ]; then
+			type="xray"
+			local bin="${XRAY_BIN}"
+			local util="${UTIL_XRAY}"
 		fi
+		[ -n "${bin}" ] && [ -n "${util}" ] && {
+			lua ${util} gen_proto_config "${_json_arg}" > ${http_config_file}
+			[ -z "$no_run" ] && ln_run "${bin}" ${type} /dev/null run -c ${http_config_file}
+		}
+		unset bin util
 	}
 	unset http_flag
 
@@ -524,35 +609,34 @@ run_global() {
 
 	V2RAY_ARGS="flag=global node=$NODE redir_port=$REDIR_PORT tcp_proxy_way=${TCP_PROXY_WAY}"
 	V2RAY_ARGS="${V2RAY_ARGS} dns_listen_port=${TUN_DNS_PORT} direct_dns_query_strategy=${DIRECT_DNS_QUERY_STRATEGY} remote_dns_query_strategy=${REMOTE_DNS_QUERY_STRATEGY} dns_cache=${DNS_CACHE}"
-	local msg="DNS: ${TUN_DNS} （$(i18n "Direct DNS: %s" "${AUTO_DNS}")"
+	local dns_msg="DNS: ${TUN_DNS} （$(i18n "Direct DNS: %s" "${AUTO_DNS}")"
 
 	[ -n "$REMOTE_DNS_PROTOCOL" ] && {
 		V2RAY_ARGS="${V2RAY_ARGS} remote_dns_protocol=${REMOTE_DNS_PROTOCOL} remote_dns_detour=${REMOTE_DNS_DETOUR}"
 		case "$REMOTE_DNS_PROTOCOL" in
 			udp*)
 				V2RAY_ARGS="${V2RAY_ARGS} remote_dns_udp_server=${REMOTE_DNS}"
-				msg="${msg} $(i18n "Remote DNS: %s" "${REMOTE_DNS}")"
+				dns_msg="${dns_msg} $(i18n "Remote DNS: %s" "${REMOTE_DNS}")"
 			;;
 			tcp)
 				V2RAY_ARGS="${V2RAY_ARGS} remote_dns_tcp_server=${REMOTE_DNS}"
-				msg="${msg} $(i18n "Remote DNS: %s" "${REMOTE_DNS}")"
+				dns_msg="${dns_msg} $(i18n "Remote DNS: %s" "${REMOTE_DNS}")"
 			;;
 			doh)
 				REMOTE_DNS_DOH=$(config_t_get global remote_dns_doh "https://1.1.1.1/dns-query")
 				V2RAY_ARGS="${V2RAY_ARGS} remote_dns_doh=${REMOTE_DNS_DOH}"
-				msg="${msg} $(i18n "Remote DNS: %s" "${REMOTE_DNS_DOH}")"
+				dns_msg="${dns_msg} $(i18n "Remote DNS: %s" "${REMOTE_DNS_DOH}")"
 			;;
 		esac
 		[ "$REMOTE_FAKEDNS" = "1" ] && {
 			V2RAY_ARGS="${V2RAY_ARGS} remote_fakedns=1"
-			msg="${msg} + FakeDNS "
+			dns_msg="${dns_msg} + FakeDNS "
 		}
 		
 		local _remote_dns_client_ip=$(config_t_get global remote_dns_client_ip)
 		[ -n "${_remote_dns_client_ip}" ] && V2RAY_ARGS="${V2RAY_ARGS} remote_dns_client_ip=${_remote_dns_client_ip}"
 	}
-	msg="${msg}）"
-	log 0 ${msg}
+	dns_msg="${dns_msg}）"
 
 	V2RAY_CONFIG=${GLOBAL_ACL_PATH}/global.json
 	V2RAY_LOG=${GLOBAL_ACL_PATH}/global.log
@@ -580,7 +664,15 @@ run_global() {
 		run_func="run_singbox"
 	fi
 	
-	${run_func} ${V2RAY_ARGS}
+	${run_func} ${V2RAY_ARGS}; local status=$?
+
+	if [ "$status" == 0 ]; then
+		log 0 ${dns_msg}
+	else
+		log_i18n 0 "[%s] process %s error, skip!" $(i18n "Global") "${V2RAY_CONFIG}"
+		ENABLED_DEFAULT_ACL=0
+		return 1
+	fi
 
 	local RUN_NEW_DNSMASQ=1
 	RUN_NEW_DNSMASQ=${DNS_REDIRECT}
@@ -592,7 +684,11 @@ run_global() {
 			DIRECT_DNSMASQ_CONF=${GLOBAL_ACL_PATH}/direct_dnsmasq.conf
 			DIRECT_DNSMASQ_CONF_PATH=${GLOBAL_ACL_PATH}/direct_dnsmasq.d
 			mkdir -p ${DIRECT_DNSMASQ_CONF_PATH}
-			lua $APP_PATH/helper_dnsmasq.lua copy_instance -LISTEN_PORT ${DIRECT_DNSMASQ_PORT} -DNSMASQ_CONF ${DIRECT_DNSMASQ_CONF} -TMP_DNSMASQ_PATH ${DIRECT_DNSMASQ_CONF_PATH}
+			json_init
+			json_add_string "LISTEN_PORT" "${DIRECT_DNSMASQ_PORT}"
+			json_add_string "DNSMASQ_CONF" "${DIRECT_DNSMASQ_CONF}"
+			json_add_string "TMP_DNSMASQ_PATH" "${DIRECT_DNSMASQ_CONF_PATH}"
+			lua $APP_PATH/helper_dnsmasq.lua copy_instance "$(json_dump)"
 			ln_run "$(first_type dnsmasq)" "dnsmasq_direct" "/dev/null" -C ${DIRECT_DNSMASQ_CONF} -x ${GLOBAL_ACL_PATH}/direct_dnsmasq.pid
 			set_cache_var "DIRECT_DNSMASQ_PORT" "${DIRECT_DNSMASQ_PORT}"
 		}
@@ -600,13 +696,22 @@ run_global() {
 		#Rewrite the default DNS service configuration
 		#Modify the default dnsmasq service
 		lua $APP_PATH/helper_dnsmasq.lua stretch
-		lua $APP_PATH/helper_dnsmasq.lua add_rule -FLAG "default" -TMP_DNSMASQ_PATH ${GLOBAL_DNSMASQ_CONF_PATH} -DNSMASQ_CONF_FILE ${GLOBAL_DNSMASQ_CONF} \
-			-DEFAULT_DNS ${AUTO_DNS} -LOCAL_DNS ${LOCAL_DNS:-${AUTO_DNS}} -TUN_DNS ${TUN_DNS} \
-			-NFTFLAG ${nftflag:-0} \
-			-NO_LOGIC_LOG ${NO_LOGIC_LOG:-0}
+		json_init
+		json_add_string "FLAG" "default"
+		json_add_string "TMP_DNSMASQ_PATH" "${GLOBAL_DNSMASQ_CONF_PATH}"
+		json_add_string "DNSMASQ_CONF_FILE" "${GLOBAL_DNSMASQ_CONF}"
+		json_add_string "DEFAULT_DNS" "${AUTO_DNS}"
+		json_add_string "LOCAL_DNS" "${LOCAL_DNS:-${AUTO_DNS}}"
+		json_add_string "TUN_DNS" "${TUN_DNS}"
+		json_add_string "NFTFLAG" "${nftflag:-0}"
+		json_add_string "NO_LOGIC_LOG" "${NO_LOGIC_LOG:-0}"
+		lua $APP_PATH/helper_dnsmasq.lua add_rule "$(json_dump)"
 		uci -q add_list dhcp.@dnsmasq[0].addnmount=${GLOBAL_DNSMASQ_CONF_PATH}
 		uci -q commit dhcp
-		lua $APP_PATH/helper_dnsmasq.lua logic_restart -LOG 1
+
+		json_init
+		json_add_string "LOG" "1"
+		lua $APP_PATH/helper_dnsmasq.lua logic_restart "$(json_dump)"
 	else
 		#Run a copy dnsmasq instance, DNS hijack for that need proxy devices.
 		GLOBAL_DNSMASQ_PORT=$(get_new_port 11400)
@@ -648,14 +753,6 @@ start_socks() {
 				[ "$enable_autoswitch" = "1" ] && $APP_PATH/socks_auto_switch.sh ${id} > /dev/null 2>&1 &
 			done
 		}
-	}
-}
-
-clean_log() {
-	logsnum=$(cat $LOG_FILE 2>/dev/null | wc -l)
-	[ "$logsnum" -gt 1000 ] && {
-		echo "" > $LOG_FILE
-		log_i18n 0 "Log file is too long, clear it!"
 	}
 }
 
@@ -805,11 +902,23 @@ run_copy_dnsmasq() {
 	local dnsmasq_conf=$TMP_ACL_PATH/$flag/dnsmasq.conf
 	local dnsmasq_conf_path=$TMP_ACL_PATH/$flag/dnsmasq.d
 	mkdir -p $dnsmasq_conf_path
-	lua $APP_PATH/helper_dnsmasq.lua copy_instance -LISTEN_PORT ${listen_port} -DNSMASQ_CONF ${dnsmasq_conf}
-	lua $APP_PATH/helper_dnsmasq.lua add_rule -FLAG "${flag}" -TMP_DNSMASQ_PATH ${dnsmasq_conf_path} -DNSMASQ_CONF_FILE ${dnsmasq_conf} \
-		-DEFAULT_DNS ${AUTO_DNS} -LOCAL_DNS ${LOCAL_DNS:-${AUTO_DNS}} -TUN_DNS ${tun_dns} \
-		-NFTFLAG ${nftflag:-0} \
-		-NO_LOGIC_LOG ${NO_LOGIC_LOG:-0}
+
+	json_init
+	json_add_string "LISTEN_PORT" "${listen_port}"
+	json_add_string "DNSMASQ_CONF" "${dnsmasq_conf}"
+	lua $APP_PATH/helper_dnsmasq.lua copy_instance "$(json_dump)"
+
+	json_init
+	json_add_string "FLAG" "${flag}"
+	json_add_string "TMP_DNSMASQ_PATH" "${dnsmasq_conf_path}"
+	json_add_string "DNSMASQ_CONF_FILE" "${dnsmasq_conf}"
+	json_add_string "DEFAULT_DNS" "${AUTO_DNS}"
+	json_add_string "LOCAL_DNS" "${LOCAL_DNS:-${AUTO_DNS}}"
+	json_add_string "TUN_DNS" "${tun_dns}"
+	json_add_string "NFTFLAG" "${nftflag:-0}"
+	json_add_string "NO_LOGIC_LOG" "${NO_LOGIC_LOG:-0}"
+	lua $APP_PATH/helper_dnsmasq.lua add_rule "$(json_dump)"
+
 	ln_run "$(first_type dnsmasq)" "dnsmasq_${flag}" "/dev/null" -C $dnsmasq_conf -x $TMP_ACL_PATH/$flag/dnsmasq.pid
 	set_cache_var "ACL_${flag}_dns_port" "${listen_port}"
 }
@@ -871,10 +980,6 @@ run_ipset_dnsmasq() {
 	[ -n "${ipset}" ] && echo "ipset=${ipset}" >> $config_file
 	[ -n "${nftset}" ] && echo "nftset=${nftset}" >> $config_file
 	ln_run "$(first_type dnsmasq)" "dnsmasq" "/dev/null" -C $config_file
-}
-
-kill_all() {
-	kill -9 $(pidof "$@") >/dev/null 2>&1
 }
 
 acl_app() {
@@ -978,7 +1083,18 @@ acl_app() {
 								elif [ "${type}" = "sing-box" ] && [ -n "${SINGBOX_BIN}" ]; then
 									run_func="run_singbox"
 								fi
-								${run_func} flag=acl_$sid node=$node redir_port=$redir_port tcp_proxy_way=${TCP_PROXY_WAY} socks_address=127.0.0.1 socks_port=$acl_socks_port dns_listen_port=${dns_port} direct_dns_query_strategy=${direct_dns_query_strategy} remote_dns_protocol=${remote_dns_protocol} remote_dns_tcp_server=${remote_dns} remote_dns_udp_server=${remote_dns} remote_dns_doh="${remote_dns}" remote_dns_client_ip=${remote_dns_client_ip} remote_dns_detour=${remote_dns_detour} remote_fakedns=${remote_fakedns} remote_dns_query_strategy=${remote_dns_query_strategy} write_ipset_direct=${write_ipset_direct} config_file=${config_file}
+								${run_func} flag=acl_$sid node=$node redir_port=$redir_port tcp_proxy_way=${TCP_PROXY_WAY} \
+											socks_address=127.0.0.1 socks_port=$acl_socks_port \
+											dns_listen_port=${dns_port} \
+											direct_dns_query_strategy=${direct_dns_query_strategy} \
+											remote_dns_protocol=${remote_dns_protocol} remote_dns_tcp_server=${remote_dns} remote_dns_udp_server=${remote_dns} remote_dns_doh="${remote_dns}" \
+											remote_dns_client_ip=${remote_dns_client_ip} remote_dns_detour=${remote_dns_detour} remote_fakedns=${remote_fakedns} remote_dns_query_strategy=${remote_dns_query_strategy} \
+											write_ipset_direct=${write_ipset_direct} config_file=${config_file}
+								local status=$?
+								if [ "$status" != 0 ]; then
+									log_i18n 2 "[%s] process %s error, skip!" "${remarks}" "${config_file}"
+									continue
+								fi
 							fi
 							dnsmasq_port=$(get_new_port $(expr $dnsmasq_port + 1))
 							run_copy_dnsmasq flag="$sid" listen_port=$dnsmasq_port tun_dns="127.0.0.1#${dns_port}"
@@ -1021,7 +1137,10 @@ start() {
 			uci -q commit ${CONFIG}
 			uci -q set dhcp.@dnsmasq[0].dns_redirect='0'
 			uci -q commit dhcp
-			lua $APP_PATH/helper_dnsmasq.lua restart -LOG 0
+
+			json_init
+			json_add_string "LOG" "0"
+			lua $APP_PATH/helper_dnsmasq.lua restart "$(json_dump)"
 		}
 	fi
 	[ "$ENABLED_DEFAULT_ACL" == 1 ] && run_global
@@ -1075,7 +1194,10 @@ stop() {
 		if [ -z "${ACL_default_dns_port}" ] || [ -n "${bak_dnsmasq_dns_redirect}" ]; then
 			uci -q del_list dhcp.@dnsmasq[0].addnmount="${GLOBAL_DNSMASQ_CONF_PATH}"
 			uci -q commit dhcp
-			lua $APP_PATH/helper_dnsmasq.lua restart -LOG 0
+
+			json_init
+			json_add_string "LOG" "0"
+			lua $APP_PATH/helper_dnsmasq.lua restart "$(json_dump)"
 		fi
 		[ -n "${bak_bridge_nf_ipt}" ] && sysctl -w net.bridge.bridge-nf-call-iptables=${bak_bridge_nf_ipt} >/dev/null 2>&1
 		[ -n "${bak_bridge_nf_ip6t}" ] && sysctl -w net.bridge.bridge-nf-call-ip6tables=${bak_bridge_nf_ip6t} >/dev/null 2>&1
@@ -1143,9 +1265,6 @@ get_config() {
 	fi
 	set_cache_var GLOBAL_DNSMASQ_CONF ${DNSMASQ_CONF_DIR}/dnsmasq-${CONFIG}.conf
 	set_cache_var GLOBAL_DNSMASQ_CONF_PATH ${GLOBAL_ACL_PATH}/dnsmasq.d
-
-	XRAY_BIN=$(first_type $(config_t_get global_app xray_file) xray)
-	SINGBOX_BIN=$(first_type $(config_t_get global_app sing_box_file) sing-box)
 }
 
 arg1=$1

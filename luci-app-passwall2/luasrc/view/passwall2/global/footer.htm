@@ -1,5 +1,5 @@
 <%
-local api = require "luci.passwall2.api"
+local api = self.api
 -%>
 <style>
  #cbi-<%=api.appname%>-socks .td.cbi-value-field > div { 
@@ -13,6 +13,8 @@ local api = require "luci.passwall2.api"
 </style>
 <script type="text/javascript">
 	//<![CDATA[
+	var shunt_list = JSON.parse('<%=self.shunt_list%>');
+
 	function go() {
 		var _status = document.getElementsByClassName('_status');
 		for (var i = 0; i < _status.length; i++) {
@@ -120,6 +122,32 @@ local api = require "luci.passwall2.api"
 			}
 		}
 	}
-	setTimeout("go()", 1000);
+	document.addEventListener("DOMContentLoaded", function () {
+		const hiddenSelect = document.getElementById("cbid.passwall2.<%=self.global_cfgid%>.node");
+		let o_val = hiddenSelect.value
+		const o_hasItem = shunt_list.find(element => element.id == o_val);
+		hiddenSelect.addEventListener("change", function(el){
+			let new_val = el.target.value
+			const new_hasItem = shunt_list.find(element => element.id == new_val);
+			if (new_hasItem || (o_hasItem && !new_hasItem)) {
+				XHR.get('<%=api.url("update_node")%>', {
+					id: "<%=self.global_cfgid%>",
+					data: JSON.stringify({
+						node: new_val
+					})
+				},
+				function(x, data) {
+					if (x && x.status == 200 && data.code == 1) {
+						window.location.reload();
+					}
+					else {
+						alert("<%:Error%>");
+					}
+				});
+			}
+		});
+		go();
+	});
+	//setTimeout("go()", 1000);
 	//]]>
 </script>

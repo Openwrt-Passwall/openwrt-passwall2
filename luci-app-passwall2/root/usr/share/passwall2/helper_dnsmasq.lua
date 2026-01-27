@@ -2,6 +2,7 @@ local api = require "luci.passwall2.api"
 local appname = "passwall2"
 local uci = api.uci
 local sys = api.sys
+local jsonc = api.jsonc
 local fs = api.fs
 local datatypes = api.datatypes
 local TMP = {}
@@ -81,7 +82,7 @@ function stretch()
 end
 
 function restart(var)
-	local LOG = var["-LOG"]
+	local LOG = var["LOG"]
 	sys.call("/etc/init.d/dnsmasq restart >/dev/null 2>&1")
 	if LOG == "1" then
 		api.log(0, api.i18n.translate("Restart dnsmasq service."))
@@ -89,7 +90,7 @@ function restart(var)
 end
 
 function logic_restart(var)
-	local LOG = var["-LOG"]
+	local LOG = var["LOG"]
 	local DEFAULT_DNS = api.get_cache_var("DEFAULT_DNS")
 	if DEFAULT_DNS then
 		backup_servers()
@@ -116,8 +117,8 @@ function logic_restart(var)
 end
 
 function copy_instance(var)
-	local LISTEN_PORT = var["-LISTEN_PORT"]
-	local TMP_DNSMASQ_PATH = var["-TMP_DNSMASQ_PATH"]
+	local LISTEN_PORT = var["LISTEN_PORT"]
+	local TMP_DNSMASQ_PATH = var["TMP_DNSMASQ_PATH"]
 	local conf_lines = {}
 	local DEFAULT_DNSMASQ_CFGID = sys.exec("echo -n $(uci -q show dhcp.@dnsmasq[0] | awk 'NR==1 {split($0, conf, /[.=]/); print conf[2]}')")
 	for line in io.lines("/tmp/etc/dnsmasq.conf." .. DEFAULT_DNSMASQ_CFGID) do
@@ -143,11 +144,11 @@ function copy_instance(var)
 	if TMP_DNSMASQ_PATH then
 		sys.call("rm -rf " .. TMP_DNSMASQ_PATH .. "/*passwall2*")
 	end
-	if var["-return"] == "1" then
+	if var["return"] == "1" then
 		return conf_lines
 	end
 	if #conf_lines > 0 then
-		local DNSMASQ_CONF = var["-DNSMASQ_CONF"]
+		local DNSMASQ_CONF = var["DNSMASQ_CONF"]
 		local conf_out = io.open(DNSMASQ_CONF, "a")
 		conf_out:write(table.concat(conf_lines, "\n"))
 		conf_out:write("\n")
@@ -156,23 +157,20 @@ function copy_instance(var)
 end
 
 function add_rule(var)
-	local FLAG = var["-FLAG"]
-	local TMP_DNSMASQ_PATH = var["-TMP_DNSMASQ_PATH"]
-	local DNSMASQ_CONF_FILE = var["-DNSMASQ_CONF_FILE"]
-	local LISTEN_PORT = var["-LISTEN_PORT"]
-	local DEFAULT_DNS = var["-DEFAULT_DNS"]
-	local LOCAL_DNS = var["-LOCAL_DNS"]
-	local TUN_DNS = var["-TUN_DNS"]
-	local NO_LOGIC_LOG = var["-NO_LOGIC_LOG"]
-	local NFTFLAG = var["-NFTFLAG"]
+	local FLAG = var["FLAG"]
+	local TMP_DNSMASQ_PATH = var["TMP_DNSMASQ_PATH"]
+	local DNSMASQ_CONF_FILE = var["DNSMASQ_CONF_FILE"]
+	local LISTEN_PORT = var["LISTEN_PORT"]
+	local DEFAULT_DNS = var["DEFAULT_DNS"]
+	local LOCAL_DNS = var["LOCAL_DNS"]
+	local TUN_DNS = var["TUN_DNS"]
+	local NFTFLAG = var["NFTFLAG"]
 	local CACHE_PATH = api.CACHE_PATH
 	local CACHE_FLAG = "dnsmasq_" .. FLAG
 	local CACHE_DNS_PATH = CACHE_PATH .. "/" .. CACHE_FLAG
 	local CACHE_TEXT_FILE = CACHE_DNS_PATH .. ".txt"
 
 	local list1 = {}
-	local excluded_domain = {}
-	local excluded_domain_str = "!"
 
 	local function check_dns(domain, dns)
 		if domain == "" or domain:find("#") then
@@ -321,7 +319,11 @@ function add_rule(var)
 		local conf_lines = {}
 		if LISTEN_PORT then
 			--Copy dnsmasq instance
-			conf_lines = copy_instance({["-LISTEN_PORT"] = LISTEN_PORT, ["-TMP_DNSMASQ_PATH"] = TMP_DNSMASQ_PATH, ["-return"] = "1"})
+			conf_lines = copy_instance({
+				["LISTEN_PORT"] = LISTEN_PORT,
+				["TMP_DNSMASQ_PATH"] = TMP_DNSMASQ_PATH,
+				["return"] = "1"
+			})
 			--dhcp.leases to hostsMore actions
 			local hosts = "/tmp/etc/" .. appname .. "_tmp/dhcp-hosts"
 			sys.call("touch " .. hosts)
@@ -360,6 +362,10 @@ _G.add_rule = add_rule
 if arg[1] then
 	local func =_G[arg[1]]
 	if func then
-		func(api.get_function_args(arg))
+		local var = nil
+		if arg[2] then
+			var = jsonc.parse(arg[2])
+		end
+		func(var)
 	end
 end

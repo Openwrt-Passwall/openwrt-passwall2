@@ -688,7 +688,7 @@ local hysteria2_type = get_core("hysteria2_type", {{has_hysteria2,"hysteria2"},{
 		return server.replace(/^\[/, '').replace(/\]$/, '');
 	}
 
-	function fromUrl(btn, urlname, sid) {
+	function fromUrl(btn, urlname, sid, cacheData) {
 		var opt = {
 			base: 'cbid.passwall2',
 			client: true,
@@ -796,9 +796,21 @@ local hysteria2_type = get_core("hysteria2_type", {{has_hysteria2,"hysteria2"},{
 		}
 		opt.base = "cbid." + urlname + "." + sid;
 		opt.client = urlname.indexOf("server") === -1;
-		var ssrurl = prompt('<%:Paste Share URL Here%>', '');
-		if (ssrurl === null || ssrurl === "") {
-			return false;
+		var ssrurl = null;
+		if (cacheData) {
+			ssrurl = cacheData.ssrurl
+		} else {
+			ssrurl = prompt('<%:Paste Share URL Here%>', '');
+			if (ssrurl === null || ssrurl === "") {
+				return false;
+			}
+			sessionStorage.setItem("fromUrl", JSON.stringify({
+				timestamp: Date.now(),
+				savetime: 60 * 1000,
+				urlname: urlname,
+				sid: sid,
+				ssrurl: ssrurl
+			}));
 		}
 		ssrurl = ssrurl.replace(/&amp;/gi, '&').replace(/\s*#\s*/, '#').trim();  // Some odd links use "&" as "&", and include spaces before and after "#".
 		s.innerHTML = "";
@@ -1653,12 +1665,22 @@ local hysteria2_type = get_core("hysteria2_type", {{has_hysteria2,"hysteria2"},{
 			return false;
 		}
 		s.innerHTML = "<font color='green'><%:Import Finished %></font>";
-		return false;
+		sessionStorage.removeItem("fromUrl");
+		return true;
 	}
 	
 	function exportConfigFile(btn, sid) {
 		window.open('<%=api.url("gen_client_config")%>?id=' + sid, "_blank")
 	}
+
+	document.addEventListener("DOMContentLoaded", function () {
+		const fromUrlCache = JSON.parse(sessionStorage.getItem("fromUrl"));
+		if (fromUrlCache && fromUrlCache.savetime && (Date.now() - fromUrlCache.timestamp) < fromUrlCache.savetime) {
+			fromUrl(null, fromUrlCache.urlname, fromUrlCache.sid, fromUrlCache)
+		} else {
+			sessionStorage.removeItem("fromUrl");
+		}
+	})
 
 //]]></script>
 <style>

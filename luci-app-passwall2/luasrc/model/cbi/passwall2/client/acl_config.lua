@@ -312,9 +312,6 @@ o:depends("remote_dns_protocol", "udp")
 o = s:option(Flag, "remote_fakedns", "FakeDNS", translate("Use FakeDNS work in the domain that proxy."))
 o.default = "0"
 o.rmempty = false
-o:depends("remote_dns_protocol", "tcp")
-o:depends("remote_dns_protocol", "doh")
-o:depends("remote_dns_protocol", "udp")
 
 o = s:option(ListValue, "remote_dns_query_strategy", translate("Remote Query Strategy"))
 o.default = "UseIPv4"
@@ -346,6 +343,12 @@ for k, v in pairs(nodes_table) do
 	o_node.group[#o_node.group+1] = (v.group and v.group ~= "") and v.group or translate("default")
 	if v.type == "Xray" then
 		s.fields["_xray_node"]:depends({ node = v.id })
+	end
+	if v.node_type == "normal" or v.protocol == "_balancing" or v.protocol == "_urltest" then
+		--Shunt node has its own separate options.
+		s.fields["remote_fakedns"]:depends({ node = v.id, remote_dns_protocol = "tcp" })
+		s.fields["remote_fakedns"]:depends({ node = v.id, remote_dns_protocol = "doh" })
+		s.fields["remote_fakedns"]:depends({ node = v.id, remote_dns_protocol = "udp" })
 	end
 end
 

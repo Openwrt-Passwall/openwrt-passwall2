@@ -60,7 +60,7 @@ end
 
 local function non_file_check(file_path, header_content)
 	local remote_file_size = nil
-	local local_file_size = tonumber(fs.stat(file_path, "size")) or 0
+	local local_file_size = tonumber(fs.stat(file_path, "size") or 0)
 	if local_file_size == 0 then
 		log(2, api.i18n.translate("Downloaded file is empty or an error occurred while reading it."))
 		return true

@@ -8,15 +8,19 @@ end
 
 local type_name = "TUIC"
 
+-- [[ TUIC ]]
+
+s.fields["type"]:value(type_name, "TUIC")
+
+if s.val["type"] ~= type_name then
+	return
+end
+
 local option_prefix = "tuic_"
 
 local function _n(name)
 	return option_prefix .. name
 end
-
--- [[ TUIC ]]
-
-s.fields["type"]:value(type_name, translate("TUIC"))
 
 o = s:option(Value, _n("address"), translate("Address (Support Domain Name)"))
 

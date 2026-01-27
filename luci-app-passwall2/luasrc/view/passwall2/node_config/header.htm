@@ -1,0 +1,53 @@
+<%
+local api = self.api
+-%>
+<script type="text/javascript">
+	//<![CDATA[
+	function waitForElement(selector, callback) {
+		const el = document.querySelector(selector);
+		if (el) return callback(el);
+		const observer = new MutationObserver(() => {
+			const el = document.querySelector(selector);
+			if (el) {
+				observer.disconnect();
+				callback(el);
+			}
+		});
+		observer.observe(document.body, { childList: true, subtree: true });
+	}
+
+	function getOption(opt) {
+		var obj;
+		var id = 'cbid.<%=api.appname%>.<%=self.section%>.' + opt;
+		obj = document.getElementsByName(id)[0] || document.getElementById(id);
+		if (obj) {
+			var combobox = document.getElementById('cbi.combobox.' + id);
+			if (combobox) {
+				obj.combobox = combobox;
+			}
+			var div = document.getElementById(id);
+			if (div && div.getElementsByTagName("li").length > 0) {
+				obj = div;
+			}
+			return obj;
+		} else {
+			return null;
+		}
+	}
+	
+	function update_node(data) {
+		XHR.get('<%=api.url("update_node")%>', {
+			id: "<%=self.section%>",
+			data: JSON.stringify(data)
+		},
+		function(x, data) {
+			if (x && x.status == 200 && data.code == 1) {
+				window.location.reload();
+			}
+			else {
+				alert("<%:Error%>");
+			}
+		});
+	}
+	//]]>
+</script>
