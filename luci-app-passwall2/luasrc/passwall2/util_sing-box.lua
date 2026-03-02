@@ -11,6 +11,7 @@ local split = api.split
 local local_version = api.get_app_version("sing-box"):match("[^v]+")
 local version_ge_1_11_0 = api.compare_versions(local_version, ">=", "1.11.0")
 local version_ge_1_12_0 = api.compare_versions(local_version, ">=", "1.12.0")
+local version_ge_1_13_0 = api.compare_versions(local_version, ">=", "1.13.0")
 
 local GEO_VAR = {
 	OK = nil,
@@ -143,6 +144,11 @@ function gen_outbound(flag, node, tag, proxy_table)
 			tag = tag .. ":" .. remarks
 		end
 
+		local function is_ip(addr)
+			if not addr then return false end
+			return not addr:match("%a")
+		end
+
 		result = {
 			_id = node_id,
 			_flag = flag,
@@ -151,9 +157,18 @@ function gen_outbound(flag, node, tag, proxy_table)
 			type = node.protocol,
 			server = node.address,
 			server_port = tonumber(node.port),
-			domain_strategy = node.domain_strategy,
 			detour = node.detour,
 		}
+
+		if not version_ge_1_13_0 then
+			result.domain_strategy = node.domain_strategy
+		end
+
+		if version_ge_1_13_0 then
+			if node.address and not is_ip(node.address) then
+				result.domain_resolver = "remote"
+			end
+		end
 
 		local tls = nil
 		if node.tls == "1" then
@@ -965,6 +980,7 @@ function gen_config(var)
 	}
 
 	local experimental = nil
+	local inner_fakedns = false
 
 	function add_rule_set(tab)
 		if tab and next(tab) and tab.tag and not rule_set_table[tab.tag]then
@@ -1143,7 +1159,7 @@ function gen_config(var)
 			end
 			return nodes
 		end
-	
+
 		function get_node_by_id(node_id)
 			if not node_id or node_id == "" or node_id == "nil" then return nil end
 			if node_id:find("Socks_") then
@@ -1615,6 +1631,7 @@ function gen_config(var)
 		dns = {
 			servers = {},
 			rules = {},
+			final = "remote",
 			disable_cache = (dns_cache and dns_cache == "0") and true or false,
 			disable_expire = false, -- Disable DNS cache expiration.
 			independent_cache = false, -- Make each DNS server's cache independent for specific purposes. If enabled, it will slightly reduce performance.
@@ -1622,73 +1639,177 @@ function gen_config(var)
 			fakeip = nil,
 		}
 
-		table.insert(dns.servers, {
-			tag = "block",
-			address = "rcode://success",
-		})
+		if version_ge_1_13_0 then
+			if remote_dns_udp_server then
+				local server_port = tonumber(remote_dns_udp_port) or 53
+				table.insert(dns.servers, {
+					tag = "remote",
+					type = "udp",
+					server = remote_dns_udp_server,
+					server_port = server_port,
+					detour = (remote_dns_detour == "direct") and "direct" or COMMON.default_outbound_tag,
+				})
+			end
 
-		local remote_strategy = "prefer_ipv6"
-		if remote_dns_query_strategy == "UseIPv4" then
-			remote_strategy = "ipv4_only"
-		elseif remote_dns_query_strategy == "UseIPv6" then
-			remote_strategy = "ipv6_only"
-		end
+			if remote_dns_tcp_server then
+				local server_port = tonumber(remote_dns_tcp_port) or 53
+				table.insert(dns.servers, {
+					tag = "remote",
+					type = "tcp",
+					server = remote_dns_tcp_server,
+					server_port = server_port,
+					detour = (remote_dns_detour == "direct") and "direct" or COMMON.default_outbound_tag,
+				})
+			end
 
-		local remote_server = {
-			tag = "remote",
-			address_strategy = "prefer_ipv4",
-			strategy = remote_strategy,
-			address_resolver = "direct",
-			detour = COMMON.default_outbound_tag,
-			client_subnet = (remote_dns_client_ip and remote_dns_client_ip ~= "") and remote_dns_client_ip or nil,
-		}
+			if remote_dns_doh_url then
+				table.insert(dns.servers, {
+					tag = "remote",
+					type = "https",
+					server = remote_dns_doh_url,
+					detour = (remote_dns_detour == "direct") and "direct" or COMMON.default_outbound_tag,
+				})
+			end
 
-		if remote_dns_detour == "direct" then
-			remote_server.detour = "direct"
-		end
+			if direct_dns_udp_server then
+				local port = tonumber(direct_dns_udp_port) or 53
+				table.insert(dns.servers, {
+					tag = "direct",
+					type = "udp",
+					server = direct_dns_udp_server,
+					server_port = port,
+					detour = "direct",
+				})
+			end
 
-		if remote_dns_udp_server then
-			local server_port = tonumber(remote_dns_udp_port) or 53
-			remote_server.address = "udp://" .. remote_dns_udp_server .. ":" .. server_port
-		end
+			local fakedns_tag = "remote_fakeip"
+			if remote_dns_fake or inner_fakedns == "1" then
+				dns.fakeip = {
+					enabled = true,
+					inet4_range = "198.18.0.0/16",
+					inet6_range = "fc00::/18",
+				}
+				table.insert(dns.servers, {
+					tag = fakedns_tag,
+					type = "fakeip",
+					inet4_range = "198.18.0.0/16",
+					inet6_range = "fc00::/18",
+				})
+				if not experimental then
+					experimental = {}
+				end
+				experimental.cache_file = {
+					enabled = true,
+					store_fakeip = true,
+					path = CACHE_PATH .. "/singbox_" .. flag .. ".db"
+				}
+			end
 
-		if remote_dns_tcp_server then
-			local server_port = tonumber(remote_dns_tcp_port) or 53
-			remote_server.address = "tcp://" .. remote_dns_tcp_server .. ":" .. server_port
-		end
+			if node_id and redir_port then
+				local node = get_node_by_id(node_id)
+				if node and node.protocol == "_shunt" and node.default_node == "_direct" then
+					dns.final = "direct"
+				end
+			else
+				dns.final = "direct"
+			end
 
-		if remote_dns_doh_url then
-			remote_server.address = remote_dns_doh_url
-		end
-
-		if remote_server.address then
-			table.insert(dns.servers, remote_server)
-		end
-
-		local fakedns_tag = "remote_fakeip"
-		if remote_dns_fake or inner_fakedns == "1" then
-			dns.fakeip = {
-				enabled = true,
-				inet4_range = "198.18.0.0/16",
-				inet6_range = "fc00::/18",
-			}
-
+		else
 			table.insert(dns.servers, {
-				tag = fakedns_tag,
-				address = "fakeip",
-				strategy = remote_strategy,
+				tag = "block",
+				address = "rcode://success",
 			})
 
-			if not experimental then
-				experimental = {}
+			local remote_strategy = "prefer_ipv6"
+			if remote_dns_query_strategy == "UseIPv4" then
+				remote_strategy = "ipv4_only"
+			elseif remote_dns_query_strategy == "UseIPv6" then
+				remote_strategy = "ipv6_only"
 			end
-			experimental.cache_file = {
-				enabled = true,
-				store_fakeip = true,
-				path = CACHE_PATH .. "/singbox_" .. flag .. ".db"
+
+			local remote_server = {
+				tag = "remote",
+				address_strategy = "prefer_ipv4",
+				strategy = remote_strategy,
+				address_resolver = "direct",
+				detour = COMMON.default_outbound_tag,
+				client_subnet = (remote_dns_client_ip and remote_dns_client_ip ~= "") and remote_dns_client_ip or nil,
 			}
+
+			if remote_dns_detour == "direct" then
+				remote_server.detour = "direct"
+			end
+
+			if remote_dns_udp_server then
+				local server_port = tonumber(remote_dns_udp_port) or 53
+				remote_server.address = "udp://" .. remote_dns_udp_server .. ":" .. server_port
+			end
+
+			if remote_dns_tcp_server then
+				local server_port = tonumber(remote_dns_tcp_port) or 53
+				remote_server.address = "tcp://" .. remote_dns_tcp_server .. ":" .. server_port
+			end
+
+			local direct_strategy = "prefer_ipv6"
+			if direct_dns_query_strategy == "UseIPv4" then
+				direct_strategy = "ipv4_only"
+			elseif direct_dns_query_strategy == "UseIPv6" then
+				direct_strategy = "ipv6_only"
+			end
+
+			if remote_dns_doh_url then
+				remote_server.address = remote_dns_doh_url
+			end
+
+			if remote_server.address then
+				table.insert(dns.servers, remote_server)
+			end
+
+			local fakedns_tag = "remote_fakeip"
+			if remote_dns_fake or inner_fakedns == "1" then
+				dns.fakeip = {
+					enabled = true,
+					inet4_range = "198.18.0.0/16",
+					inet6_range = "fc00::/18",
+				}
+				table.insert(dns.servers, {
+					tag = fakedns_tag,
+					address = "fakeip",
+					strategy = remote_strategy,
+				})
+				if not experimental then
+					experimental = {}
+				end
+				experimental.cache_file = {
+					enabled = true,
+					store_fakeip = true,
+					path = CACHE_PATH .. "/singbox_" .. flag .. ".db"
+				}
+			end
+
+			if direct_dns_udp_server then
+				local port = tonumber(direct_dns_udp_port) or 53
+				table.insert(dns.servers, {
+					tag = "direct",
+					address = "udp://" .. direct_dns_udp_server .. ":" .. port,
+					address_strategy = "prefer_ipv6",
+					strategy = direct_strategy,
+					detour = "direct",
+				})
+			end
+
+			local default_dns_flag = "remote"
+			if node_id and redir_port then
+				local node = get_node_by_id(node_id)
+				if node and node.protocol == "_shunt" and node.default_node == "_direct" then
+					default_dns_flag = "direct"
+				end
+			else
+				default_dns_flag = "direct"
+			end
+			dns.final = default_dns_flag
 		end
-	
+
 		if direct_dns_udp_server then
 			local domain = {}
 			local nodes_domain_text = sys.exec('uci show passwall2 | grep ".address=" | cut -d "\'" -f 2 | grep "[a-zA-Z]$" | sort -u')
@@ -1701,38 +1822,8 @@ function gen_config(var)
 					domain = domain
 				})
 			end
-	
-			local direct_strategy = "prefer_ipv6"
-			if direct_dns_query_strategy == "UseIPv4" then
-				direct_strategy = "ipv4_only"
-			elseif direct_dns_query_strategy == "UseIPv6" then
-				direct_strategy = "ipv6_only"
-			end
-	
-			local port = tonumber(direct_dns_udp_port) or 53
-	
-			table.insert(dns.servers, {
-				tag = "direct",
-				address = "udp://" .. direct_dns_udp_server .. ":" .. port,
-				address_strategy = "prefer_ipv6",
-				strategy = direct_strategy,
-				detour = "direct",
-			})
 		end
 
-		local default_dns_flag = "remote"
-		if node_id and redir_port then
-			local node = get_node_by_id(node_id)
-			if node.protocol == "_shunt" then
-				if node.default_node == "_direct" then
-					default_dns_flag = "direct"
-				end
-			end
-		else default_dns_flag = "direct"
-		end
-		dns.final = default_dns_flag
-
-		-- DNS in order of shunt
 		if dns_domain_rules and #dns_domain_rules > 0 then
 			for index, value in ipairs(dns_domain_rules) do
 				if value.outboundTag and (value.domain or value.domain_suffix or value.domain_keyword or value.domain_regex or value.rule_set) then
@@ -1749,41 +1840,24 @@ function gen_config(var)
 					if value.outboundTag ~= "block" and value.outboundTag ~= "direct" then
 						dns_rule.server = "remote"
 						dns_rule.rewrite_ttl = 30
-						if value.outboundTag ~= COMMON.default_outbound_tag and remote_server.address and remote_dns_detour ~= "direct" then
-							local remote_dns_server = api.clone(remote_server)
-							remote_dns_server.tag = value.shunt_tag
-							remote_dns_server.detour = value.outboundTag
-							table.insert(dns.servers, remote_dns_server)
-							dns_rule.server = remote_dns_server.tag
-						end
-						if value.fakedns then
-							local fakedns_dns_rule = api.clone(dns_rule)
-							fakedns_dns_rule.query_type = {
-								"A", "AAAA"
-							}
-							fakedns_dns_rule.server = fakedns_tag
-							fakedns_dns_rule.disable_cache = true
-							fakedns_dns_rule.client_subnet = nil
-							table.insert(dns.rules, fakedns_dns_rule)
-						end
 					end
 					table.insert(dns.rules, dns_rule)
 				end
 			end
 		end
 
-		if remote_dns_fake and default_dns_flag == "remote" then
-			-- When default is not direct and enable fakedns, default DNS use FakeDNS.
+		if remote_dns_fake and dns.final == "remote" then
 			local fakedns_dns_rule = {
 				query_type = {
 					"A", "AAAA"
 				},
-				server = fakedns_tag,
+				server = "remote_fakeip",
 				disable_cache = true
 			}
 			table.insert(dns.rules, fakedns_dns_rule)
 		end
-	
+
+		-- DNS 入站和出站
 		table.insert(inbounds, {
 			type = "direct",
 			tag = "dns-in",
@@ -1800,6 +1874,7 @@ function gen_config(var)
 			inbound = {
 				"dns-in"
 			},
+			action = "hijack-dns",
 			outbound = "dns-out"
 		})
 
@@ -1859,12 +1934,20 @@ function gen_config(var)
 			route = route,
 			experimental = experimental,
 		}
+	if version_ge_1_13_0 then
+		table.insert(outbounds, {
+			type = "direct",
+			tag = "direct",
+			routing_mark = 255,
+		})
+	else
 		table.insert(outbounds, {
 			type = "direct",
 			tag = "direct",
 			routing_mark = 255,
 			domain_strategy = "prefer_ipv6",
 		})
+	end
 		table.insert(outbounds, {
 			type = "block",
 			tag = "block"
@@ -1963,6 +2046,9 @@ function gen_config(var)
 				})
 			end
 		end
+	if version_ge_1_13_0 and config.route and not config.route.default_domain_resolver then
+		config.route.default_domain_resolver = "remote"
+	end
 		return jsonc.stringify(config, 1)
 	end
 end
