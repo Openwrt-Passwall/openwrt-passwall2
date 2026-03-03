@@ -179,6 +179,14 @@ function gen_outbound(flag, node, tag, proxy_table)
 					table.insert(alpn, w)
 				end)
 			end
+			local ech = {
+				enabled = (node.ech == "1") and true or false,
+				config = node.ech_config and split(node.ech_config:gsub("\\n", "\n"), "\n") or {},
+			}
+			if not version_ge_1_13_0 then
+				ech.pq_signature_schemes_enabled = node.pq_signature_schemes_enabled and true or false
+				ech.dynamic_record_sizing_disabled = node.dynamic_record_sizing_disabled and true or false
+			end
 			tls = {
 				enabled = true,
 				disable_sni = (node.tls_disable_sni == "1") and true or false, -- Do not send the server name in ClientHello.
@@ -188,12 +196,7 @@ function gen_outbound(flag, node, tag, proxy_table)
 				--max_version = "1.3",
 				fragment = fragment,
 				record_fragment = record_fragment,
-				ech = {
-					enabled = (node.ech == "1") and true or false,
-					config = node.ech_config and split(node.ech_config:gsub("\\n", "\n"), "\n") or {},
-					pq_signature_schemes_enabled = node.pq_signature_schemes_enabled and true or false,
-					dynamic_record_sizing_disabled = node.dynamic_record_sizing_disabled and true or false
-				},
+				ech = ech,
 				utls = {
 					enabled = (node.utls == "1" or node.reality == "1") and true or false,
 					fingerprint = node.fingerprint or "chrome"
@@ -417,6 +420,14 @@ function gen_outbound(flag, node, tag, proxy_table)
 					end
 				end
 			end
+			local ech = {
+				enabled = (node.ech == "1") and true or false,
+				config = node.ech_config and split(node.ech_config:gsub("\\n", "\n"), "\n") or {},
+			}
+			if not version_ge_1_13_0 then
+				ech.pq_signature_schemes_enabled = node.pq_signature_schemes_enabled and true or false
+				ech.dynamic_record_sizing_disabled = node.dynamic_record_sizing_disabled and true or false
+			end
 			protocol_table = {
 				server_ports = next(server_ports) and server_ports or nil,
 				hop_interval = (function()
@@ -441,12 +452,7 @@ function gen_outbound(flag, node, tag, proxy_table)
 					alpn = (node.hysteria_alpn and node.hysteria_alpn ~= "") and {
 						node.hysteria_alpn
 					} or nil,
-					ech = {
-						enabled = (node.ech == "1") and true or false,
-						config = node.ech_config and split(node.ech_config:gsub("\\n", "\n"), "\n") or {},
-						pq_signature_schemes_enabled = node.pq_signature_schemes_enabled and true or false,
-						dynamic_record_sizing_disabled = node.dynamic_record_sizing_disabled and true or false
-					}
+					ech = ech,
 				}
 			}
 		end
@@ -460,6 +466,17 @@ function gen_outbound(flag, node, tag, proxy_table)
 		end
 
 		if node.protocol == "tuic" then
+			local ech = nil
+			if node.ech == "1" then
+				ech = {
+					enabled = true,
+					config = node.ech_config and split(node.ech_config:gsub("\\n", "\n"), "\n") or {},
+				}
+				if not version_ge_1_13_0 then
+					ech.pq_signature_schemes_enabled = node.pq_signature_schemes_enabled and true or false
+					ech.dynamic_record_sizing_disabled = node.dynamic_record_sizing_disabled and true or false
+				end
+			end
 			protocol_table = {
 				uuid = node.uuid,
 				password = node.password,
@@ -478,12 +495,7 @@ function gen_outbound(flag, node, tag, proxy_table)
 					alpn = (node.tuic_alpn and node.tuic_alpn ~= "") and {
 						node.tuic_alpn
 					} or nil,
-					ech = (node.ech == "1") and {
-						enabled = true,
-						config = node.ech_config and split(node.ech_config:gsub("\\n", "\n"), "\n") or {},
-						pq_signature_schemes_enabled = node.pq_signature_schemes_enabled and true or false,
-						dynamic_record_sizing_disabled = node.dynamic_record_sizing_disabled and true or false
-					} or nil
+					ech = ech,
 				}
 			}
 		end
@@ -497,6 +509,14 @@ function gen_outbound(flag, node, tag, proxy_table)
 						table.insert(server_ports, range)
 					end
 				end
+			end
+			local ech = {
+				enabled = (node.ech == "1") and true or false,
+				config = node.ech_config and split(node.ech_config:gsub("\\n", "\n"), "\n") or {},
+			}
+			if not version_ge_1_13_0 then
+				ech.pq_signature_schemes_enabled = node.pq_signature_schemes_enabled and true or false
+				ech.dynamic_record_sizing_disabled = node.dynamic_record_sizing_disabled and true or false
 			end
 			protocol_table = {
 				server_ports = next(server_ports) and server_ports or nil,
@@ -518,12 +538,7 @@ function gen_outbound(flag, node, tag, proxy_table)
 					insecure = (node.tls_allowInsecure == "1") and true or false,
 					fragment = fragment,
 					record_fragment = record_fragment,
-					ech = {
-						enabled = (node.ech == "1") and true or false,
-						config = node.ech_config and split(node.ech_config:gsub("\\n", "\n"), "\n") or {},
-						pq_signature_schemes_enabled = node.pq_signature_schemes_enabled and true or false,
-						dynamic_record_sizing_disabled = node.dynamic_record_sizing_disabled and true or false
-					}
+					ech = ech,
 				}
 			}
 		end
@@ -591,9 +606,11 @@ function gen_config_server(node)
 		tls.ech = {
 			enabled = true,
 			key = node.ech_key and split(node.ech_key:gsub("\\n", "\n"), "\n") or {},
-			pq_signature_schemes_enabled = (node.pq_signature_schemes_enabled == "1") and true or false,
-			dynamic_record_sizing_disabled = (node.dynamic_record_sizing_disabled == "1") and true or false,
 		}
+		if not version_ge_1_13_0 then
+			tls.ech.pq_signature_schemes_enabled = (node.pq_signature_schemes_enabled == "1") and true or false
+			tls.ech.dynamic_record_sizing_disabled = (node.dynamic_record_sizing_disabled == "1") and true or false
+		end
 	end
 
 	local mux = nil
@@ -1712,9 +1729,8 @@ function gen_config(var)
 				end
 			else
 				dns.final = "direct"
-			end
-
-		else
+				end
+			else
 			table.insert(dns.servers, {
 				tag = "block",
 				address = "rcode://success",
@@ -1857,7 +1873,6 @@ function gen_config(var)
 			table.insert(dns.rules, fakedns_dns_rule)
 		end
 
-		-- DNS 入站和出站
 		table.insert(inbounds, {
 			type = "direct",
 			tag = "dns-in",
@@ -2046,7 +2061,7 @@ function gen_config(var)
 				})
 			end
 		end
-	if version_ge_1_13_0 and config.route and not config.route.default_domain_resolver then
+	if version_ge_1_12_0 and config.route and not config.route.default_domain_resolver then
 		config.route.default_domain_resolver = "remote"
 	end
 		return jsonc.stringify(config, 1)
