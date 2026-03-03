@@ -2061,7 +2061,7 @@ function gen_config(var)
 				})
 			end
 		end
-	if version_ge_1_12_0 and config.route and not config.route.default_domain_resolver then
+	if version_ge_1_13_0 and config.route and not config.route.default_domain_resolver then
 		config.route.default_domain_resolver = "remote"
 	end
 		return jsonc.stringify(config, 1)
