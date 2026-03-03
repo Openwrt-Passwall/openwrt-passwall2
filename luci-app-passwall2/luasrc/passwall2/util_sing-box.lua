@@ -999,6 +999,28 @@ function gen_config(var)
 	local experimental = nil
 	local inner_fakedns = false
 
+	local function parse_doh_url(input)
+		if not input or input == "" then return nil end
+		local parts = split(input, ",")
+		local url = parts[1]
+		if not url:match("^https://") then
+			api.log(0, "Invalid DoH URL (must start with https://): " .. url)
+			return nil
+		end
+		local rest = url:sub(9)
+		local host_part, path = rest:match("^([^/]+)(.*)$")
+		path = path or ""
+		if path == "" then path = "/" end
+		local host, port = host_part:match("^(.-):(%d+)$")
+		if host then
+			port = tonumber(port)
+		else
+			host = host_part
+			port = 443
+		end
+		return host, port, path
+	end
+
 	function add_rule_set(tab)
 		if tab and next(tab) and tab.tag and not rule_set_table[tab.tag]then
 			rule_set_table[tab.tag] = tab
@@ -1680,12 +1702,18 @@ function gen_config(var)
 			end
 
 			if remote_dns_doh_url then
-				table.insert(dns.servers, {
-					tag = "remote",
-					type = "https",
-					server = remote_dns_doh_url,
-					detour = (remote_dns_detour == "direct") and "direct" or COMMON.default_outbound_tag,
-				})
+				local host, port, path = parse_doh_url(remote_dns_doh_url)
+				if host then
+					local server = {
+						tag = "remote",
+						type = "https",
+						server = host,
+						server_port = port,
+						path = path,
+						detour = (remote_dns_detour == "direct") and "direct" or COMMON.default_outbound_tag,
+					}
+					table.insert(dns.servers, server)
+				end
 			end
 
 			if direct_dns_udp_server then
