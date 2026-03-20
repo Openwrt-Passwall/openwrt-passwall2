@@ -37,6 +37,17 @@ config_t_set() {
 	local ret=$(uci -q set "${CONFIG}.@${1}[${index}].${2}=${3}" 2>/dev/null)
 }
 
+is_safe_cache_key() {
+	case "$1" in
+		""|*[!A-Za-z0-9_]*)
+			return 1
+		;;
+		*)
+			return 0
+		;;
+	esac
+}
+
 eval_set_val() {
 	for i in $@; do
 		for j in $i; do
@@ -54,25 +65,33 @@ eval_unset_val() {
 }
 
 eval_cache_var() {
-	[ -s "$TMP_PATH/var" ] && eval $(cat "$TMP_PATH/var")
+	[ -s "$TMP_PATH/var" ] || return 0
+	while IFS= read -r line; do
+		local key val
+		key=$(printf '%s\n' "$line" | awk -F '=' '{print $1}')
+		val=$(printf '%s\n' "$line" | sed -n 's/^[^=]*="\(.*\)"$/\1/p')
+		is_safe_cache_key "$key" || continue
+		export "${key}=${val}"
+	done < "$TMP_PATH/var"
 }
 
 get_cache_var() {
 	local key="${1}"
-	[ -n "${key}" ] && [ -s "$TMP_PATH/var" ] && {
-		echo $(cat $TMP_PATH/var | grep "^${key}=" | awk -F '=' '{print $2}' | tail -n 1 | awk -F'"' '{print $2}')
-	}
+	is_safe_cache_key "${key}" || return 0
+	[ -n "${key}" ] && [ -s "$TMP_PATH/var" ] && awk -v key="${key}" -F '=' '$1 == key {print $2}' "$TMP_PATH/var" | tail -n 1 | awk -F'"' '{print $2}'
 }
 
 set_cache_var() {
 	local key="${1}"
 	shift 1
-	local val="$@"
-	[ -n "${key}" ] && [ -n "${val}" ] && {
-		sed -i "/${key}=/d" $TMP_PATH/var >/dev/null 2>&1
-		echo "${key}=\"${val}\"" >> $TMP_PATH/var
-		eval ${key}=\"${val}\"
-	}
+	local val="$*"
+	is_safe_cache_key "${key}" || return 1
+	val=$(printf '%s' "${val}" | tr '\r\n"' '   ')
+	mkdir -p "${TMP_PATH}"
+	[ -f "$TMP_PATH/var" ] || : > "$TMP_PATH/var"
+	sed -i "/^${key}=/d" "$TMP_PATH/var" >/dev/null 2>&1
+	printf '%s="%s"\n' "${key}" "${val}" >> "$TMP_PATH/var"
+	export "${key}=${val}"
 }
 
 echolog() {

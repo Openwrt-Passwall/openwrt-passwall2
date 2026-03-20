@@ -2,6 +2,17 @@
 
 . /usr/share/passwall2/utils.sh
 
+is_safe_identifier() {
+	case "$1" in
+		""|*[!A-Za-z0-9_-]*)
+			return 1
+		;;
+		*)
+			return 0
+		;;
+	esac
+}
+
 test_url() {
 	local url=$1
 	local try=1
@@ -44,16 +55,20 @@ test_proxy() {
 url_test_node() {
 	result=0
 	local node_id=$1
+	is_safe_identifier "$node_id" || {
+		echo $result
+		return
+	}
 	local _type=$(echo $(config_n_get ${node_id} type) | tr 'A-Z' 'a-z')
 	[ -n "${_type}" ] && {
 		local _tmp_port=$(get_new_port 48900 tcp,udp)
-		/usr/share/${CONFIG}/app.sh run_socks flag="url_test_${node_id}" node=${node_id} bind=127.0.0.1 socks_port=${_tmp_port} config_file=url_test_${node_id}.json
+		/usr/share/${CONFIG}/app.sh run_socks flag="url_test_${node_id}" node="${node_id}" bind=127.0.0.1 socks_port="${_tmp_port}" config_file="url_test_${node_id}.json"
 		local curlx="socks5h://127.0.0.1:${_tmp_port}"
 		sleep 1s
 		local url=$(config_t_get global_other url_test_url https://www.google.com/generate_204)
-		result=$(curl --connect-timeout 3 -o /dev/null -I -skL -w "%{http_code}:%{time_starttransfer}" -x $curlx "${url}")
-		pgrep -af "url_test_${node_id}" | awk '! /test\.sh/{print $1}' | xargs kill -9 >/dev/null 2>&1
-		rm -rf /tmp/etc/${CONFIG}/*url_test_${node_id}*.json
+		result=$(curl --connect-timeout 3 -o /dev/null -I -skL -w "%{http_code}:%{time_starttransfer}" -x "$curlx" "${url}")
+		pgrep -af -- "url_test_${node_id}" | awk '! /test\.sh/{print $1}' | xargs kill -9 >/dev/null 2>&1
+		rm -f "/tmp/etc/${CONFIG}/url_test_${node_id}.json"
 	}
 	echo $result
 }
