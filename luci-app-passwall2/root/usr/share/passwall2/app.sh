@@ -107,7 +107,7 @@ run_xray() {
 		json_add_string "dns_listen_port" "${dns_listen_port}"
 		[ -n "$dns_cache" ] && json_add_string "dns_cache" "${dns_cache}"
 
-		local _dns=$(get_first_dns AUTO_DNS 53 | sed 's/#/:/g')
+		local _dns=$(get_first_dns "$AUTO_DNS" 53 | sed 's/#/:/g')
 		local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
 		local _dns_port=$(echo ${_dns} | awk -F ':' '{print $2}')
 
@@ -154,14 +154,14 @@ run_xray() {
 		json_init
 		case "$remote_dns_protocol" in
 			udp)
-				local _dns=$(get_first_dns remote_dns_udp_server 53 | sed 's/#/:/g')
+				local _dns=$(get_first_dns "$remote_dns_udp_server" 53 | sed 's/#/:/g')
 				local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
 				local _dns_port=$(echo ${_dns} | awk -F ':' '{print $2}')
 				json_add_string "remote_dns_udp_port" "${_dns_port}"
 				json_add_string "remote_dns_udp_server" "${_dns_address}"
 			;;
 			tcp)
-				local _dns=$(get_first_dns remote_dns_tcp_server 53 | sed 's/#/:/g')
+				local _dns=$(get_first_dns "$remote_dns_tcp_server" 53 | sed 's/#/:/g')
 				local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
 				local _dns_port=$(echo ${_dns} | awk -F ':' '{print $2}')
 				json_add_string "remote_dns_tcp_port" "${_dns_port}"
@@ -190,17 +190,17 @@ run_xray() {
 
 		local independent_dns
 		if [ -z "${independent_dns}" ]; then
-			local _json2_keys key
+			local _json2_keys key _v
 			json_load "${_json2_arg}"
 			json_get_keys _json2_keys
 			for key in ${_json2_keys}; do
-				json_get_var "_json2_$key" "$key"
+				json_get_var _v "$key"
+				json_load "${_json1_arg}"
+				json_add_string "$key" "$_v"
+				_json1_arg="$(json_dump)"
+				json_load "${_json2_arg}"
 			done
 			json_load "${_json1_arg}"
-			for key in ${_json2_keys}; do
-				eval "local _v=\$_json2_$key"
-				json_add_string "$key" "$_v"
-			done
 		else
 			dns_remote_listen_port=$(get_new_port $(expr ${direct_dnsmasq_listen_port:-${dns_listen_port}} + 1) udp)
 			V2RAY_DNS_REMOTE_CONFIG="${TMP_PATH}/${flag}_dns_remote.json"
@@ -290,7 +290,7 @@ run_singbox() {
 		}
 	}
 	[ -n "$dns_listen_port" ] && {
-		local _dns=$(get_first_dns AUTO_DNS 53 | sed 's/#/:/g')
+		local _dns=$(get_first_dns "$AUTO_DNS" 53 | sed 's/#/:/g')
 		local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
 		local _dns_port=$(echo ${_dns} | awk -F ':' '{print $2}')
 
@@ -332,7 +332,7 @@ run_singbox() {
 		case "$remote_dns_protocol" in
 			udp|\
 			quic)
-				local _dns=$(get_first_dns remote_dns_udp_server 53 | sed 's/#/:/g')
+				local _dns=$(get_first_dns "$remote_dns_udp_server" 53 | sed 's/#/:/g')
 				local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
 				local _dns_port=$(echo ${_dns} | awk -F ':' '{print $2}')
 				json_add_string "remote_dns_udp_port" "${_dns_port}"
@@ -341,7 +341,7 @@ run_singbox() {
 			;;
 			tcp|\
 			tls)
-				local _dns=$(get_first_dns remote_dns_tcp_server 53 | sed 's/#/:/g')
+				local _dns=$(get_first_dns "$remote_dns_tcp_server" 53 | sed 's/#/:/g')
 				local _dns_address=$(echo ${_dns} | awk -F ':' '{print $1}')
 				local _dns_port=$(echo ${_dns} | awk -F ':' '{print $2}')
 				json_add_string "remote_dns_tcp_port" "${_dns_port}"
@@ -1036,7 +1036,29 @@ acl_app() {
 			local _ip _mac _iprange _ipset _ip_or_mac source_list config_file
 			local sid=$(uci -q show "${CONFIG}.${item}" | grep "=acl_rule" | awk -F '=' '{print $1}' | awk -F '.' '{print $2}')
 			[ "$(config_n_get $sid enabled)" = "1" ] || continue
-			eval $(uci -q show "${CONFIG}.${item}" | cut -d'.' -sf 3-)
+			while IFS='=' read -r key value; do
+				value="${value#\'}"
+				value="${value%\'}"
+				case "$key" in
+					enabled) enabled="$value" ;;
+					remarks) remarks="$value" ;;
+					sources) sources="${sources:+${sources} }$value" ;;
+					interface) interface="$value" ;;
+					tcp_no_redir_ports) tcp_no_redir_ports="$value" ;;
+					udp_no_redir_ports) udp_no_redir_ports="$value" ;;
+					node) node="$value" ;;
+					direct_dns_query_strategy) direct_dns_query_strategy="$value" ;;
+					remote_dns_protocol) remote_dns_protocol="$value" ;;
+					remote_dns) remote_dns="$value" ;;
+					remote_dns_doh) remote_dns_doh="$value" ;;
+					remote_dns_client_ip) remote_dns_client_ip="$value" ;;
+					remote_dns_detour) remote_dns_detour="$value" ;;
+					remote_fakedns) remote_fakedns="$value" ;;
+					remote_dns_query_strategy) remote_dns_query_strategy="$value" ;;
+				esac
+			done <<EOF
+$(uci -q show "${CONFIG}.${item}" | cut -d'.' -sf 3-)
+EOF
 
 			if [ -n "${sources}" ]; then
 				for s in $sources; do
