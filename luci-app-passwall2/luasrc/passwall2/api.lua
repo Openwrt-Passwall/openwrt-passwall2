@@ -60,6 +60,21 @@ function is_old_uci()
 	return sys.call("grep -E 'require[ \t]*\"uci\"' /usr/lib/lua/luci/model/uci.lua >/dev/null 2>&1") == 0
 end
 
+local function is_safe_uci_identifier(value)
+	return type(value) == "string" and value:match("^[A-Za-z0-9_%-]+$") ~= nil
+end
+
+local function is_safe_uci_reference(value)
+	return type(value) == "string" and (
+		value:match("^[A-Za-z0-9_%-]+$") ~= nil or
+		value:match("^@[A-Za-z0-9_%-]+%[%d+%]$") ~= nil
+	)
+end
+
+local function is_safe_cache_key(value)
+	return type(value) == "string" and value:match("^[A-Za-z0-9_]+$") ~= nil
+end
+
 function uci_save(cursor, config, commit, apply)
 	if is_old_uci() then
 		cursor:save(config)
@@ -82,38 +97,93 @@ function uci_save(cursor, config, commit, apply)
 end
 
 function sh_uci_get(config, section, option)
-	local _, val = exec_call(string.format("uci -q get %s.%s.%s", config, section, option))
-	return val
+	if not is_safe_uci_identifier(config) or not is_safe_uci_reference(section) or not is_safe_uci_identifier(option) then
+		return nil
+	end
+	return uci:get(config, section, option)
 end
 
 function sh_uci_set(config, section, option, val, commit)
-	exec_call(string.format("uci -q set %s.%s.%s=\"%s\"", config, section, option, val))
+	if not is_safe_uci_identifier(config) or not is_safe_uci_reference(section) or not is_safe_uci_identifier(option) then
+		return false
+	end
+	uci:set(config, section, option, tostring(val))
+	uci:save(config)
 	if commit then sh_uci_commit(config) end
+	return true
 end
 
 function sh_uci_del(config, section, option, commit)
-	exec_call(string.format("uci -q delete %s.%s.%s", config, section, option))
+	if not is_safe_uci_identifier(config) or not is_safe_uci_reference(section) or not is_safe_uci_identifier(option) then
+		return false
+	end
+	uci:delete(config, section, option)
+	uci:save(config)
 	if commit then sh_uci_commit(config) end
+	return true
 end
 
 function sh_uci_add_list(config, section, option, val, commit)
-	exec_call(string.format("uci -q del_list %s.%s.%s=\"%s\"", config, section, option, val))
-	exec_call(string.format("uci -q add_list %s.%s.%s=\"%s\"", config, section, option, val))
+	if not is_safe_uci_identifier(config) or not is_safe_uci_reference(section) or not is_safe_uci_identifier(option) then
+		return false
+	end
+	local list = uci:get_list(config, section, option) or {}
+	local str_val = tostring(val)
+	for _, item in ipairs(list) do
+		if item == str_val then
+			if commit then sh_uci_commit(config) end
+			return true
+		end
+	end
+	list[#list + 1] = str_val
+	uci:set_list(config, section, option, list)
+	uci:save(config)
 	if commit then sh_uci_commit(config) end
+	return true
 end
 
 function sh_uci_commit(config)
-	exec_call(string.format("uci -q commit %s", config))
+	if not is_safe_uci_identifier(config) then
+		return false
+	end
+	uci:commit(config)
+	return true
 end
 
 function set_cache_var(key, val)
-	sys.call(string.format('. /usr/share/passwall2/utils.sh ; set_cache_var %s "%s"', key, val))
+	if not is_safe_cache_key(key) then
+		return false
+	end
+	local cache_file = TMP_PATH .. "/var"
+	local value = tostring(val or ""):gsub("[\r\n\"]", " ")
+	local lines = {}
+	if fs.access(cache_file) then
+		for line in (fs.readfile(cache_file) or ""):gmatch("[^\r\n]+") do
+			if not line:match("^" .. key .. "=") then
+				lines[#lines + 1] = line
+			end
+		end
+	end
+	lines[#lines + 1] = string.format('%s="%s"', key, value)
+	fs.mkdirr(TMP_PATH)
+	return fs.writefile(cache_file, table.concat(lines, "\n") .. "\n")
 end
 
 function get_cache_var(key)
-	local val = sys.exec(string.format('. /usr/share/passwall2/utils.sh ; echo -n $(get_cache_var %s)', key))
-	if val == "" then val = nil end
-	return val
+	if not is_safe_cache_key(key) then
+		return nil
+	end
+	local cache_file = TMP_PATH .. "/var"
+	if not fs.access(cache_file) then
+		return nil
+	end
+	for line in (fs.readfile(cache_file) or ""):gmatch("[^\r\n]+") do
+		local k, v = line:match('^([A-Za-z0-9_]+)="(.*)"$')
+		if k == key then
+			return v ~= "" and v or nil
+		end
+	end
+	return nil
 end
 
 function get_new_port()

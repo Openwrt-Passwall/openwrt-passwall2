@@ -12,6 +12,65 @@ local fs = api.fs
 local jsonStringify = luci.jsonc.stringify
 local jsonParse = luci.jsonc.parse
 
+local function shellquote(value)
+	return util.shellquote(tostring(value or ""))
+end
+
+local function is_safe_identifier(value)
+	return type(value) == "string" and value:match("^[A-Za-z0-9_%-]+$") ~= nil
+end
+
+local function is_safe_uci_reference(value)
+	return type(value) == "string" and (
+		value:match("^[A-Za-z0-9_%-]+$") ~= nil or
+		value:match("^@[A-Za-z0-9_%-]+%[%d+%]$") ~= nil
+	)
+end
+
+local function is_safe_backup_filename(value)
+	return type(value) == "string" and value:match("^[A-Za-z0-9._%-]+$") ~= nil and not value:find("/", 1, true)
+end
+
+local function parse_port(value)
+	local port = tonumber(value)
+	if port and port >= 1 and port <= 65535 and tostring(port) == tostring(value) then
+		return port
+	end
+	return nil
+end
+
+local function is_safe_url(value)
+	if type(value) ~= "string" or value == "" then
+		return false
+	end
+	if value:find("[\r\n%z]") then
+		return false
+	end
+	return value:match("^https?://") ~= nil
+end
+
+local function archive_entries_are_safe(file_path)
+	local cmd = "tar -tvzf " .. shellquote(file_path) .. " 2>/dev/null"
+	local output = luci.sys.exec(cmd)
+	if output == "" then
+		return false
+	end
+	for line in output:gmatch("[^\r\n]+") do
+		local entry_type = line:sub(1, 1)
+		if entry_type ~= "-" and entry_type ~= "d" then
+			return false
+		end
+		local entry = line:match("%d%d:%d%d%s+(.+)$") or line:match("%d%d%d%d%-%d%d%-%d%d%s+%d%d:%d%d%s+(.+)$")
+		if not entry or entry == "" then
+			return false
+		end
+		if entry:sub(1, 1) == "/" or entry:find("%.%.", 1, true) then
+			return false
+		end
+	end
+	return true
+end
+
 function index()
 	if not nixio.fs.access("/etc/config/passwall2") then
 		if nixio.fs.access("/usr/share/passwall2/0_default_config") then
@@ -169,7 +228,7 @@ function link_add_node()
 		end
 		-- If it's the last piece, then it will be executed.
 		if chunk_index + 1 == total_chunks then
-			luci.sys.call("lua /usr/share/passwall2/subscribe.lua add " .. group)
+			luci.sys.call("lua /usr/share/passwall2/subscribe.lua add " .. shellquote(group))
 		end
 	end
 end
@@ -215,12 +274,26 @@ end
 
 function gen_client_config()
 	local id = http.formvalue("id")
+	if not is_safe_identifier(id) then
+		http.status(400, "Bad Request")
+		http_write_json_error("Invalid node id")
+		return
+	end
 	local config_file = api.TMP_PATH .. "/config_" .. id
-	luci.sys.call(string.format("/usr/share/passwall2/app.sh run_socks flag=config_%s node=%s bind=127.0.0.1 socks_port=1080 config_file=%s no_run=1", id, id, config_file))
+	local cmd = table.concat({
+		"/usr/share/passwall2/app.sh run_socks",
+		"flag=" .. shellquote("config_" .. id),
+		"node=" .. shellquote(id),
+		"bind=" .. shellquote("127.0.0.1"),
+		"socks_port=" .. shellquote("1080"),
+		"config_file=" .. shellquote(config_file),
+		"no_run=1"
+	}, " ")
+	luci.sys.call(cmd)
 	if nixio.fs.access(config_file) then
 		http.prepare_content("application/json")
-		http.write(luci.sys.exec("cat " .. config_file))
-		luci.sys.call("rm -f " .. config_file)
+		http.write(fs.readfile(config_file) or "")
+		fs.remove(config_file)
 	else
 		http.redirect(api.url("node_list"))
 	end
@@ -238,9 +311,14 @@ end
 function get_redir_log()
 	local id = http.formvalue("id")
 	local name = http.formvalue("name")
+	if not is_safe_identifier(id) or not is_safe_identifier(name) then
+		http.status(400, "Bad Request")
+		http.write(i18n.translate("Invalid log target"))
+		return
+	end
 	local file_path = "/tmp/etc/passwall2/acl/" .. id .. "/" .. name .. ".log"
 	if nixio.fs.access(file_path) then
-		local content = luci.sys.exec("tail -n 19999 '" .. file_path .. "'")
+		local content = luci.sys.exec("tail -n 19999 -- " .. shellquote(file_path))
 		content = content:gsub("\n", "<br />")
 		http.write(content)
 	else
@@ -250,9 +328,14 @@ end
 
 function get_socks_log()
 	local name = http.formvalue("name")
+	if not is_safe_identifier(name) then
+		http.status(400, "Bad Request")
+		http.write(i18n.translate("Invalid log target"))
+		return
+	end
 	local path = "/tmp/etc/passwall2/SOCKS_" .. name .. ".log"
 	if nixio.fs.access(path) then
-		local content = luci.sys.exec("tail -n 5000 ".. path)
+		local content = luci.sys.exec("tail -n 5000 -- " .. shellquote(path))
 		content = content:gsub("\n", "<br />")
 		http.write(content)
 	else
@@ -285,13 +368,18 @@ function socks_status()
 	local e = {}
 	local index = http.formvalue("index")
 	local id = http.formvalue("id")
+	if not is_safe_identifier(id) then
+		http.status(400, "Bad Request")
+		http_write_json_error("Invalid node id")
+		return
+	end
 	e.index = index
-	e.socks_status = luci.sys.call(string.format("/bin/busybox top -bn1 | grep -v -E 'grep|acl/|acl_' | grep '%s/bin/' | grep '%s' | grep 'SOCKS_' > /dev/null", appname, id)) == 0
+	e.socks_status = luci.sys.call(string.format("/bin/busybox top -bn1 | grep -v -E 'grep|acl/|acl_' | grep '%s/bin/' | grep -- %s | grep 'SOCKS_' > /dev/null", appname, shellquote(id))) == 0
 	local use_http = uci:get(appname, id, "http_port") or 0
 	e.use_http = 0
 	if tonumber(use_http) > 0 then
 		e.use_http = 1
-		e.http_status = luci.sys.call(string.format("/bin/busybox top -bn1 | grep -v -E 'grep|acl/|acl_' | grep '%s/bin/' | grep '%s' | grep -E 'HTTP_|HTTP2SOCKS' > /dev/null", appname, id)) == 0
+		e.http_status = luci.sys.call(string.format("/bin/busybox top -bn1 | grep -v -E 'grep|acl/|acl_' | grep '%s/bin/' | grep -- %s | grep -E 'HTTP_|HTTP2SOCKS' > /dev/null", appname, shellquote(id))) == 0
 	end
 	http_write_json(e)
 end
@@ -300,7 +388,12 @@ function connect_status()
 	local e = {}
 	e.use_time = ""
 	local url = http.formvalue("url")
-	local result = luci.sys.exec('curl --connect-timeout 3 -o /dev/null -I -sk -w "%{http_code}:%{time_appconnect}" ' .. url)
+	if not is_safe_url(url) then
+		http.status(400, "Bad Request")
+		http_write_json_error("Invalid URL")
+		return
+	end
+	local result = luci.sys.exec('curl --connect-timeout 3 -o /dev/null -I -sk -w "%{http_code}:%{time_appconnect}" -- ' .. shellquote(url))
 	local code = tonumber(luci.sys.exec("echo -n '" .. result .. "' | awk -F ':' '{print $1}'") or "0")
 	if code ~= 0 then
 		local use_time = luci.sys.exec("echo -n '" .. result .. "' | awk -F ':' '{print $2}'")
@@ -319,15 +412,26 @@ function ping_node()
 	local address = http.formvalue("address")
 	local port = http.formvalue("port")
 	local type = http.formvalue("type") or "icmp"
+	if not address or address == "" or address:find("[\r\n%z]") then
+		http.status(400, "Bad Request")
+		http_write_json_error("Invalid address")
+		return
+	end
+	local parsed_port = parse_port(port)
+	if type == "tcping" and not parsed_port then
+		http.status(400, "Bad Request")
+		http_write_json_error("Invalid port")
+		return
+	end
 	local e = {}
 	e.index = index
 	if type == "tcping" and luci.sys.exec("echo -n $(command -v tcping)") ~= "" then
 		if api.is_ipv6(address) then
 			address = api.get_ipv6_only(address)
 		end
-		e.ping = luci.sys.exec(string.format("echo -n $(tcping -q -c 1 -i 1 -t 2 -p %s %s 2>&1 | grep -o 'time=[0-9]*' | awk -F '=' '{print $2}') 2>/dev/null", port, address))
+		e.ping = luci.sys.exec(string.format("echo -n $(tcping -q -c 1 -i 1 -t 2 -p %d %s 2>&1 | grep -o 'time=[0-9]*' | awk -F '=' '{print $2}') 2>/dev/null", parsed_port, shellquote(address)))
 	else
-		e.ping = luci.sys.exec("echo -n $(ping -c 1 -W 1 %q 2>&1 | grep -o 'time=[0-9]*' | awk -F '=' '{print $2}') 2>/dev/null" % address)
+		e.ping = luci.sys.exec("echo -n $(ping -c 1 -W 1 -- " .. shellquote(address) .. " 2>&1 | grep -o 'time=[0-9]*' | awk -F '=' '{print $2}') 2>/dev/null")
 	end
 	http_write_json(e)
 end
@@ -335,9 +439,14 @@ end
 function urltest_node()
 	local index = http.formvalue("index")
 	local id = http.formvalue("id")
+	if not is_safe_identifier(id) then
+		http.status(400, "Bad Request")
+		http_write_json_error("Invalid node id")
+		return
+	end
 	local e = {}
 	e.index = index
-	local result = luci.sys.exec(string.format("/usr/share/passwall2/test.sh url_test_node %s %s", id, "urltest_node"))
+	local result = luci.sys.exec(string.format("/usr/share/passwall2/test.sh url_test_node %s %s", shellquote(id), shellquote("urltest_node")))
 	local code = tonumber(luci.sys.exec("echo -n '" .. result .. "' | awk -F ':' '{print $1}'") or "0")
 	if code ~= 0 then
 		local use_time = luci.sys.exec("echo -n '" .. result .. "' | awk -F ':' '{print $2}'")
@@ -375,11 +484,21 @@ end
 function update_node()
 	local id = http.formvalue("id") -- Node id
 	local data = http.formvalue("data") -- json new Data
-	if id and data then
+	if is_safe_identifier(id) and data then
 		local data_t = jsonParse(data) or {}
 		if next(data_t) then
 			for k, v in pairs(data_t) do
-				uci:set(appname, id, k, v)
+				if not is_safe_identifier(k) then
+					http.status(400, "Bad Request")
+					http_write_json_error("Invalid option name")
+					return
+				end
+				if type(v) == "table" then
+					http.status(400, "Bad Request")
+					http_write_json_error("Unsupported option value")
+					return
+				end
+				uci:set(appname, id, k, tostring(v))
 			end
 			api.uci_save(uci, appname)
 			http_write_json_ok()
@@ -393,6 +512,11 @@ function set_node()
 	local type = http.formvalue("type")
 	local config = http.formvalue("config")
 	local section = http.formvalue("section")
+	if not is_safe_uci_reference(type) or not is_safe_identifier(config) or not is_safe_uci_reference(section) then
+		http.status(400, "Bad Request")
+		http_write_json_error("Invalid UCI target")
+		return
+	end
 	uci:set(appname, type, config, section)
 	api.uci_save(uci, appname, true, true)
 	http.redirect(api.url("log"))
@@ -450,6 +574,18 @@ end
 function delete_select_nodes()
 	local ids = http.formvalue("ids")
 	local redirect = http.formvalue("redirect")
+	if not ids or ids == "" then
+		http.status(400, "Bad Request")
+		http_write_json_error("Missing node ids")
+		return
+	end
+	for id in ids:gmatch("([^,]+)") do
+		if not is_safe_identifier(id) then
+			http.status(400, "Bad Request")
+			http_write_json_error("Invalid node id")
+			return
+		end
+	end
 	string.gsub(ids, '[^' .. "," .. ']+', function(w)
 		if (uci:get(appname, "@global[0]", "node") or "") == w then
 			uci:delete(appname, '@global[0]', "node")
@@ -576,6 +712,11 @@ function save_node_order()
 	local ids = http.formvalue("ids") or ""
 	local new_order = {}
 	for id in ids:gmatch("([^,]+)") do
+		if not is_safe_identifier(id) then
+			http.status(400, "Bad Request")
+			http_write_json_error("Invalid node id")
+			return
+		end
 		new_order[#new_order + 1] = id
 	end
 	for idx, name in ipairs(new_order) do
@@ -589,6 +730,11 @@ function reassign_group()
 	local ids = http.formvalue("ids") or ""
 	local group = http.formvalue("group") or "default"
 	for id in ids:gmatch("([^,]+)") do
+		if not is_safe_identifier(id) then
+			http.status(400, "Bad Request")
+			http_write_json_error("Invalid node id")
+			return
+		end
 		if group ~="" and group ~= "default" then
 			api.sh_uci_set(appname, id, "group", group)
 		else
@@ -610,7 +756,12 @@ end
 
 function update_rules()
 	local update = http.formvalue("update")
-	luci.sys.call("lua /usr/share/passwall2/rule_update.lua log '" .. update .. "' > /dev/null 2>&1 &")
+	if not is_safe_identifier(update) then
+		http.status(400, "Bad Request")
+		http_write_json_error("Invalid update target")
+		return
+	end
+	luci.sys.call("lua /usr/share/passwall2/rule_update.lua log " .. shellquote(update) .. " > /dev/null 2>&1 &")
 	http_write_json()
 end
 
@@ -630,14 +781,25 @@ end
 function server_user_status()
 	local e = {}
 	e.index = http.formvalue("index")
-	e.status = luci.sys.call(string.format("/bin/busybox top -bn1 | grep -v 'grep' | grep '%s/bin/' | grep -i '%s' >/dev/null", appname .. "_server", http.formvalue("id"))) == 0
+	local id = http.formvalue("id")
+	if not is_safe_identifier(id) then
+		http.status(400, "Bad Request")
+		http_write_json_error("Invalid user id")
+		return
+	end
+	e.status = luci.sys.call(string.format("/bin/busybox top -bn1 | grep -v 'grep' | grep '%s/bin/' | grep -i -- %s >/dev/null", appname .. "_server", shellquote(id))) == 0
 	http_write_json(e)
 end
 
 function server_user_log()
 	local id = http.formvalue("id")
+	if not is_safe_identifier(id) then
+		http.status(400, "Bad Request")
+		http.write(i18n.translate("Invalid log target"))
+		return
+	end
 	if nixio.fs.access("/tmp/etc/passwall2_server/" .. id .. ".log") then
-		local content = luci.sys.exec("cat /tmp/etc/passwall2_server/" .. id .. ".log")
+		local content = fs.readfile("/tmp/etc/passwall2_server/" .. id .. ".log") or ""
 		content = content:gsub("\n", "<br />")
 		http.write(content)
 	else
@@ -707,6 +869,10 @@ function restore_backup()
 			result = { status = "error", message = "Missing filename" }
 			return
 		end
+		if not is_safe_backup_filename(filename) then
+			result = { status = "error", message = "Invalid filename" }
+			return
+		end
 		if not chunk then
 			result = { status = "error", message = "Missing chunk data" }
 			return
@@ -729,11 +895,11 @@ function restore_backup()
 			api.log(0, string.format(" * PassWall2 %s", i18n.translate("Configuration file uploaded successfully…")))
 			local temp_dir = '/tmp/passwall2_bak'
 			api.sys.call("mkdir -p " .. temp_dir)
-			if api.sys.call("tar -xzf " .. file_path .. " -C " .. temp_dir) == 0 then
+			if archive_entries_are_safe(file_path) and api.sys.call("tar -xzf " .. shellquote(file_path) .. " -C " .. shellquote(temp_dir)) == 0 then
 				for _, backup_file in ipairs(backup_files) do
 					local temp_file = temp_dir .. backup_file
 					if fs.access(temp_file) then
-						api.sys.call("cp -f " .. temp_file .. " " .. backup_file)
+						api.sys.call("cp -f " .. shellquote(temp_file) .. " " .. shellquote(backup_file))
 					end
 				end
 				api.log(0, string.format(" * PassWall2 %s", i18n.translate("Configuration restored successfully…")))
@@ -856,15 +1022,21 @@ function subscribe_manual()
 		http_write_json({ success = false, msg = "Missing section or URL, skip." })
 		return
 	end
+	if not is_safe_identifier(section) or not is_safe_url(current_url) then
+		http.status(400, "Bad Request")
+		http_write_json({ success = false, msg = "Invalid section or URL." })
+		return
+	end
 	local uci_url = api.sh_uci_get(appname, section, "url")
 	if not uci_url or uci_url == "" then
 		http_write_json({ success = false, msg = i18n.translate("Please save and apply before manually subscribing.") })
 		return
 	end
 	if uci_url ~= current_url then
-		api.sh_uci_set(appname, section, "url", current_url, true)
+		uci:set(appname, section, "url", current_url)
+		api.uci_save(uci, appname, true)
 	end
-	luci.sys.call("lua /usr/share/" .. appname .. "/subscribe.lua start " .. section .. " manual >/dev/null 2>&1 &")
+	luci.sys.call("lua /usr/share/" .. appname .. "/subscribe.lua start " .. shellquote(section) .. " manual >/dev/null 2>&1 &")
 	http_write_json({ success = true, msg = "Subscribe triggered." })
 end
 
@@ -879,6 +1051,11 @@ function subscribe_manual_all()
 	local url_list = util.split(urls, ",")
 	-- Check if there are any unsaved configurations.
 	for i, section in ipairs(section_list) do
+		if not is_safe_identifier(section) then
+			http.status(400, "Bad Request")
+			http_write_json({ success = false, msg = "Invalid section." })
+			return
+		end
 		local uci_url = api.sh_uci_get(appname, section, "url")
 		if not uci_url or uci_url == "" then
 			http_write_json({ success = false, msg = i18n.translate("Please save and apply before manually subscribing.") })
@@ -888,11 +1065,17 @@ function subscribe_manual_all()
 	-- Save URLs that have changed.
 	for i, section in ipairs(section_list) do
 		local current_url = url_list[i] or ""
+		if current_url ~= "" and not is_safe_url(current_url) then
+			http.status(400, "Bad Request")
+			http_write_json({ success = false, msg = "Invalid URL." })
+			return
+		end
 		local uci_url = api.sh_uci_get(appname, section, "url")
 		if current_url ~= "" and uci_url ~= current_url then
-			api.sh_uci_set(appname, section, "url", current_url, true)
+			uci:set(appname, section, "url", current_url)
 		end
 	end
+	api.uci_save(uci, appname, true)
 	luci.sys.call("lua /usr/share/" .. appname .. "/subscribe.lua start all manual >/dev/null 2>&1 &")
 	http_write_json({ success = true, msg = "Subscribe triggered." })
 end
