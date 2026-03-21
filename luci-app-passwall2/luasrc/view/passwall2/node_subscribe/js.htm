@@ -115,7 +115,7 @@ table .cbi-button-down {
 			}
 
 			sectionIds.push(id);
-			urls.push(currentUrl);
+			urls.push(encodeURIComponent(currentUrl));
 		}
 
 		if (sectionIds.length === 0) {

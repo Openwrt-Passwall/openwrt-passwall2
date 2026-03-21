@@ -71,6 +71,14 @@ local function archive_entries_are_safe(file_path)
 	return true
 end
 
+local function process_status(command)
+	return luci.sys.call(command .. " >/dev/null 2>&1") == 0
+end
+
+local function pgrep_pattern(path)
+	return "[/]" .. tostring(path or ""):gsub("^/", "")
+end
+
 function index()
 	if not nixio.fs.access("/etc/config/passwall2") then
 		if nixio.fs.access("/usr/share/passwall2/0_default_config") then
@@ -354,13 +362,13 @@ end
 
 function index_status()
 	local e = {}
-	e["global_status"] = luci.sys.call("/bin/busybox top -bn1 | grep -v 'grep' | grep '/tmp/etc/passwall2/bin/' | grep 'default' | grep 'global' >/dev/null") == 0
+	e["global_status"] = process_status(string.format("pgrep -af %s | grep 'default' | grep 'global'", shellquote(pgrep_pattern("/tmp/etc/passwall2/bin/"))))
 	http_write_json(e)
 end
 
 function haproxy_status()
 	local e = {}
-	e["status"] = luci.sys.call(string.format("/bin/busybox top -bn1 | grep -v grep | grep '%s/bin/' | grep haproxy >/dev/null", appname)) == 0
+	e["status"] = process_status(string.format("pgrep -af %s | grep haproxy", shellquote(pgrep_pattern("/tmp/etc/" .. appname .. "/bin/"))))
 	http_write_json(e)
 end
 
@@ -374,12 +382,12 @@ function socks_status()
 		return
 	end
 	e.index = index
-	e.socks_status = luci.sys.call(string.format("/bin/busybox top -bn1 | grep -v -E 'grep|acl/|acl_' | grep '%s/bin/' | grep -- %s | grep 'SOCKS_' > /dev/null", appname, shellquote(id))) == 0
+	e.socks_status = process_status(string.format("pgrep -af %s | grep -v -E 'acl/|acl_' | grep -- %s | grep 'SOCKS_'", shellquote(pgrep_pattern("/tmp/etc/" .. appname .. "/bin/")), shellquote(id)))
 	local use_http = uci:get(appname, id, "http_port") or 0
 	e.use_http = 0
 	if tonumber(use_http) > 0 then
 		e.use_http = 1
-		e.http_status = luci.sys.call(string.format("/bin/busybox top -bn1 | grep -v -E 'grep|acl/|acl_' | grep '%s/bin/' | grep -- %s | grep -E 'HTTP_|HTTP2SOCKS' > /dev/null", appname, shellquote(id))) == 0
+		e.http_status = process_status(string.format("pgrep -af %s | grep -v -E 'acl/|acl_' | grep -- %s | grep -E 'HTTP_|HTTP2SOCKS'", shellquote(pgrep_pattern("/tmp/etc/" .. appname .. "/bin/")), shellquote(id)))
 	end
 	http_write_json(e)
 end
@@ -787,7 +795,7 @@ function server_user_status()
 		http_write_json_error("Invalid user id")
 		return
 	end
-	e.status = luci.sys.call(string.format("/bin/busybox top -bn1 | grep -v 'grep' | grep '%s/bin/' | grep -i -- %s >/dev/null", appname .. "_server", shellquote(id))) == 0
+	e.status = process_status(string.format("pgrep -af %s | grep -i -- %s", shellquote(pgrep_pattern("/tmp/etc/" .. appname .. "_server/bin/")), shellquote(id)))
 	http_write_json(e)
 end
 
@@ -877,7 +885,14 @@ function restore_backup()
 			result = { status = "error", message = "Missing chunk data" }
 			return
 		end
+		if chunk_index < 0 or total_chunks <= 0 or chunk_index >= total_chunks then
+			result = { status = "error", message = "Invalid chunk metadata" }
+			return
+		end
 		local file_path = "/tmp/" .. filename
+		if chunk_index == 0 then
+			fs.remove(file_path)
+		end
 		local decoded = nixio.bin.b64decode(chunk)
 		if not decoded then
 			result = { status = "error", message = "Base64 decode failed" }
@@ -894,7 +909,8 @@ function restore_backup()
 			api.sys.call("echo '' > /tmp/log/passwall2.log")
 			api.log(0, string.format(" * PassWall2 %s", i18n.translate("Configuration file uploaded successfully…")))
 			local temp_dir = '/tmp/passwall2_bak'
-			api.sys.call("mkdir -p " .. temp_dir)
+			api.sys.call("rm -rf " .. shellquote(temp_dir))
+			api.sys.call("mkdir -p " .. shellquote(temp_dir))
 			if archive_entries_are_safe(file_path) and api.sys.call("tar -xzf " .. shellquote(file_path) .. " -C " .. shellquote(temp_dir)) == 0 then
 				for _, backup_file in ipairs(backup_files) do
 					local temp_file = temp_dir .. backup_file
@@ -1064,7 +1080,7 @@ function subscribe_manual_all()
 	end
 	-- Save URLs that have changed.
 	for i, section in ipairs(section_list) do
-		local current_url = url_list[i] or ""
+		local current_url = api.UrlDecode(url_list[i] or "") or ""
 		if current_url ~= "" and not is_safe_url(current_url) then
 			http.status(400, "Bad Request")
 			http_write_json({ success = false, msg = "Invalid URL." })
