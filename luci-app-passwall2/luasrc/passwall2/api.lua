@@ -274,15 +274,14 @@ end
 
 function curl_base(url, file, args)
 	if not args then args = {} end
-	local cmd = {"curl"}
+	local cmd = "curl"
 	for _, arg in ipairs(args) do
-		cmd[#cmd + 1] = arg
+		cmd = cmd .. " " .. tostring(arg)
 	end
 	if file then
-		cmd[#cmd + 1] = "-o"
-		cmd[#cmd + 1] = file
+		cmd = cmd .. " -o " .. shellquote_arg(file)
 	end
-	cmd[#cmd + 1] = url
+	cmd = cmd .. " " .. shellquote_arg(url)
 	return exec_call(cmd)
 end
 
