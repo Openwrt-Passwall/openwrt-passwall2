@@ -78,7 +78,6 @@ end
 local function shellquote_arg(value)
 	return util.shellquote(tostring(value or ""))
 end
-
 function uci_save(cursor, config, commit, apply)
 	if is_old_uci() then
 		cursor:save(config)

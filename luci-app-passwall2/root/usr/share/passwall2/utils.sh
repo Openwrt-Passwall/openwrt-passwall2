@@ -79,6 +79,26 @@ eval_unset_val() {
 		unset "$key"
 	done
 }
+eval_set_val() {
+	for arg in "$@"; do
+		case "$arg" in
+			*=*)
+				local key="${arg%%=*}"
+				local val="${arg#*=}"
+				is_safe_shell_name "$key" || continue
+				export "${key}=${val}"
+			;;
+		esac
+	done
+}
+
+eval_unset_val() {
+	for arg in "$@"; do
+		local key="${arg%%=*}"
+		is_safe_shell_name "$key" || continue
+		unset "$key"
+	done
+}
 
 eval_cache_var() {
 	[ -s "$TMP_PATH/var" ] || return 0
