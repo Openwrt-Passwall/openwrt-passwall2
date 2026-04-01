@@ -76,10 +76,111 @@ o = s:option(Value, "remarks", translate("Remarks"))
 o.default = arg[1]
 o.rmempty = false
 
-o = s:option(ListValue, "interface", translate("Source Interface"))
+o = s:option(Value, "interface", translate("Source Interface"))
 o:value("", translate("All"))
-local wa = require "luci.tools.webadmin"
-wa.cbi_add_networks(o)
+-- Populate with actual kernel network devices instead of UCI interface names,
+-- because the backend (nftables iifname / iptables -i) matches kernel device names.
+do
+	local nfs = require "nixio.fs"
+	local _cursor = require("luci.model.uci").cursor()
+	local _sysnet = "/sys/class/net/"
+
+	-- Map UCI interface names to their device names and vice versa
+	local _iface_to_dev = {}
+	local _dev_to_ifaces = {}
+	local _iface_proto = {}
+	_cursor:foreach("network", "interface", function(sec)
+		local name = sec[".name"]
+		if name ~= "loopback" then
+			_iface_proto[name] = sec.proto
+			if sec.device then
+				_iface_to_dev[name] = sec.device
+				_dev_to_ifaces[sec.device] = _dev_to_ifaces[sec.device] or {}
+				table.insert(_dev_to_ifaces[sec.device], name)
+			end
+		end
+	end)
+
+	-- Classify device type using sysfs attributes
+	local function classify_sysfs(dev)
+		if nfs.stat(_sysnet .. dev .. "/bridge", "type") == "dir" then
+			return translate("Bridge")
+		elseif nfs.stat(_sysnet .. dev .. "/wireless", "type") == "dir" then
+			return translate("Wireless Adapter")
+		elseif dev:match("^tun") or dev:match("^tap") or dev:match("^wg") or dev:match("^ppp") then
+			return translate("Tunnel Interface")
+		else
+			return translate("Ethernet Adapter")
+		end
+	end
+
+	-- Classify offline UCI interfaces by config hints
+	local function classify_uci(dev_name, proto)
+		if dev_name and dev_name:match("^br%-") then
+			return translate("Bridge")
+		elseif proto == "wireguard" or proto == "pppoe" or proto == "pptp" or proto == "l2tp" then
+			return translate("Tunnel Interface")
+		else
+			return translate("Interface")
+		end
+	end
+
+	local _seen = {}
+	local _devices = {}
+
+	-- Active kernel devices from /sys/class/net/.
+	-- Skip bridge member ports (/master) and DSA master devices (/dsa) because
+	-- nftables iifname matches the parent bridge for routed traffic, not
+	-- individual member ports. Also skip internal virtual devices.
+	local _iter = nfs.dir(_sysnet)
+	if _iter then
+		for dev in _iter do
+			if dev ~= "lo"
+				and not dev:match("^veth")
+				and not dev:match("^ifb")
+				and not dev:match("^gre")
+				and not dev:match("^sit")
+				and not dev:match("^ip6tnl")
+				and not dev:match("^erspan")
+				and not nfs.stat(_sysnet .. dev .. "/master", "type")
+				and not nfs.stat(_sysnet .. dev .. "/dsa", "type")
+			then
+				local dtype = classify_sysfs(dev)
+				local label = dtype .. ': "' .. dev .. '"'
+				if _dev_to_ifaces[dev] then
+					label = label .. " (" .. table.concat(_dev_to_ifaces[dev], ", ") .. ")"
+				end
+				_devices[#_devices + 1] = { name = dev, label = label, sort = dtype .. ":" .. dev }
+				_seen[dev] = true
+			end
+		end
+	end
+
+	-- UCI interfaces whose device does not currently exist (down tunnels, VPNs, etc.).
+	-- Stored by UCI name since the kernel device is not available yet.
+	-- Dedup by device: if two interfaces share a device, only one is shown.
+	for iface, dev in pairs(_iface_to_dev) do
+		if not _seen[dev] then
+			local dtype = classify_uci(dev, _iface_proto[iface])
+			local label = dtype .. ': "' .. iface .. '"'
+			-- Sort offline entries after active devices
+			_devices[#_devices + 1] = { name = iface, label = label, sort = "zzz:" .. iface }
+			_seen[dev] = true
+		end
+	end
+
+	table.sort(_devices, function(a, b) return a.sort < b.sort end)
+	for _, d in ipairs(_devices) do
+		o:value(d.name, d.label)
+	end
+end
+
+o.validate = function(self, value, section)
+	if value == "" or value:match("^[a-zA-Z0-9][a-zA-Z0-9%.%_%-]*$") then
+		return value
+	end
+	return nil, translate("Invalid interface name")
+end
 
 local mac_t = {}
 sys.net.mac_hints(function(e, t)

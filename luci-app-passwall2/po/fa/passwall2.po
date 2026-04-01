@@ -1101,6 +1101,21 @@ msgstr "محدوده IP"
 msgid "Source Interface"
 msgstr "رابط منبع"
 
+msgid "Bridge"
+msgstr "پل شبکه"
+
+msgid "Wireless Adapter"
+msgstr "آداپتور بی‌سیم"
+
+msgid "Ethernet Adapter"
+msgstr "آداپتور اترنت"
+
+msgid "Tunnel Interface"
+msgstr "رابط تونل"
+
+msgid "Invalid interface name"
+msgstr "نام رابط نامعتبر"
+
 msgid "Use Interface With ACLs"
 msgstr "استفاده از رابط با ACLها"
 

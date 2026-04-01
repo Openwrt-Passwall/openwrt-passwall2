@@ -1093,6 +1093,21 @@ msgstr "IP 范围"
 msgid "Source Interface"
 msgstr "源接口"
 
+msgid "Bridge"
+msgstr "网桥"
+
+msgid "Wireless Adapter"
+msgstr "无线适配器"
+
+msgid "Ethernet Adapter"
+msgstr "以太网适配器"
+
+msgid "Tunnel Interface"
+msgstr "隧道接口"
+
+msgid "Invalid interface name"
+msgstr "无效的接口名称"
+
 msgid "Use Interface With ACLs"
 msgstr "使用接口控制"
 

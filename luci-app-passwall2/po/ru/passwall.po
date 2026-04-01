@@ -1100,7 +1100,22 @@ msgid "IP range"
 msgstr "Диапазон IP"
 
 msgid "Source Interface"
-msgstr "Исходящий интерфейс"
+msgstr "Интерфейс источника"
+
+msgid "Bridge"
+msgstr "Мост"
+
+msgid "Wireless Adapter"
+msgstr "Беспроводной адаптер"
+
+msgid "Ethernet Adapter"
+msgstr "Ethernet-адаптер"
+
+msgid "Tunnel Interface"
+msgstr "Туннельный интерфейс"
+
+msgid "Invalid interface name"
+msgstr "Недопустимое имя интерфейса"
 
 msgid "Use Interface With ACLs"
 msgstr "Применять правила к интерфейсу"
