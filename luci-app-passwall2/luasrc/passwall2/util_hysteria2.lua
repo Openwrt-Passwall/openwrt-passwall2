@@ -60,7 +60,7 @@ function gen_config(var)
 	local config = {
 		server = server,
 		transport = {
-			type = node.protocol or "udp",
+			type = "udp",
 			udp = {
 				hopInterval = (function()
 							local HopIntervalStr = tostring(node.hysteria2_hop_interval or "30s")
