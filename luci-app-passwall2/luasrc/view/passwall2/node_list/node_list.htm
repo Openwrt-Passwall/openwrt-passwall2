@@ -298,7 +298,7 @@ table td, .table .td {
 	function to_add_node() {
 		ajaxAbortAll();
 		const dom = document.getElementsByClassName("cbi-tab")[0];
-		const current_group = dom.getAttribute("group_name")
+		const current_group = dom ? (dom.getAttribute("group_name") || "default") : "default";
 		window.location.href='<%=api.url("add_node")%>?redirect=1&group=' + current_group;
 	}
 	

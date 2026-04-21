@@ -603,7 +603,11 @@ function save_node_list_opt()
 end
 
 function update_rules()
-	local update = http.formvalue("update")
+	local update = http.formvalue("update") or ""
+	if update == "" then
+		http_write_json_error({ message = "missing update target" })
+		return
+	end
 	luci.sys.call("lua /usr/share/passwall2/rule_update.lua log '" .. update .. "' > /dev/null 2>&1 &")
 	http_write_json()
 end
