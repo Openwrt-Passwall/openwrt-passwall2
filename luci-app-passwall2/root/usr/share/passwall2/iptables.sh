@@ -24,8 +24,15 @@ ipt_n="$ipt -t nat -w"
 ipt_m="$ipt -t mangle -w"
 ip6t_n="$ip6t -t nat -w"
 ip6t_m="$ip6t -t mangle -w"
-[ -z "$ip6t" -o -z "$(lsmod | grep 'ip6table_nat')" ] && ip6t_n="eval #$ip6t_n"
-[ -z "$ip6t" -o -z "$(lsmod | grep 'ip6table_mangle')" ] && ip6t_m="eval #$ip6t_m"
+KCONFIG=$(zcat /proc/config.gz 2>/dev/null)
+
+has_ip6t_nat=$(lsmod | grep 'ip6table_nat')
+[ -z "$has_ip6t_nat" ] && has_ip6t_nat=$(echo "$KCONFIG" | grep 'CONFIG_IP6_NF_NAT=y')
+[ -z "$ip6t" -o -z "$has_ip6t_nat" ] && ip6t_n="eval #$ip6t_n"
+
+has_ip6t_mangle=$(lsmod | grep 'ip6table_mangle')
+[ -z "$has_ip6t_mangle" ] && has_ip6t_mangle=$(echo "$KCONFIG" | grep 'CONFIG_IP6_NF_MANGLE=y')
+[ -z "$ip6t" -o -z "$has_ip6t_mangle" ] && ip6t_m="eval #$ip6t_m"
 FWI=$(uci -q get firewall.passwall2.path 2>/dev/null)
 FAKE_IP="198.18.0.0/16"
 FAKE_IP_6="fc00::/18"

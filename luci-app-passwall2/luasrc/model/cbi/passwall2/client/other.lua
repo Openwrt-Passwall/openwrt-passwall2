@@ -114,7 +114,24 @@ if handle then
 	handle:close()
 end
 
-if (mods:find("REDIRECT") and mods:find("TPROXY")) or (mods:find("nft_redir") and mods:find("nft_tproxy")) then
+local has_redir = mods:find("REDIRECT") or mods:find("nft_redir")
+local has_tproxy = mods:find("TPROXY") or mods:find("nft_tproxy")
+local has_ip6t_mangle = mods:find("ip6table_mangle")
+
+if not (has_redir and has_tproxy and has_ip6t_mangle) then
+	local kconfig_handle = io.popen("zcat /proc/config.gz 2>/dev/null")
+	if kconfig_handle then
+		local kconfig = kconfig_handle:read("*a") or ""
+		kconfig_handle:close()
+		if kconfig ~= "" then
+			has_redir = has_redir or kconfig:find("CONFIG_NFT_REDIR=y")
+			has_tproxy = has_tproxy or kconfig:find("CONFIG_NFT_TPROXY=y")
+			has_ip6t_mangle = has_ip6t_mangle or kconfig:find("CONFIG_IP6_NF_MANGLE=y")
+		end
+	end
+end
+
+if (has_redir and has_tproxy) then
 	o = s:option(ListValue, "tcp_proxy_way", translate("TCP Proxy Way"))
 	o.default = "redirect"
 	o:value("redirect", "REDIRECT")
@@ -132,7 +149,7 @@ if (mods:find("REDIRECT") and mods:find("TPROXY")) or (mods:find("nft_redir") an
 		self.map:set(section, "tcp_proxy_way", value)
 	end
 
-	if mods:find("ip6table_mangle") or mods:find("nft_tproxy") then
+	if has_ip6t_mangle or has_tproxy then
 		---- IPv6 TProxy
 		o = s:option(Flag, "ipv6_tproxy", translate("IPv6 TProxy"),
 			"<font color='red'>" ..

@@ -135,7 +135,22 @@ if handle then
 	handle:close()
 end
 
-if (mods:find("REDIRECT") and mods:find("TPROXY")) or (mods:find("nft_redir") and mods:find("nft_tproxy")) then
+local has_redir = mods:find("REDIRECT") or mods:find("nft_redir")
+local has_tproxy = mods:find("TPROXY") or mods:find("nft_tproxy")
+
+if not (has_redir and has_tproxy) then
+	local kconfig_handle = io.popen("zcat /proc/config.gz 2>/dev/null")
+	if kconfig_handle then
+		local kconfig = kconfig_handle:read("*a") or ""
+		kconfig_handle:close()
+		if kconfig ~= "" then
+			has_redir = has_redir or kconfig:find("CONFIG_NFT_REDIR=y")
+			has_tproxy = has_tproxy or kconfig:find("CONFIG_NFT_TPROXY=y")
+		end
+	end
+end
+
+if (has_redir and has_tproxy) then
 	o = s:taboption("Main", Flag, "localhost_proxy", translate("Localhost Proxy"), translate("When selected, localhost can transparent proxy."))
 	o.default = "1"
 	o.rmempty = false
