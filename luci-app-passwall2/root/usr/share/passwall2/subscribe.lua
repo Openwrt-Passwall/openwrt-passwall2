@@ -664,6 +664,11 @@ local function parseClashNode(node, add_mode, group, sub_cfg)
 				result.tls_allowInsecure = "1"
 			end
 		end
+		if node.tls and node["reality-opts"] and node["reality-opts"]["public-key"] then
+			result.reality = "1"
+			result.reality_publicKey = (node["reality-opts"] and node["reality-opts"]["public-key"]) or nil
+			result.reality_shortId = (node["reality-opts"] and node["reality-opts"]["short-id"]) or nil
+		end
 		result.transport = node.network and string.lower(node.network) or "tcp"
 		if result.type == "sing-box" and result.transport == "raw" then 
 			result.transport = "tcp"
