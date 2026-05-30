@@ -1012,9 +1012,10 @@ acl_app() {
 	[ -n "$items" ] && {
 		local index=0
 		local item
-		local redir_port dns_port dnsmasq_port
+		local redir_port dns_port dnsmasq_port socks_port
 		local ipt_tmp msg msg2
 		redir_port=11200
+		socks_port=11600
 		dns_port=11300
 		dnsmasq_port=${GLOBAL_DNSMASQ_PORT:-11400}
 		for item in $items; do
@@ -1098,12 +1099,13 @@ acl_app() {
 							set_cache_var "ACL_${sid}_default" "1"
 						else
 							redir_port=$(get_new_port $(expr $redir_port + 1))
+							socks_port=$(get_new_port $(expr $socks_port + 1))
 
 							local type=$(echo $(config_n_get $node type) | tr 'A-Z' 'a-z')
 							if [ -n "${type}" ]; then
 								config_file=$TMP_ACL_PATH/${node}_TCP_UDP_DNS_${redir_port}.json
 								dns_port=$(get_new_port $(expr $dns_port + 1))
-								local acl_socks_port=$(get_new_port $(expr $redir_port + $index))
+								local acl_socks_port=$socks_port
 								local run_func
 								[ -n "${XRAY_BIN}" ] && run_func="run_xray"
 								[ -n "${SINGBOX_BIN}" ] && run_func="run_singbox"
