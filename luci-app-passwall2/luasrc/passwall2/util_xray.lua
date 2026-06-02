@@ -1684,12 +1684,12 @@ function gen_config(var)
 					blockTypes = (api.compare_versions(xray_version, "<", "26.4.25")) and { 65 } or nil,  -- Todo is to remove it
 					rules = (api.compare_versions(xray_version, ">", "26.4.17")) and {
 						{
-							qtype = "1,28",
+							qType = "1,28",
 							action = "hijack"
 						},
 						{
-							qtype = 65,
-							action = "reject",
+							qType = 65,
+							action = "Return",
 						},
 						{
 							action = "direct"
@@ -1705,14 +1705,14 @@ function gen_config(var)
 					address = remote_dns_udp_server,
 					port = tonumber(remote_dns_udp_port) or 53,
 					network = _remote_dns_proto or "tcp",
-					nonIPQuery = (api.compare_versions(xray_version, "<", "26.4.25")) and "reject" or nil, -- Todo is to remove it
+					nonIPQuery = (api.compare_versions(xray_version, "<", "26.4.25")) and "Return" or nil, -- Todo is to remove it
 					rules = (api.compare_versions(xray_version, ">", "26.4.17")) and {
 						{
-							qtype = "1,28",
+							qType = "1,28",
 							action = "hijack"
 						},
 						{
-							action = "reject"
+							action = "Return"
 						}
 					} or nil
 				}
