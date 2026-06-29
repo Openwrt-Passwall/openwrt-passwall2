@@ -8,7 +8,7 @@ PassWall2 is a powerful LuCI web interface application for OpenWrt that provides
 
 ## 🛠️ Installation
 
-### ⚠️ Pre-installation (Recommended)
+### ⚠️ Pre-installation
 
 ```bash
 # find it in releases,base of your router Arch
@@ -62,6 +62,49 @@ Choose the package format based on your **router's OpenWrt package manager**:
 ```bash
 /etc/init.d/rpcd restart
 ```
+
+### 🧩 Add PassWall2 APK repository (recommended)
+**Instead of installing .apk packages manually**, you can add the PassWall2 APK repository and signing key to enable installation and updates via apk.
+
+1. Add repository signing key
+
+```bash
+wget -O passwall.pub https://sourceforge.net/projects/openwrt-passwall-build/files/apk.pub
+mv passwall.pub /etc/apk/keys/
+```
+
+2. Add PassWall2 repositories
+
+```bash
+. /etc/openwrt_release
+
+release="${DISTRIB_RELEASE%.*}"
+arch="$DISTRIB_ARCH"
+
+wget -O /etc/apk/keys/passwall.pub \
+  https://sourceforge.net/projects/openwrt-passwall-build/files/apk.pub
+
+cat >> /etc/apk/repositories.d/customfeeds.list <<EOF
+https://sourceforge.net/projects/openwrt-passwall-build/files/releases/packages-${release}/${arch}/passwall_packages/packages.adb
+https://sourceforge.net/projects/openwrt-passwall-build/files/releases/packages-${release}/${arch}/passwall_luci/packages.adb
+https://sourceforge.net/projects/openwrt-passwall-build/files/releases/packages-${release}/${arch}/passwall2/packages.adb
+EOF
+```
+
+3. Update package index
+
+```bash
+apk update
+```
+
+4. Install optional dependency packages (depending on your configuration) and PassWall2 from repository
+
+```bash
+apk add tcping geoview # add other dependencies
+
+apk add luci-app-passwall2
+```
+
 
 ## 📋 System Requirements
 
