@@ -759,6 +759,15 @@ local function parseClashNode(node, add_mode, group, sub_cfg)
 		if sub_allowinsecure then
 			result.tls_allowInsecure = "1"
 		end
+		if node["client-fingerprint"] then
+			result.utls = "1"
+			result.fingerprint = node["client-fingerprint"]
+		end
+		if node.tls and node["reality-opts"] and node["reality-opts"]["public-key"] then
+			result.reality = "1"
+			result.reality_publicKey = node["reality-opts"]["public-key"]
+			result.reality_shortId = node["reality-opts"]["short-id"]
+		end
 	end
 	if not result.remarks or result.remarks == "" then
 		if result.address and result.port then
