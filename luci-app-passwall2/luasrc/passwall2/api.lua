@@ -1361,6 +1361,7 @@ function set_apply_on_parse(map)
 			map.on_after_save = function(self)
 				if old then old(self) end
 				map:set("@global[0]", "timestamp", os.time())
+				sys.call("/etc/init.d/passwall2 restart >/dev/null 2>&1 &")
 			end
 			local cbi = require "luci.cbi"
 			map:append(cbi.Template(appname .. "/cbi/optimize_cbi_ui"))
