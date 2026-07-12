@@ -1513,7 +1513,7 @@ function match_node_rule(name, rule)
 	local function split_or(expr)
 		local t = {}
 		for part in expr:gmatch("[^|]+") do
-			part = part:gsub("^%s+", ""):gsub("%s+$", "")
+			part = trim(part)
 			if part ~= "" then
 				table.insert(t, part)
 			end
@@ -1524,7 +1524,7 @@ function match_node_rule(name, rule)
 	local function split_and(expr)
 		local t = {}
 		for part in expr:gmatch("[^&]+") do
-			part = part:gsub("^%s+", ""):gsub("%s+$", "")
+			part = trim(part)
 			if part ~= "" then
 				table.insert(t, part)
 			end
