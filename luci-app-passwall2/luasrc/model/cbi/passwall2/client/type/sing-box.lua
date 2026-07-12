@@ -154,7 +154,9 @@ if load_urltest_options then -- [[ URLTest Start ]]
 	o:depends({ [_n("node_add_mode")] = "batch" })
 	local descrStr = "Example: <code>^A && B && !C && D$</code><br>"
 	descrStr = descrStr .. "This means the node remark must start with A (^), include B, exclude C (!), and end with D ($).<br>"
-	descrStr = descrStr .. "Conditions are joined by <code>&&</code>, and their order does not affect the result."
+	descrStr = descrStr .. "Conditions are joined by <code>&&</code> (AND), and their order does not affect the result.<br>"
+	descrStr = descrStr .. "Multiple groups can be separated by <code>||</code> (OR), matching succeeds if any group matches.<br>"
+	descrStr = descrStr .. "Example: <code>A && B || C && D</code> means (A AND B) OR (C AND D)."
 	o.description = translate(descrStr)
 
 	o = s:option(Value, _n("urltest_url"), translate("Probe URL"))
