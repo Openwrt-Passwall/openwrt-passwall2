@@ -923,7 +923,7 @@ function gen_config(var)
 			type = "fragment",
 			settings = {
 				packets = xray_settings.fragment_packets,
-				lengths = #lengths > 0 and lengths or nil,
+				lengths = #lengths > 0 and lengths or {"100-200"},
 				delays = #delays > 0 and delays or nil,
 				maxSplit = xray_settings.fragment_maxSplit
 			}
