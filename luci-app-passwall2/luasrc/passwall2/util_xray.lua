@@ -922,10 +922,10 @@ function gen_config(var)
 		fragment_table = {
 			type = "fragment",
 			settings = {
-				packets = xray_settings.fragment_packets,
-				lengths = #lengths > 0 and lengths or {"100-200"},
-				delays = #delays > 0 and delays or nil,
-				maxSplit = xray_settings.fragment_maxSplit
+				packets = xray_settings.fragment_packets or "tlshello",
+				lengths = #lengths > 0 and lengths or {"3-5","6-8","10-20"},
+				delays = #delays > 0 and delays or {"10-20"},
+				maxSplit = xray_settings.fragment_maxSplit or "3-6"
 			}
 		}
 	end
