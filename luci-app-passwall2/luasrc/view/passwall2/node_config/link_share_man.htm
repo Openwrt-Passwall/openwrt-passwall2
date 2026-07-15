@@ -1314,6 +1314,8 @@ local current_node = map:get(section)
 						opt.set(dom_prefix + 'utls', true);
 						opt.set(dom_prefix + 'fingerprint', queryParam.fp);
 					}
+					opt.set(dom_prefix + 'ech', !!queryParam.ech);
+					opt.set(dom_prefix + 'ech_config', queryParam.ech || '');
 					opt.set(dom_prefix + 'tls_pinSHA256', queryParam.pcs || '');
 					opt.set(dom_prefix + 'tls_CertByName', queryParam.vcn || '');
 					opt.set(
