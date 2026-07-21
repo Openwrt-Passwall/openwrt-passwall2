@@ -297,8 +297,8 @@ load_acl() {
 
 			tcp_no_redir_ports=${tcp_no_redir_ports:-default}
 			udp_no_redir_ports=${udp_no_redir_ports:-default}
-			tcp_proxy_mode="global"
-			udp_proxy_mode="global"
+			[ "$direct" = "1" ] && tcp_proxy_mode="disable" || tcp_proxy_mode="global"
+			[ "$direct" = "1" ] && udp_proxy_mode="disable" || udp_proxy_mode="global"
 			tcp_redir_ports=${tcp_redir_ports:-default}
 			udp_redir_ports=${udp_redir_ports:-default}
 			node=${node:-default}
