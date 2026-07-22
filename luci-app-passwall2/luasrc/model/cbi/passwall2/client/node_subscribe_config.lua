@@ -135,14 +135,12 @@ o:value("https", "DoH")
 o = s:option(Value, "domain_resolver_dns", "DNS")
 o.datatype = "or(ipaddr,ipaddrport)"
 o:value("114.114.114.114")
-o:value("223.5.5.5:53")
 o.default = o.keylist[1]
 o:depends({ domain_resolver = "tcp" })
 o:depends({ domain_resolver = "udp" })
 
 o = s:option(Value, "domain_resolver_dns_https", "DNS")
 o:value("https://120.53.53.53/dns-query", "DNSPod")
-o:value("https://223.5.5.5/dns-query", "AliDNS")
 o.default = o.keylist[1]
 o:depends({ domain_resolver = "https" })
 

@@ -201,9 +201,10 @@ run_xray() {
 
 run_singbox() {
 	local flag node redir_port tcp_proxy_way socks_address socks_port socks_username socks_password http_address http_port http_username http_password
-	local dns_listen_port direct_dns_query_strategy remote_dns_protocol remote_dns_udp_server remote_dns_tcp_server remote_dns_doh remote_dns_client_ip remote_dns_detour remote_fakedns remote_dns_query_strategy dns_cache
+	local dns_listen_port direct_dns direct_dns_query_strategy remote_dns_protocol remote_dns_udp_server remote_dns_tcp_server remote_dns_doh remote_dns_client_ip remote_dns_detour remote_fakedns remote_dns_query_strategy dns_cache
 	local loglevel log_file config_file
 	eval_set_val $@
+	[ -n "$direct_dns" ] || direct_dns="${DIRECT_DNS}"
 	local type=$(echo $(config_n_get $node type) | tr 'A-Z' 'a-z')
 	[ -z "$type" ] && return 1
 	node_protocol=$(config_n_get $node protocol)
@@ -321,6 +322,7 @@ run_singbox() {
 	}
 	json_add_string "direct_dns_udp_port" "${DIRECT_DNS_UDP_PORT}"
 	json_add_string "direct_dns_udp_server" "${DIRECT_DNS_UDP_SERVER}"
+	[ -n "$direct_dns" ] && json_add_string "direct_dns" "${direct_dns}"
 	json_add_string "direct_dns_query_strategy" "${direct_dns_query_strategy}"
 
 	[ -n "${redir_port}" ] && {
@@ -743,7 +745,11 @@ run_global_dnsmasq() {
 	else
 		#Run a copy dnsmasq instance, DNS hijack for that need proxy devices.
 		GLOBAL_DNSMASQ_PORT=$(get_new_port 11400)
-		run_copy_dnsmasq flag="default" listen_port=$GLOBAL_DNSMASQ_PORT local_dns="${DNSMASQ_LOCAL_DNS}" tun_dns="${DNSMASQ_TUN_DNS}" default_dns="${DNSMASQ_DEFAULT_DNS}"
+		if ! run_copy_dnsmasq flag="default" listen_port=$GLOBAL_DNSMASQ_PORT local_dns="${DNSMASQ_LOCAL_DNS}" tun_dns="${DNSMASQ_TUN_DNS}" default_dns="${DNSMASQ_DEFAULT_DNS}"; then
+			log_i18n 2 "Failed to start the dedicated DNS service on port %s." "${GLOBAL_DNSMASQ_PORT}"
+			unset GLOBAL_DNSMASQ_PORT
+			return 1
+		fi
 		DNS_REDIRECT_PORT=${GLOBAL_DNSMASQ_PORT}
 		#dhcp.leases to hosts
 		$APP_PATH/lease2hosts.sh > /dev/null 2>&1 &
@@ -945,7 +951,27 @@ run_copy_dnsmasq() {
 	json_add_string "NO_LOGIC_LOG" "${NO_LOGIC_LOG:-0}"
 	lua $APP_PATH/helper_dnsmasq.lua add_rule "$(json_dump)"
 
-	ln_run 0 "$(first_type dnsmasq)" "dnsmasq_${flag}" "/dev/null" -C $dnsmasq_conf -x $TMP_ACL_PATH/$flag/dnsmasq.pid
+	local dnsmasq_bin=$(first_type dnsmasq)
+	local dnsmasq_pid=$TMP_ACL_PATH/$flag/dnsmasq.pid
+	[ -n "$dnsmasq_bin" ] || {
+		log_i18n 2 "DNS service binary not found."
+		return 1
+	}
+	"$dnsmasq_bin" --test -C "$dnsmasq_conf" > /dev/null 2>&1 || {
+		log_i18n 2 "DNS service configuration validation failed: %s" "$dnsmasq_conf"
+		return 1
+	}
+	ln_run 0 "$dnsmasq_bin" "dnsmasq_${flag}" "/dev/null" -C $dnsmasq_conf -x $dnsmasq_pid
+	local retry=0
+	while [ "$retry" -lt 10 ]; do
+		[ -s "$dnsmasq_pid" ] && kill -0 "$(cat "$dnsmasq_pid")" 2>/dev/null && break
+		sleep 1
+		retry=$((retry + 1))
+	done
+	[ -s "$dnsmasq_pid" ] && kill -0 "$(cat "$dnsmasq_pid")" 2>/dev/null || {
+		log_i18n 2 "DNS service failed to listen on port %s." "$listen_port"
+		return 1
+	}
 	set_cache_var "ACL_${flag}_dns_port" "${listen_port}"
 }
 
@@ -1131,7 +1157,10 @@ acl_app() {
 								fi
 							fi
 							dnsmasq_port=$(get_new_port $(expr $dnsmasq_port + 1))
-							run_copy_dnsmasq flag="$sid" listen_port=$dnsmasq_port local_dns="${LOCAL_DNS:-${AUTO_DNS}}" tun_dns="127.0.0.1#${dns_port}" default_dns="${AUTO_DNS}"
+							if ! run_copy_dnsmasq flag="$sid" listen_port=$dnsmasq_port local_dns="${LOCAL_DNS:-${AUTO_DNS}}" tun_dns="127.0.0.1#${dns_port}" default_dns="${AUTO_DNS}"; then
+								log_i18n 2 "[%s] dedicated DNS service failed, skip this transparent proxy!" "${remarks}"
+								continue
+							fi
 							#dhcp.leases to hostsMore actions
 							$APP_PATH/lease2hosts.sh > /dev/null 2>&1 &
 
@@ -1311,6 +1340,7 @@ get_config() {
 	REMOTE_DNS=$(config_t_get global remote_dns 1.1.1.1:53 | sed 's/#/:/g' | sed -E 's/\:([^:]+)$/#\1/g')
 	REMOTE_FAKEDNS=$(config_t_get global remote_fakedns '0')
 	REMOTE_DNS_QUERY_STRATEGY=$(config_t_get global remote_dns_query_strategy UseIPv4)
+	DIRECT_DNS=$(config_t_get global direct_dns)
 	DNS_CACHE=$(config_t_get global dns_cache 1)
 	DNS_REDIRECT=$(config_t_get global dns_redirect 1)
 

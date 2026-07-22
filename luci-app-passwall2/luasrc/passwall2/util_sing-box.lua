@@ -1117,6 +1117,7 @@ function gen_config(var)
 	local local_http_username = var["local_http_username"]
 	local local_http_password = var["local_http_password"]
 	local dns_listen_port = var["dns_listen_port"]
+	local direct_dns = var["direct_dns"]
 	local direct_dns_udp_server = var["direct_dns_udp_server"]
 	local direct_dns_udp_port = var["direct_dns_udp_port"]
 	local direct_dns_query_strategy = var["direct_dns_query_strategy"]
@@ -1825,18 +1826,39 @@ function gen_config(var)
 		tag = "local"
 	})
 
-	route.default_domain_resolver = {
-		server = "local"
-	}
-
-	if direct_dns_udp_server then
-		table.insert(dns.servers, {
-			tag = "direct",
+	local direct_dns_server
+	if direct_dns and direct_dns ~= "" then
+		local direct_dns_url, direct_dns_bootstrap = direct_dns:match("^([^,]+),?(.*)$")
+		direct_dns_server = parseDNS(direct_dns_url)
+		if direct_dns_server and direct_dns_bootstrap ~= "" and not api.is_ip(direct_dns_server.server) then
+			table.insert(dns.servers, {
+				tag = "direct-bootstrap",
+				type = "hosts",
+				predefined = {
+					[direct_dns_server.server] = direct_dns_bootstrap
+				}
+			})
+			direct_dns_server.domain_resolver = "direct-bootstrap"
+		end
+	end
+	if not direct_dns_server and direct_dns_udp_server then
+		direct_dns_server = {
 			type = "udp",
 			server = direct_dns_udp_server,
 			server_port = tonumber(direct_dns_udp_port) or 53,
-			detour = "direct",
-		})
+		}
+	end
+	if direct_dns_server then
+		direct_dns_server.tag = "direct"
+		direct_dns_server.detour = "direct"
+		table.insert(dns.servers, direct_dns_server)
+		route.default_domain_resolver = {
+			server = "direct"
+		}
+	else
+		route.default_domain_resolver = {
+			server = "local"
+		}
 	end
 
 	for i, v in pairs(GLOBAL.DNS_SERVER) do
@@ -2134,17 +2156,12 @@ function gen_config(var)
 	end
 
 	if next(ech_domain) ~= nil then
-		table.insert(dns.servers, {
-			tag = "ech-dns",
-			type = "https",
-			server = "223.5.5.5"
-		})
 		if not dns.rules then dns.rules = {} end
 		local domain = {}
 		for line, _ in pairs(ech_domain) do domain[#domain+1] = line end
 		table.insert(dns.rules, 1, {
 			domain = domain,
-			server = "ech-dns"
+			server = direct_dns_server and "direct" or "local"
 		})
 	end
 

@@ -175,7 +175,7 @@ o.description = "<br /><ul>"
 .. "<li>" .. translate("Subdomain (recommended): Begining with 'domain:' and the rest is a domain. When the targeting domain is exactly the value, or is a subdomain of the value, this rule takes effect. Example: rule 'domain:v2ray.com' matches 'www.v2ray.com', 'v2ray.com', but not 'xv2ray.com'.") .. "</li>"
 .. "<li>" .. translate("Full domain: Begining with 'full:' and the rest is a domain. When the targeting domain is exactly the value, the rule takes effect. Example: rule 'domain:v2ray.com' matches 'v2ray.com', but not 'www.v2ray.com'.") .. "</li>"
 .. "<li>" .. translate("Such as:") .. "</li>"
-.. "<li>" .. "domain:my-nodes.com tcp://223.5.5.5" .. "</li>"
+.. "<li>" .. "domain:my-nodes.com tcp://119.29.29.29" .. "</li>"
 .. "<li>" .. "domain:vpn.com udp://119.29.29.29:53" .. "</li>"
 .. "<li>" .. "full:www.dnspod.com https://120.53.53.53/dns-query" .. "</li>"
 .. "<li>" .. '<a style="color:red">' .. translate("Please note that the program will not start if the format is incorrect!") .. '</a>' .. "</li>"
@@ -188,6 +188,12 @@ o.default = "UseIP"
 o:value("UseIP")
 o:value("UseIPv4")
 o:value("UseIPv6")
+
+if current_node.type == "sing-box" then
+	o = s:taboption("DNS", Value, "direct_dns", translate("Direct DNS"), translate("Optional. Leave empty to use the WAN DNS. Supports udp://IP:PORT, tcp://IP:PORT, or https://HOST/dns-query,BOOTSTRAP_IP. Direct DNS bypasses the transparent proxy."))
+	o:value("https://120.53.53.53/dns-query", "DNSPod DoH")
+	o:value("udp://119.29.29.29:53", "DNSPod UDP")
+end
 
 o = s:taboption("DNS", ListValue, "remote_dns_protocol", translate("Remote DNS Protocol"))
 o:value("tcp", "TCP")

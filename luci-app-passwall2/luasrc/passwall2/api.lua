@@ -182,7 +182,7 @@ end
 
 -- Domain resolution
 function domainToIPv4(domain, dns)
-	local Dns = dns or "223.5.5.5"
+	local Dns = dns or "119.29.29.29"
 	local IPs = luci.sys.exec('nslookup %s %s | awk \'/^Name:/{getline; if ($1 == "Address:") print $2}\'' % { domain, Dns })
 	for IP in string.gmatch(IPs, "%S+") do
 		if datatypes.ipaddr(IP) and not datatypes.ip6addr(IP) then return IP end
