@@ -1021,11 +1021,15 @@ acl_app() {
 		dnsmasq_port=${GLOBAL_DNSMASQ_PORT:-11400}
 		for item in $items; do
 			index=$(expr $index + 1)
-			local enabled sid remarks sources interface tcp_no_redir_ports udp_no_redir_ports node direct_dns_query_strategy remote_dns_protocol remote_dns remote_dns_doh remote_dns_client_ip remote_dns_detour remote_fakedns remote_dns_query_strategy
+			local enabled sid remarks sources interface tcp_no_redir_ports udp_no_redir_ports node direct_dns_query_strategy remote_dns_protocol remote_dns remote_dns_doh remote_dns_client_ip remote_dns_detour remote_fakedns remote_dns_query_strategy log loglevel log_file
 			local _ip _mac _iprange _ipset _ip_or_mac source_list config_file
 			local sid=$(uci -q show "${CONFIG}.${item}" | grep "=acl_rule" | awk -F '=' '{print $1}' | awk -F '.' '{print $2}')
 			[ "$(config_n_get $sid enabled)" = "1" ] || continue
 			eval $(uci -q show "${CONFIG}.${item}" | cut -d'.' -sf 3-)
+			log=${log:-0}
+			loglevel=${loglevel:-warn}
+			log_file="/dev/null"
+			[ "${log}" = "1" ] && log_file="/tmp/log/passwall2_acl_${sid}.log"
 
 			if [ -n "${sources}" ]; then
 				for s in $sources; do
@@ -1121,7 +1125,8 @@ acl_app() {
 											direct_dns_query_strategy=${direct_dns_query_strategy} \
 											remote_dns_protocol=${remote_dns_protocol} remote_dns_tcp_server=${remote_dns} remote_dns_udp_server=${remote_dns} remote_dns_doh="${remote_dns}" \
 											remote_dns_client_ip=${remote_dns_client_ip} remote_dns_detour=${remote_dns_detour} remote_fakedns=${remote_fakedns} remote_dns_query_strategy=${remote_dns_query_strategy} \
-											config_file=${config_file}
+											config_file=${config_file} \
+											log_file="${log_file}" loglevel="${loglevel}"
 								local status=$?
 								if [ "$status" != 0 ]; then
 									log_i18n 2 "[%s] process %s error, skip this transparent proxy!" "${remarks}" "${config_file}"

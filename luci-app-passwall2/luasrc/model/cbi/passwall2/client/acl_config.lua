@@ -78,6 +78,33 @@ o = s:option(Value, "remarks", translate("Remarks"))
 o.default = arg[1]
 o.rmempty = false
 
+---- Log
+o = s:option(Flag, "log", translate("Enable Log"))
+o.default = 0
+o.rmempty = false
+
+o = s:option(ListValue, "loglevel", translate("Log Level"))
+o.default = "warn"
+o:value("debug", "Debug")
+o:value("info", "Info")
+o:value("warn", "Warning")
+o:value("error", "Error")
+o:depends("log", "1")
+
+o = s:option(DummyValue, "_acl_log", translate("Log File"))
+o.rawhtml = true
+o.cfgvalue = function(t, n)
+	local log_path = "/tmp/log/passwall2_acl_" .. arg[1] .. ".log"
+	local log_url = api.url("get_acl_log") .. "?id=" .. arg[1]
+	return string.format(
+		'<code>%s</code>&nbsp;&nbsp;<input class="btn cbi-button cbi-button-apply" type="button" value="%s" onclick="window.open(\'%s\', \'_blank\')" />',
+		log_path,
+		translate("View Log"),
+		log_url
+	)
+end
+o:depends("log", "1")
+
 o = s:option(Value, "interface", translate("Source Interface"))
 o:value("", translate("All"))
 local iface = api.get_network_devices()
