@@ -70,6 +70,7 @@ function index()
 	entry({"admin", "services", appname, "get_now_use_node"}, call("get_now_use_node")).leaf = true
 	entry({"admin", "services", appname, "get_redir_log"}, call("get_redir_log")).leaf = true
 	entry({"admin", "services", appname, "get_socks_log"}, call("get_socks_log")).leaf = true
+	entry({"admin", "services", appname, "get_acl_log"}, call("get_acl_log")).leaf = true
 	entry({"admin", "services", appname, "get_log"}, call("get_log")).leaf = true
 	entry({"admin", "services", appname, "clear_log"}, call("clear_log")).leaf = true
 	entry({"admin", "services", appname, "index_status"}, call("index_status")).leaf = true
@@ -259,6 +260,18 @@ function get_socks_log()
 	local path = "/tmp/etc/passwall2/SOCKS_" .. name .. ".log"
 	if nixio.fs.access(path) then
 		local content = luci.sys.exec("tail -n 5000 ".. path)
+		content = content:gsub("\n", "<br />")
+		http.write(content)
+	else
+		http.write(string.format("<script>alert('%s');window.close();</script>", i18n.translate("Not enabled log")))
+	end
+end
+
+function get_acl_log()
+	local id = http.formvalue("id")
+	local path = "/tmp/log/passwall2_acl_" .. id .. ".log"
+	if nixio.fs.access(path) then
+		local content = luci.sys.exec("tail -n 5000 '" .. path .. "'")
 		content = content:gsub("\n", "<br />")
 		http.write(content)
 	else
