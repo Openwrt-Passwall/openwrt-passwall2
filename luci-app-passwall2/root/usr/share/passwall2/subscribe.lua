@@ -40,6 +40,8 @@ local DEFAULT_TROJAN_TYPE = api.get_core("trojan_type", {{has_singbox,"sing-box"
 local DEFAULT_VMESS_TYPE = api.get_core("vmess_type", {{has_xray,"xray"},{has_singbox,"sing-box"}})
 local DEFAULT_VLESS_TYPE = api.get_core("vless_type", {{has_xray,"xray"},{has_singbox,"sing-box"}})
 local DEFAULT_HYSTERIA2_TYPE = api.get_core("hysteria2_type", {{has_hysteria2,"hysteria2"},{has_singbox,"sing-box"},{has_xray,"xray"}})
+-- HAPP subscription resolver endpoint.
+local HAPP_RESOLVER_API = "https://unhapp.xyz/api.php"
 local core_has = {
 	["xray"] = has_xray,
 	["sing-box"] = has_singbox,
@@ -129,7 +131,7 @@ do
 	if true then
 		local szType = "@global[0]"
 		local option = "node"
-		
+
 		local node_id = uci:get(appname, szType, option)
 		CONFIG[#CONFIG + 1] = {
 			log = true,
@@ -288,7 +290,7 @@ do
 						end
 					}
 				end
-				
+
 			end
 		elseif node.protocol and node.protocol == '_balancing' then
 			local flag = i18n.translatef("Xray Load Balancing node [%s] list", node_id)
@@ -611,7 +613,7 @@ local function parseClashNode(node, add_mode, group, sub_cfg)
 			end
 		end
 		result.transport = node.network and string.lower(node.network) or "tcp"
-		if result.type == "sing-box" and result.transport == "raw" then 
+		if result.type == "sing-box" and result.transport == "raw" then
 			result.transport = "tcp"
 		elseif result.type == "Xray" and result.transport == "tcp" then
 			result.transport = "raw"
@@ -683,7 +685,7 @@ local function parseClashNode(node, add_mode, group, sub_cfg)
 			result.reality_shortId = (node["reality-opts"] and node["reality-opts"]["short-id"]) or nil
 		end
 		result.transport = node.network and string.lower(node.network) or "tcp"
-		if result.type == "sing-box" and result.transport == "raw" then 
+		if result.type == "sing-box" and result.transport == "raw" then
 			result.transport = "tcp"
 		elseif result.type == "Xray" and result.transport == "tcp" then
 			result.transport = "raw"
@@ -852,7 +854,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 		result.protocol = hostInfo[#hostInfo-3]
 		result.method = hostInfo[#hostInfo-2]
 		result.obfs = hostInfo[#hostInfo-1]
-		result.password = base64Decode(hostInfo[#hostInfo])	
+		result.password = base64Decode(hostInfo[#hostInfo])
 		local params = {}
 		for _, v in pairs(split(dat[2], '&')) do
 			local s = v:find("=", 1, true)
@@ -888,7 +890,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 
 		if not info.net then info.net = "tcp" end
 		info.net = string.lower(info.net)
-		if result.type == "sing-box" and info.net == "raw" then 
+		if result.type == "sing-box" and info.net == "raw" then
 			info.net = "tcp"
 		elseif result.type == "Xray" and info.net == "tcp" then
 			info.net = "raw"
@@ -1151,7 +1153,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 
 			if params.type then
 				params.type = string.lower(params.type)
-				if result.type == "sing-box" and params.type == "raw" then 
+				if result.type == "sing-box" and params.type == "raw" then
 					params.type = "tcp"
 				elseif result.type == "Xray" and params.type == "tcp" then
 					params.type = "raw"
@@ -1316,7 +1318,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 			log(2, i18n.translatef("Skipping the %s node is due to incompatibility with the %s core program or incorrect node usage type settings.", "Trojan", "Trojan"))
 			return nil
 		end
-		
+
 		local alias = ""
 		if content:find("#") then
 			local idx_sp = content:find("#")
@@ -1380,7 +1382,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 
 			if not params.type then params.type = "tcp" end
 			params.type = string.lower(params.type)
-			if result.type == "sing-box" and params.type == "raw" then 
+			if result.type == "sing-box" and params.type == "raw" then
 				params.type = "tcp"
 			elseif result.type == "Xray" and params.type == "tcp" then
 				params.type = "raw"
@@ -1520,7 +1522,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 			if ({ xhttp=true, kcp=true, mkcp=true })[params.type] and result.type ~= "Xray" and has_xray then
 				result.type = "Xray"
 			end
-			if result.type == "sing-box" and params.type == "raw" then 
+			if result.type == "sing-box" and params.type == "raw" then
 				params.type = "tcp"
 			elseif result.type == "Xray" and params.type == "tcp" then
 				params.type = "raw"
@@ -1659,7 +1661,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 			content = content:sub(0, idx_sp - 1)
 		end
 		result.remarks = UrlDecode(alias)
-		
+
 		local query = split(content:gsub("/%?", "?"), '%?')
 		local host_port = query[1]
 		local params = {}
@@ -1961,8 +1963,121 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 	return result
 end
 
+-- Resolve happ://crypt* subscription URLs using the configured resolver API.
+-- Returns:
+--   resolved_url, http_code
+-- On success:
+--   resolved_url = resolved HTTP/HTTPS URL
+--   http_code    = 200
+-- On failure:
+--   resolved_url = nil
+--   http_code    = HTTP status returned by the resolver (if available) or 0
+local function resolve_happ_url(url, mode, tmp_file)
+	if not url or url == "" then
+		return nil, 0
+	end
+
+	-- Not a HAPP subscription.
+	if not url:match("^happ://crypt%d*/") then
+		return url, 200
+	end
+
+	-- Fallback temporary file (should normally be supplied by the caller).
+	if not tmp_file or tmp_file == "" then
+		tmp_file = "/tmp/passwall2_happ_resolver"
+	end
+
+	-- Build JSON payload safely.
+	local payload = jsonStringify({
+		url = url
+	})
+
+	local curl_args = {
+		"-fkL",
+		"-w %{http_code}",
+		"--retry 3",
+		"--connect-timeout 3",
+		"-H 'Content-Type: application/json'",
+		"-d " .. luci.util.shellquote(payload)
+	}
+
+	local return_code
+	local result
+
+	if mode == "direct" then
+		return_code, result = api.curl_direct(HAPP_RESOLVER_API, tmp_file, curl_args)
+	elseif mode == "proxy" then
+		return_code, result = api.curl_proxy(HAPP_RESOLVER_API, tmp_file, curl_args)
+	else
+		return_code, result = api.curl_auto(HAPP_RESOLVER_API, tmp_file, curl_args)
+	end
+
+	local http_code = tonumber(result) or 0
+
+	if not return_code or return_code ~= 0 then
+		fs.remove(tmp_file)
+
+		log(1, string.format(
+			"HAPP resolver request failed (mode=%s, rc=%s)",
+			tostring(mode or "auto"),
+			tostring(return_code)
+		))
+
+		return nil, http_code
+	end
+
+	local resolved_url = ""
+
+	if fs.access(tmp_file) then
+		local f = io.open(tmp_file, "r")
+		if f then
+			resolved_url = api.trim(f:read("*all") or "")
+			f:close()
+		end
+	end
+
+	fs.remove(tmp_file)
+
+	if http_code ~= 200 then
+		log(1, string.format(
+			"HAPP resolver returned HTTP %d",
+			http_code
+		))
+		return nil, http_code
+	end
+
+	if resolved_url == "" then
+		log(1, "HAPP resolver returned an empty response.")
+		return nil, http_code
+	end
+
+	-- The resolver must return a plain HTTP/HTTPS subscription URL.
+	if not resolved_url:match("^https?://") then
+		log(1, "HAPP resolver returned an invalid URL: " .. resolved_url)
+		return nil, http_code
+	end
+
+    log(1, "HAPP URL resolved successfully.")
+
+    return resolved_url, http_code
+end
+
 local function curl(url, file, ua, mode, hwid)
 	if not url or url == "" then return 22, 404 end
+    -- Resolve HAPP subscription URL if needed.
+    if url:match("^happ://crypt%d*/") then
+        local resolver_tmp_file = file .. ".resolver"
+
+        local resolved_url, http_code =
+                resolve_happ_url(url, mode, resolver_tmp_file)
+
+        if not resolved_url then
+                -- Resolver failed. Preserve the HTTP status for logging.
+                return 22, http_code
+        end
+
+        url = resolved_url
+    end
 	local curl_args = {
 		"-fskL", "-w %{http_code}", "--retry 3", "--connect-timeout 3", "-H 'Accept-Encoding: identity'"
 	}
