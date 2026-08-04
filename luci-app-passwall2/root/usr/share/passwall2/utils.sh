@@ -390,7 +390,7 @@ ln_run() {
 	#echo "${file_func} $*" >&2
 	[ -n "${file_func}" ] || {
 		log 1 "$(i18n "%s not found, unable to start..." "${ln_name}")"
-		return 0
+		return 1
 	}
 
 	[ "${queue_run}" == "1" ] && {
