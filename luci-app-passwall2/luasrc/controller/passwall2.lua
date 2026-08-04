@@ -224,8 +224,16 @@ function gen_client_config()
 	local id = http.formvalue("id")
 	local config_file = api.TMP_PATH .. "/config_" .. id
 	luci.sys.call(string.format("/usr/share/passwall2/app.sh run_socks flag=config_%s node=%s bind=127.0.0.1 socks_port=1080 config_file=%s no_run=1", id, id, config_file))
+	local content_type = "application/json"
+	-- A helper type may write its config with its own extension (TrustTunnel uses TOML).
+	-- Without this the file is neither served nor removed, and it stays in TMP_PATH with
+	-- the node credentials in it.
+	if not nixio.fs.access(config_file) and nixio.fs.access(config_file .. ".toml") then
+		config_file = config_file .. ".toml"
+		content_type = "text/plain"
+	end
 	if nixio.fs.access(config_file) then
-		http.prepare_content("application/json")
+		http.prepare_content(content_type)
 		http.write(luci.sys.exec("cat " .. config_file))
 		luci.sys.call("rm -f " .. config_file)
 	else

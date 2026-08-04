@@ -74,6 +74,101 @@ local current_node = map:get(section)
 		}
 	}
 
+
+	// TrustTunnel deep links (tt://?<base64url>) carry a TLV payload whose tags and
+	// lengths use the RFC 9000 variable-length integer encoding. See DEEP_LINK.md in
+	// the TrustTunnel repository.
+	function ttVarintRead(b, i) {
+		const n = 1 << (b[i] >> 6);
+		if (i + n > b.length) throw new Error("truncated varint");
+		let v = b[i] & 0x3f;
+		for (let k = 1; k < n; k++) v = v * 256 + b[i + k];
+		return [v, i + n];
+	}
+
+	function ttVarintWrite(v) {
+		if (v < 64) return [v];
+		if (v < 16384) return [0x40 | (v >> 8), v & 0xff];
+		if (v < 1073741824) return [0x80 | (v >> 24), (v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff];
+		throw new Error("value too large");
+	}
+
+	function ttTlvDecode(bytes) {
+		const out = [];
+		let i = 0;
+		while (i < bytes.length) {
+			let tag, len;
+			[tag, i] = ttVarintRead(bytes, i);
+			[len, i] = ttVarintRead(bytes, i);
+			if (i + len > bytes.length) throw new Error("truncated payload");
+			out.push([tag, bytes.slice(i, i + len)]);
+			i += len;
+		}
+		return out;
+	}
+
+	function ttTlvAdd(out, tag, val) {
+		out.push(...ttVarintWrite(tag), ...ttVarintWrite(val.length), ...val);
+	}
+
+	function ttUtf8Encode(s) {
+		const u = unescape(encodeURIComponent(s));
+		const b = [];
+		for (let i = 0; i < u.length; i++) b.push(u.charCodeAt(i));
+		return b;
+	}
+
+	function ttUtf8Decode(b) {
+		let s = "";
+		for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+		try { return decodeURIComponent(escape(s)); } catch (e) { return s; }
+	}
+
+	function ttBytesToStr(b) {
+		let s = "";
+		for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+		return s;
+	}
+
+	// The link carries the certificate chain as concatenated DER; the form holds PEM.
+	function ttPemToDer(pem) {
+		const out = [];
+		const blocks = pem.match(/-----BEGIN [^-]+-----[\s\S]*?-----END [^-]+-----/g) || [];
+		for (const blk of blocks) {
+			const b64 = blk.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
+			const raw = atob(b64);
+			for (let i = 0; i < raw.length; i++) out.push(raw.charCodeAt(i));
+		}
+		return out;
+	}
+
+	function ttDerToPem(der) {
+		// The chain arrives as concatenated DER. Each certificate is an ASN.1 SEQUENCE,
+		// so the boundaries can be walked without a full parser: tag 0x30, then either a
+		// short length or 0x80|n followed by n length bytes.
+		const out = [];
+		let i = 0;
+		while (i < der.length) {
+			if (der[i] !== 0x30 || i + 2 > der.length) break;
+			let hdr = 2, len = der[i + 1];
+			if (len & 0x80) {
+				const n = len & 0x7f;
+				if (n === 0 || n > 4 || i + 2 + n > der.length) break;
+				len = 0;
+				for (let k = 0; k < n; k++) len = len * 256 + der[i + 2 + k];
+				hdr = 2 + n;
+			}
+			const end = i + hdr + len;
+			if (end > der.length) break;
+			const b64 = btoa(ttBytesToStr(der.slice(i, end)));
+			let body = "";
+			for (let k = 0; k < b64.length; k += 64) body += b64.substring(k, k + 64) + "\n";
+			out.push("-----BEGIN CERTIFICATE-----\n" + body + "-----END CERTIFICATE-----");
+			i = end;
+		}
+		return out.join("\n");
+	}
+
 	function dictvalue(d, key) {
 		var v = d[key];
 		if (typeof (v) === 'undefined' || v === '')
@@ -173,6 +268,9 @@ local current_node = map:get(section)
 		} else if (v_type === "Hysteria2") {
 			dom_prefix = "hysteria2_"
 			protocol = "hysteria2"
+		} else if (v_type === "TrustTunnel") {
+			dom_prefix = "trusttunnel_"
+			protocol = "tt"
 		} else if (v_type === "Xray") {
 			dom_prefix = "xray_"
 		} else if (v_type === "sing-box") {
@@ -713,6 +811,41 @@ local current_node = map:get(section)
 				params = params.substring(1);
 			}
 			url += params;
+		} else if (v_type === "TrustTunnel") {
+			var payload = [];
+			var tt_str = function(tag, id) {
+				var e = opt.get(dom_prefix + id);
+				if (e && e.value && e.value.trim() !== "") ttTlvAdd(payload, tag, ttUtf8Encode(e.value.trim()));
+			};
+			var tt_bool = function(tag, id, dflt) {
+				var e = opt.get(dom_prefix + id);
+				var v = e ? !!e.checked : dflt;
+				if (v !== dflt) ttTlvAdd(payload, tag, [v ? 1 : 0]);
+			};
+			ttTlvAdd(payload, 0, [1]);
+			var tt_host = opt.get(dom_prefix + "hostname");
+			var tt_addr_raw = opt.get(dom_prefix + "address");
+			var tt_hostname = (tt_host && tt_host.value.trim() !== "") ? tt_host.value.trim()
+				: (tt_addr_raw ? tt_addr_raw.value.trim() : _address);
+			ttTlvAdd(payload, 1, ttUtf8Encode(tt_hostname));
+			ttTlvAdd(payload, 2, ttUtf8Encode(_address + ":" + opt.get(dom_prefix + "port").value));
+			tt_str(3, "custom_sni");
+			tt_bool(4, "has_ipv6", true);
+			tt_str(5, "username");
+			tt_str(6, "password");
+			tt_bool(7, "skip_verification", false);
+			var tt_pem = opt.get(dom_prefix + "certificate");
+			if (tt_pem && tt_pem.value.trim() !== "") {
+				var der = ttPemToDer(tt_pem.value);
+				if (der.length) ttTlvAdd(payload, 8, der);
+			}
+			var tt_up = opt.get(dom_prefix + "upstream_protocol");
+			if (tt_up && tt_up.value === "http3") ttTlvAdd(payload, 9, [2]);
+			tt_bool(10, "anti_dpi", false);
+			tt_str(11, "client_random");
+			if (v_alias && v_alias.value.trim() !== "") ttTlvAdd(payload, 12, ttUtf8Encode(v_alias.value.trim()));
+			url = "?" + b64encsafe(ttBytesToStr(payload));
+			return "tt://" + url;
 		}
 		if (url) {
 			url = protocol.toLowerCase() + "://" + url;
@@ -1718,6 +1851,74 @@ local current_node = map:get(section)
 				opt.set('remarks', decodeURIComponent(hash.substr(1)));
 			}
 		}
+		if (ssu[0] === "tt") {
+			dom_prefix = "trusttunnel_"
+			opt.set('type', "TrustTunnel");
+			var tt_payload = (ssu[1] || "").replace(/^\?/, "").replace(/#.*/, "").trim();
+			var tt_entries = null;
+			try {
+				var tt_raw = b64decsafe(tt_payload), tt_bytes = [];
+				for (var i = 0; i < tt_raw.length; i++) tt_bytes.push(tt_raw.charCodeAt(i));
+				tt_entries = ttTlvDecode(tt_bytes);
+			} catch (e) {
+				tt_entries = null;
+			}
+			if (!tt_entries || !tt_entries.length) {
+				s.innerHTML = "<font color='red'><%:Invalid Share URL Format%></font>";
+				return false;
+			}
+			var tt = {}, tt_addr = [], tt_der = [];
+			for (var i = 0; i < tt_entries.length; i++) {
+				var tag = tt_entries[i][0], val = tt_entries[i][1];
+				if (tag === 2) tt_addr.push(ttUtf8Decode(val));
+				else if (tag === 8) tt_der = tt_der.concat(val);
+				else tt[tag] = val;
+			}
+			if (!tt_addr.length || tt[1] === undefined || tt[5] === undefined || tt[6] === undefined) {
+				s.innerHTML = "<font color='red'><%:Invalid Share URL Format%></font>";
+				return false;
+			}
+			if (tt[0] !== undefined && ttVarintRead(tt[0], 0)[0] > 1) {
+				s.innerHTML = "<font color='red'><%:Unsupported share link version.%></font>";
+				return false;
+			}
+			var tt_first = tt_addr[0];
+			var tt_sep = tt_first.lastIndexOf(":");
+			if (tt_sep <= 0) {
+				s.innerHTML = "<font color='red'><%:Invalid Share URL Format%></font>";
+				return false;
+			}
+			opt.set(dom_prefix + 'address', unbracketIP(tt_first.substring(0, tt_sep)));
+			opt.set(dom_prefix + 'port', tt_first.substring(tt_sep + 1) || "443");
+			opt.set(dom_prefix + 'hostname', ttUtf8Decode(tt[1]));
+			opt.set(dom_prefix + 'username', ttUtf8Decode(tt[5]));
+			opt.set(dom_prefix + 'password', ttUtf8Decode(tt[6]));
+			opt.set(dom_prefix + 'custom_sni', tt[3] !== undefined ? ttUtf8Decode(tt[3]) : '');
+			opt.set(dom_prefix + 'client_random', tt[11] !== undefined ? ttUtf8Decode(tt[11]) : '');
+			opt.set(dom_prefix + 'has_ipv6', tt[4] !== undefined ? tt[4][0] === 1 : true);
+			opt.set(dom_prefix + 'skip_verification', tt[7] !== undefined ? tt[7][0] === 1 : false);
+			opt.set(dom_prefix + 'anti_dpi', tt[10] !== undefined ? tt[10][0] === 1 : false);
+			opt.set(dom_prefix + 'upstream_protocol', (tt[9] !== undefined && ttVarintRead(tt[9], 0)[0] === 2) ? "http3" : "http2");
+			opt.set(dom_prefix + 'certificate', tt_der.length ? ttDerToPem(tt_der) : '');
+			var tt_name = tt_first;
+			if (tt[12] !== undefined) {
+				tt_name = ttUtf8Decode(tt[12]);
+			} else if (ssrurl.indexOf("#") > -1) {
+				try { tt_name = decodeURI(ssrurl.split("#")[1]); } catch (e) { }
+			}
+			opt.set('remarks', tt_name);
+			// dns_upstreams (tag 13) is dropped on purpose: passwall2 owns DNS.
+			if (opt.get(dom_prefix + 'port').value) {
+				opt.get(dom_prefix + 'port').focus();
+				opt.get(dom_prefix + 'port').blur();
+			}
+			sessionStorage.removeItem("fromUrl");
+			s.innerHTML = (tt_addr.length > 1)
+				? "<font color='orange'><%:Only the first endpoint address was imported.%></font>"
+				: "<font color='green'><%:Import Finished %></font>";
+			return true;
+		}
+
 		if (ssu[0] === "anytls") {
 			if (has_singbox) {
 				dom_prefix = "singbox_"

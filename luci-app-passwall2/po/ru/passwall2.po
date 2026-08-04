@@ -2411,3 +2411,43 @@ msgstr "Размер упаковки Gecko (макс)"
 
 msgid "valid time (hh:mm)"
 msgstr "Время действия (чч:мм)"
+
+
+msgid "TLS Hostname"
+msgstr "Имя хоста TLS"
+
+msgid "Leave empty to use the endpoint address."
+msgstr "Оставьте пустым, чтобы использовать адрес эндпоинта."
+
+msgid "Upstream Protocol"
+msgstr "Протокол подключения"
+
+msgid "Custom SNI"
+msgstr "Пользовательский SNI"
+
+msgid "Client Random"
+msgstr "Client Random"
+
+msgid "Invalid Client Random."
+msgstr "Неверное значение Client Random."
+
+msgid "Anti-DPI"
+msgstr "Противодействие DPI"
+
+msgid "Post-Quantum"
+msgstr "Постквантовая криптография"
+
+msgid "The character \"|\" is not allowed here."
+msgstr "Символ «|» здесь недопустим."
+
+msgid "Socks node: [%s]%s, config generation failed."
+msgstr "Socks-узел: [%s]%s, не удалось сгенерировать конфигурацию."
+
+msgid "Must be PEM format!"
+msgstr "Должно быть в формате PEM!"
+
+msgid "Only the first endpoint address was imported."
+msgstr "Импортирован только первый адрес эндпоинта."
+
+msgid "Unsupported share link version."
+msgstr "Версия ссылки не поддерживается."
