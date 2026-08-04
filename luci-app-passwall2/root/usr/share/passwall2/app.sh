@@ -14,6 +14,7 @@ UTIL_SS=$LUA_UTIL_PATH/util_shadowsocks.lua
 UTIL_XRAY=$LUA_UTIL_PATH/util_xray.lua
 UTIL_NAIVE=$LUA_UTIL_PATH/util_naiveproxy.lua
 UTIL_HYSTERIA2=$LUA_UTIL_PATH/util_hysteria2.lua
+UTIL_TRUSTTUNNEL=$LUA_UTIL_PATH/util_trusttunnel.lua
 SINGBOX_BIN=$(first_type $(config_t_get global_app sing_box_file) sing-box)
 XRAY_BIN=$(first_type $(config_t_get global_app xray_file) xray)
 
@@ -495,6 +496,18 @@ run_socks() {
 		local _json_arg="$(json_dump)"
 		lua $UTIL_HYSTERIA2 gen_config "${_json_arg}" > $config_file
 		[ -z "$no_run" ] && ln_run ${QUEUE_RUN} "$(first_type $(config_t_get global_app hysteria_file))" "hysteria" $log_file -c "$config_file" client
+	;;
+	trusttunnel)
+		json_add_string "local_socks_address" "${bind}"
+		json_add_string "local_socks_port" "${socks_port}"
+		config_file="${config_file%.json}.toml"
+		local _json_arg="$(json_dump)"
+		if ! lua $UTIL_TRUSTTUNNEL gen_config "${_json_arg}" > $config_file || [ ! -s "$config_file" ]; then
+			rm -f "$config_file"
+			log 1 "$(i18n "Socks node: [%s]%s, config generation failed." "${remarks}" "${tmp}")"
+			return 1
+		fi
+		[ -z "$no_run" ] && ln_run ${QUEUE_RUN} "$(first_type $(config_t_get global_app trusttunnel_client_file /usr/bin/trusttunnel_client))" "trusttunnel_client" $log_file -c "$config_file"
 	;;
 	esac
 

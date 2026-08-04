@@ -80,4 +80,28 @@ _M.geoview = {
 	}
 }
 
+_M.trusttunnel_client = {
+	-- name:lower() must equal the binary name inside the release tarball, it is used to
+	-- locate the file after extraction.
+	name = "TrustTunnel_Client",
+	repo = "TrustTunnel/TrustTunnelClient",
+	-- Not gh_release_url: no api-cache JSON exists for this repo yet. Happy to switch
+	-- once trusttunnel is added to the api-cache workflow in openwrt-passwall-packages.
+	get_url = function(self)
+		return "https://api.github.com/repos/" .. self.repo .. "/releases/latest"
+	end,
+	cmd_version = "--version | awk '{print $2}'",
+	zipped = true,
+	zipped_suffix = "tar.gz",
+	default_path = "/usr/bin/trusttunnel_client",
+	match_fmt_str = "linux%%-%s%%.tar%%.gz$",
+	file_tree = {
+		x86_64   = "x86_64",
+		aarch64  = "aarch64",
+		armv8    = "aarch64",
+		rockchip = "aarch64",
+		armv7    = "armv7"
+	}
+}
+
 return _M

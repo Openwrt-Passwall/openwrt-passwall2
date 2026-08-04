@@ -53,6 +53,7 @@ config global_app
 	option xray_file '/usr/bin/xray'
 	option hysteria_file '/usr/bin/hysteria'
 	option sing_box_file '/usr/bin/sing-box'
+	option trusttunnel_client_file '/usr/bin/trusttunnel_client'
 
 config global_subscribe
 	option filter_keyword_mode '1'

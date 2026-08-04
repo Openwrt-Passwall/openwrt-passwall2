@@ -2399,3 +2399,37 @@ msgstr "Gecko 包大小（最大）"
 
 msgid "valid time (hh:mm)"
 msgstr "有效时间（hh:mm）"
+
+
+msgid "TLS Hostname"
+msgstr "TLS 主机名"
+
+msgid "Leave empty to use the endpoint address."
+msgstr "留空则使用端点地址。"
+
+msgid "Upstream Protocol"
+msgstr "上游协议"
+
+msgid "Custom SNI"
+msgstr "自定义 SNI"
+
+msgid "Client Random"
+msgstr "客户端随机数"
+
+msgid "Invalid Client Random."
+msgstr "客户端随机数无效。"
+
+msgid "Anti-DPI"
+msgstr "反 DPI"
+
+msgid "Post-Quantum"
+msgstr "后量子密钥交换"
+
+msgid "The character \"|\" is not allowed here."
+msgstr "此处不允许使用字符“|”。"
+
+msgid "Socks node: [%s]%s, config generation failed."
+msgstr "Socks 节点：[%s]%s，配置生成失败。"
+
+msgid "Must be PEM format!"
+msgstr "必须为 PEM 格式！"
