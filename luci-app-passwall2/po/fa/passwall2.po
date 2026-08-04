@@ -2447,3 +2447,9 @@ msgstr ""
 
 msgid "Must be PEM format!"
 msgstr ""
+
+msgid "Only the first endpoint address was imported."
+msgstr ""
+
+msgid "Unsupported share link version."
+msgstr ""

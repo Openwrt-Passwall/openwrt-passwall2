@@ -2439,3 +2439,9 @@ msgstr "Socks 節點：[%s]%s，設定產生失敗。"
 
 msgid "Must be PEM format!"
 msgstr "必須為 PEM 格式！"
+
+msgid "Only the first endpoint address was imported."
+msgstr "僅匯入了第一個端點位址。"
+
+msgid "Unsupported share link version."
+msgstr "不支援的分享連結版本。"

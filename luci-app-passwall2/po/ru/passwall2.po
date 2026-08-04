@@ -2445,3 +2445,9 @@ msgstr "Socks-узел: [%s]%s, не удалось сгенерировать �
 
 msgid "Must be PEM format!"
 msgstr "Должно быть в формате PEM!"
+
+msgid "Only the first endpoint address was imported."
+msgstr "Импортирован только первый адрес эндпоинта."
+
+msgid "Unsupported share link version."
+msgstr "Версия ссылки не поддерживается."
