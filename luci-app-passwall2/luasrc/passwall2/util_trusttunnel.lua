@@ -65,6 +65,9 @@ end
 local function toml_pem(s)
 	s = tostring(s or "")
 	if s == "" then return nil end
+	-- A literal string is copied verbatim, so it needs the same UTF-8 check as the basic
+	-- strings above: toml++ rejects the whole document over one bad byte anywhere in it.
+	if not is_utf8(s) then return nil end
 	s = s:gsub("\r\n", "\n"):gsub("\r", "\n")
 	if s:find("'''", 1, true) then return nil end
 	if s:find("[%z\1-\8\11-\31\127]") then return nil end
