@@ -1,6 +1,7 @@
 <%
 local api = require "luci.passwall2.api"
 -%>
+<%+header%>
 <script type="text/javascript">
 	//<![CDATA[
 	var log_textarea = null;
@@ -42,3 +43,4 @@ local api = require "luci.passwall2.api"
 	<input class="btn cbi-button cbi-button-remove" type="button" onclick="clearlog()" value="<%:Clear logs%>" />
 	<textarea id="log_textarea" class="cbi-input-textarea" style="width: 100%;margin-top: 10px;" data-update="change" rows="40" wrap="off" readonly="readonly"></textarea>
 </fieldset>
+<%+footer%>

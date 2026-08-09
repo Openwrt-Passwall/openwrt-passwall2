@@ -59,51 +59,6 @@ config global_subscribe
 	
 config global_singbox
 
-config shunt_rules 'China'
-	option remarks 'China'
-	option network 'tcp,udp'
-	option domain_list 'geosite:cn'
-	option ip_list 'geoip:cn'
-
-config shunt_rules 'Iran'
-	option remarks 'Iran'
-	option network 'tcp,udp'
-	option domain_list 'geosite:ir
-#rule-set:remote:https://raw.githubusercontent.com/Chocolate4U/Iran-sing-box-rules/rule-set/geosite-ir.srs'
-	option ip_list 'geoip:ir
-#rule-set:remote:https://raw.githubusercontent.com/Chocolate4U/Iran-sing-box-rules/rule-set/geoip-ir.srs'
-
-config shunt_rules 'Russia_Block'
-	option remarks 'Russia_Block'
-	option network 'tcp,udp'
-	option domain_list 'geosite:ru-blocked
-#rule-set:remote:https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/refs/heads/release/sing-box/rule-set-geosite/geosite-ru-blocked.srs'
-	option ip_list 'geoip:ru-blocked
-#rule-set:remote:https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/refs/heads/release/sing-box/rule-set-geoip/geoip-ru-blocked.srs'
-
-config shunt_rules 'Russia'
-	option remarks 'Russia'
-	option network 'tcp,udp'
-	option ip_list 'geoip:ru
-#rule-set:remote:https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/refs/heads/release/sing-box/rule-set-geoip/geoip-ru.srs'
-
-config shunt_rules 'PrivateIP'
-	option remarks 'PrivateIP'
-	option network 'tcp,udp'
-	option ip_list '10.0.0.0/8
-127.0.0.0/8
-198.51.100.0/24
-192.0.0.0/24
-169.254.0.0/16
-224.0.0.0/3
-192.168.0.0/16
-192.88.99.0/24
-100.64.0.0/10
-172.16.0.0/12
-0.0.0.0/8
-192.0.2.0/24
-203.0.113.0/24'
-
 config nodes 'examplenode'
 	option remarks 'Example'
 	option type 'Xray'
@@ -126,3 +81,151 @@ config nodes 'rulenode'
 	option domainMatcher 'hybrid'
 	option write_ipset_direct '1'
 	option enable_geoview_ip '1'
+	option shunt_group 'CN'
+
+config shunt_rules 'DirectFront'
+	option remarks 'DirectFront'
+	option network 'tcp,udp'
+	option domain_list 'domain:ip233.cn'
+	option group 'CN'
+
+config shunt_rules 'ProxyFront'
+	option remarks 'ProxyFront'
+	option network 'tcp,udp'
+	option domain_list 'domain:www.gstatic.com
+domain:ssl.gstatic.com
+domain:fonts.gstatic.com'
+	option group 'CN'
+
+config shunt_rules 'DirectGame'
+	option remarks 'DirectGame'
+	option domain_list '# steam直连域名获取国内CDN走国内线路下载
+cm.steampowered.com
+steamserver.net
+
+# steam国内CDN华为云
+steampipe.steamcontent.tnkjmec.com
+# steam国内CDN白山云
+st.dl.eccdnx.com
+st.dl.bscstorage.net
+st.dl.pinyuncloud.com
+# steam国内CDN新流云(原金山云)(支持ipv6)
+dl.steam.clngaa.com
+# steam国内CDN网宿
+cdn.mileweb.cs.steampowered.com.8686c.com
+cdn-ws.content.steamchina.com
+# steam国内CDN腾讯云 (蒸汽中国独占)
+cdn-qc.content.steamchina.com
+# steam国内CDN阿里云(支持ipv6)
+cdn-ali.content.steamchina.com
+xz.pphimalayanrt.com
+lv.queniujq.cn
+alibaba.cdn.steampipe.steamcontent.com
+
+# 国内游戏geosite域名
+geosite:category-games@cn'
+	option ip_list '# steam直连IP
+45.121.184.0/24
+103.10.124.0/23
+103.28.54.0/24
+146.66.152.0/24
+146.66.155.0/24
+153.254.86.0/24
+155.133.224.0/22
+155.133.230.0/24
+155.133.232.0/23
+155.133.234.0/24
+155.133.236.0/22
+155.133.240.0/23
+155.133.244.0/23
+155.133.246.0/24
+155.133.248.0/21
+162.254.192.0/21
+185.25.182.0/23
+190.217.32.0/22
+192.69.96.0/22
+205.196.6.0/24
+208.64.200.0/22
+208.78.164.0/22
+205.185.194.0/24'
+	option network 'tcp,udp'
+	option group 'CN'
+
+config shunt_rules 'ProxyGame'
+	option remarks 'ProxyGame'
+	option domain_list '# steam 商店/客服/聊天/网页布局/API/二维码/Google云同步 代理URL
+steamcommunity.com
+www.steamcommunity.com
+store.steampowered.com
+checkout.steampowered.com
+api.steampowered.com
+help.steampowered.com
+login.steampowered.com
+store.akamai.steamstatic.com
+steambroadcast.akamaized.net
+steamvideo-a.akamaihd.net
+steamusercontent-a.akamaihd.net
+steamstore-a.akamaihd.net
+steamcommunity-a.akamaihd.net
+steamcdn-a.akamaihd.net
+steamuserimages-a.akamaihd.net
+community.akamai.steamstatic.com
+avatars.akamai.steamstatic.com
+community.steamstatic.com
+cdn.akamai.steamstatic.com
+avatars.steamstatic.com
+shared.akamai.steamstatic.com
+clan.akamai.steamstatic.com
+cdn.cloudflare.steamstatic.com
+community.cloudflare.steamstatic.com
+store.cloudflare.steamstatic.com
+avatars.cloudflare.steamstatic.com
+clan.cloudflare.steamstatic.com
+shared.cloudflare.steamstatic.com
+steam-chat.com
+steamcloud-ugc.storage.googleapis.com
+steamcloud-eu-ams.storage.googleapis.com
+steamcloud-eu-fra.storage.googleapis.com
+steamcloud-finland.storage.googleapis.com
+steamcloud-saopaulo.storage.googleapis.com
+steamcloud-singapore.storage.googleapis.com
+steamcloud-sydney.storage.googleapis.com
+steamcloud-taiwan.storage.googleapis.com
+steamcloud-eu.storage.googleapis.com
+domain:blizzard.com
+geosite:category-games'
+	option network 'tcp,udp'
+	option group 'CN'
+
+config shunt_rules 'CN'
+	option remarks 'CN'
+	option domain_list 'geosite:cn'
+	option ip_list 'geoip:cn'
+	option network 'tcp,udp'
+	option group 'CN'
+
+config shunt_rules 'Iran'
+	option remarks 'Iran'
+	option network 'tcp,udp'
+	option domain_list 'geosite:ir
+#rule-set:remote:https://raw.githubusercontent.com/Chocolate4U/Iran-sing-box-rules/rule-set/geosite-ir.srs'
+	option ip_list 'geoip:ir
+#rule-set:remote:https://raw.githubusercontent.com/Chocolate4U/Iran-sing-box-rules/rule-set/geoip-ir.srs'
+	option group 'IR'
+
+config shunt_rules 'Russia_Block'
+	option remarks 'Russia_Block'
+	option network 'tcp,udp'
+	option domain_list 'geosite:ru-blocked
+#rule-set:remote:https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/refs/heads/release/sing-box/rule-set-geosite/geosite-ru-blocked.srs'
+	option ip_list 'geoip:ru-blocked
+#rule-set:remote:https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/refs/heads/release/sing-box/rule-set-geoip/geoip-ru-blocked.srs'
+	option group 'RU'
+
+config shunt_rules 'Russia'
+	option remarks 'Russia'
+	option network 'tcp,udp'
+	option ip_list 'geoip:ru
+#rule-set:remote:https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/refs/heads/release/sing-box/rule-set-geoip/geoip-ru.srs'
+	option group 'RU'
+

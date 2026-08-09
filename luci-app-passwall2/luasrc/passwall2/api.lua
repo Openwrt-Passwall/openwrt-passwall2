@@ -583,7 +583,7 @@ function get_node_list()
 	uci:foreach(appname, "socks", function(s)
 		if s.enabled == "1" and s.node then
 			node_list.socks_list[#node_list.socks_list + 1] = {
-				id = "Socks_" .. s[".name"],
+				id = s[".name"],
 				remark = i18n.translate("Socks Config") .. " [" .. s.port .. i18n.translate("Port") .. "]",
 				group = "Socks"
 			}
@@ -669,16 +669,14 @@ function get_full_node_remarks(n)
 	return remarks
 end
 
-function gen_uuid(format)
+function gen_uuid()
 	local uuid = sys.exec("echo -n $(cat /proc/sys/kernel/random/uuid)")
-	if format == nil then
-		uuid = string.gsub(uuid, "-", "")
-	end
 	return uuid
 end
 
-function gen_short_uuid()
-	return sys.exec("echo -n $(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8)")
+function gen_random_char(length)
+	if not length then length = 8 end
+	return sys.exec("echo -n $(head /dev/urandom | tr -dc A-Za-z0-9 | head -c %s)" % length)
 end
 
 function uci_get_type(type, config, default)
@@ -1170,7 +1168,7 @@ function to_extract(app_name, file, subfix)
 				exec("/bin/rm", {"-f", file})
 				return {
 					code = 1,
-					error = i18n.translate("Not installed %s, Can't unzip!" % { tools_name })
+					error = i18n.translatef("Not installed %s, Can't unzip!", tools_name)
 				}
 			end
 		end
@@ -1383,8 +1381,6 @@ function set_apply_on_parse(map)
 				if old then old(self) end
 				map:set("@global[0]", "timestamp", os.time())
 			end
-			local cbi = require "luci.cbi"
-			map:append(cbi.Template(appname .. "/cbi/optimize_cbi_ui"))
 		end
 	end
 end

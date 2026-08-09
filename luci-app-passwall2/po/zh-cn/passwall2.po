@@ -334,8 +334,8 @@ msgstr "你确定要删除选择的节点吗？"
 msgid "You no select nodes !"
 msgstr "你没有选择任何节点！"
 
-msgid "Are you sure set to"
-msgstr "你确定要设为"
+msgid "Are you sure set this node?"
+msgstr "你确定要设置这个节点吗？"
 
 msgid "the server?"
 msgstr "服务器吗？"
@@ -962,6 +962,9 @@ msgstr "注：会增加一些系统资源的开销。"
 msgid "Shunt Rule"
 msgstr "分流规则"
 
+msgid "Shunt Rule Group"
+msgstr "分流规则组"
+
 msgid "Please note attention to the priority, the higher the order, the higher the priority."
 msgstr "请注意优先级问题，排序越上面优先级越高。"
 
@@ -1496,6 +1499,12 @@ msgstr "启用节点日志"
 msgid "Log Level"
 msgstr "日志等级"
 
+msgid "Log File"
+msgstr "日志文件"
+
+msgid "View Log"
+msgstr "查看日志"
+
 msgid "Not enabled log"
 msgstr "未启用日志"
 
@@ -1735,6 +1744,12 @@ msgstr "域名 DNS 解析"
 
 msgid "If the node address is a domain name, this DNS will be used for resolution."
 msgstr "如果节点地址是域名，则将使用此 DNS 进行解析。"
+
+msgid "Enable Happy Eyeballs"
+msgstr "启用 Happy Eyeballs"
+
+msgid "Attempts IPv4 and IPv6 simultaneously; automatically uses the faster connection."
+msgstr "同时尝试 IPv4 和 IPv6 连接，自动使用更快的连接。"
 
 msgid "Supports only Xray or Sing-box node types."
 msgstr "仅支持 Xray 或 Sing-box 类型节点。"
@@ -2358,6 +2373,9 @@ msgstr "成功解析【%s】节点，数量：%s"
 msgid "Get subscription content for [%s] is empty. This may be due to an invalid subscription address or a network problem. Please diagnose the issue!"
 msgstr "获取到的【%s】订阅内容为空，可能是订阅地址无效，或是网络问题，请诊断！"
 
+msgid "No Proxy"
+msgstr "不代理"
+
 msgid "Proxy"
 msgstr "代理"
 
@@ -2399,3 +2417,15 @@ msgstr "Gecko 包大小（最大）"
 
 msgid "valid time (hh:mm)"
 msgstr "有效时间（hh:mm）"
+
+msgid "Disable TLS Reuse"
+msgstr "禁用 TLS 连接复用"
+
+msgid "Not Set"
+msgstr "未设置"
+
+msgid "Cipher Suites"
+msgstr "密码套件"
+
+msgid "Configures the list of supported cipher suites, separated by :"
+msgstr "配置支持的密码套件列表，以冒号 (:) 分隔。"
