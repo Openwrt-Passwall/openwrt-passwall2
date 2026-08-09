@@ -1129,7 +1129,7 @@ table td, .table .td {
 		add_node() {
 			let nodes_link = document.getElementById("nodes_link").value;
 			const group = (document.querySelector('#addlink_group_custom input[type="hidden"]')?.value || "default");
-			nodes_link = nodes_link.replace(/\t/g, "").replace(/\r\n|\r/g, "\n").replace(/[<>]/g, '').trim();
+			nodes_link = nodes_link.replace(/\t/g, "").replace(/\r\n|\r/g, "\n").replace(/<[^>]*>/g, '').trim();
 			if (nodes_link != "") {
 				nodes_link = decodeIfBase64(nodes_link);
 				let s = nodes_link.split('://');
@@ -1261,12 +1261,12 @@ table td, .table .td {
 		},
 		close() {
 			document.getElementById("set_node_div").style.display="none";
-			document.getElementById("set_node_name").innerHTML = "";
+			document.getElementById("set_node_name").textContent = "";
 		},
 		set(type, config) {
 			if (confirm('<%:Are you sure set this node?%>') == true){
 				ajax.abortAll();
-				window.location.href = '<%=api.url("set_node")%>?type=' + type + '&config=' + config + '&section=' + section;
+				window.location.href = '<%=api.url("set_node")%>?type=' + type + '&config=' + config + '&section=' + this.section;
 			}
 		}
 	}
