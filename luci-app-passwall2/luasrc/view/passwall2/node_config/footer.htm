@@ -48,7 +48,7 @@
 							protocol: getOption("<%=self.config%>", "<%=self.section%>", name).value,
 						}, node_config_url);
 					} else {
-						window.location.href = node_config_url + "?select_proto=" + el.value;
+						window.location.href = node_config_url + "?select_proto=" + encodeURIComponent(el.value);
 					}
 				}
 			});
