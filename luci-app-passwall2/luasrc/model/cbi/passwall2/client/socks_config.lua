@@ -31,7 +31,7 @@ o.default = 1
 o.rmempty = false
 
 local auto_switch_tip
-local current_node = api.get_cache_var("socks_" .. arg[1])
+local current_node = api.get_cache_var(arg[1])
 if current_node then
 	local n = m:get(current_node)
 	if n then

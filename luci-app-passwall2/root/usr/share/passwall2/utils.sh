@@ -388,7 +388,10 @@ ln_run() {
 		[ -x "${file_func}" ] || log 1 "$(i18n "%s does not have execute permissions and cannot be started: %s %s" "$(readlink ${file_func})" "${file_func}" "$*")"
 	fi
 	#echo "${file_func} $*" >&2
-	[ -n "${file_func}" ] || log 1 "$(i18n "%s not found, unable to start..." "${ln_name}")"
+	[ -n "${file_func}" ] || {
+		log 1 "$(i18n "%s not found, unable to start..." "${ln_name}")"
+		return 1
+	}
 
 	[ "${queue_run}" == "1" ] && {
 		mkdir -p $TMP_PROCESS_LIST_PATH

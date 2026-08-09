@@ -64,8 +64,8 @@ test_node() {
 		local pid_file="/tmp/etc/${CONFIG}/test_node_${node_id}_plugin.pid"
 		[ -s "$pid_file" ] && kill -9 "$(head -n 1 "$pid_file")" >/dev/null 2>&1
 		busybox pgrep -af "test_node_${node_id}" | awk '! /socks_auto_switch\.sh/{print $1}' | xargs kill -9 >/dev/null 2>&1
-		rm -rf /tmp/etc/${CONFIG}/failover/SOCKS_test_node_${node_id}_*
-		rm -f /tmp/etc/${CONFIG}/bin/priority_failover_SOCKS_test_node_${node_id}_*
+		rm -rf /tmp/etc/${CONFIG}/failover/test_node_${node_id}_*
+		rm -f /tmp/etc/${CONFIG}/bin/priority_failover_test_node_${node_id}_*
 		rm -rf /tmp/etc/${CONFIG}/test_node_${node_id}*.*
 		if [ "${_proxy_status}" -eq 200 ]; then
 			return 0
@@ -79,8 +79,8 @@ test_auto_switch() {
 	local b_nodes=$1
 	local now_node=$2
 	[ -z "$now_node" ] && {
-		if [ -n "$(get_cache_var "socks_${id}")" ]; then
-			now_node=$(get_cache_var "socks_${id}")
+		if [ -n "$(get_cache_var "${id}")" ]; then
+			now_node=$(get_cache_var "${id}")
 		else
 			#log_i18n 0 "Socks switch detection: Unknown error."
 			return 1
@@ -128,7 +128,11 @@ test_auto_switch() {
 			# If the current node is not found, or if the current node is the last node, then take the first node.
 			[ -z "$new_node" ] && new_node="$first_node"
 			local msg2="$(i18n "next backup node")"
-			[ "$now_node" = "$main_node" ] && msg2="$(i18n "backup node")"
+			if [ "$new_node" = "$main_node" ]; then
+				msg2="$(i18n "main node")"
+			else
+				[ "$now_node" = "$main_node" ] && msg2="$(i18n "backup node")"
+			fi
 			msg="$(i18n "switch to %s test detect!" "${msg2}")"
 		else
 			# When there is only one backup node, poll with the primary node.
@@ -140,11 +144,6 @@ test_auto_switch() {
 		log_i18n 0 "Socks switch detection: %s 【%s:[%s]】 abnormal, %s" "${id}" "$(config_n_get $now_node type)" "$(config_n_get $now_node remarks)" "${msg}"
 		test_node ${new_node}
 		if [ $? -eq 0 ]; then
-#			[ "$restore_switch" = "0" ] && {
-#				uci set $CONFIG.${id}.node=$new_node
-#				[ -z "$(echo $b_nodes | grep $main_node)" ] && uci add_list $CONFIG.${id}.autoswitch_backup_node=$main_node
-#				uci commit $CONFIG
-#			}
 			check_process
 			log_i18n 0 "Socks switch detection: %s 【%s:[%s]】 normal, switch to this node!" "${id}" "$(config_n_get $new_node type)" "$(config_n_get $new_node remarks)"
 			$APP_FILE socks_node_switch flag=${id} new_node=${new_node}
@@ -173,6 +172,10 @@ start() {
 		backup_node_num=$(printf "%s\n" "$backup_node" | wc -w)
 		if [ "$backup_node_num" -eq 1 ]; then
 			[ "$main_node" = "$backup_node" ] && return
+		elif [ "$backup_node_num" -gt 1 ]; then
+			[ "$restore_switch" != "1" ] && {
+				[ -z "$(echo $backup_node | grep -F "$main_node")" ] && backup_node="${backup_node} ${main_node}"
+			}
 		fi
 	else
 		return

@@ -85,7 +85,7 @@ local function fetch_geofile(geo_name, geo_type, url)
 	local tmp_path = "/tmp/" .. geo_name
 	local asset_path = asset_location .. geo_name
 	local down_filename = url:match("^.*/([^/?#]+)")
-	local sha_url = url:gsub(down_filename, down_filename .. ".sha256sum")
+	local sha_url = url:gsub((down_filename:gsub("(%W)", "%%%1")), down_filename .. ".sha256sum")
 	local sha_path = tmp_path .. ".sha256sum"
 
 	local function verify_sha256(sha_file)

@@ -1750,7 +1750,7 @@ local current_node = map:get(section)
 					opt.set(dom_prefix + 'tls', true);
 					opt.set(dom_prefix + 'reality', false);
 					opt.set(dom_prefix + 'alpn', queryParam.alpn || 'default');
-					opt.set(dom_prefix + 'tls_serverName', queryParam.sni || '');
+					opt.set(dom_prefix + 'tls_serverName', queryParam.sni || queryParam.peer || '');
 					opt.set(dom_prefix + 'tls_allowInsecure', !((queryParam.allowinsecure ?? '0') === '0' && (queryParam.insecure ?? '0') === '0'));
 					if (queryParam.fp && queryParam.fp.trim() != "") {
 						opt.set(dom_prefix + 'utls', true);
@@ -1761,7 +1761,7 @@ local current_node = map:get(section)
 					opt.set(dom_prefix + 'tls', true);
 					opt.set(dom_prefix + 'reality', true);
 					opt.set(dom_prefix + 'alpn', queryParam.alpn || 'default');
-					opt.set(dom_prefix + 'tls_serverName', queryParam.sni || '');
+					opt.set(dom_prefix + 'tls_serverName', queryParam.sni || queryParam.peer || '');
 					if (queryParam.fp && queryParam.fp.trim() != "") {
 						opt.set(dom_prefix + 'utls', true);
 						opt.set(dom_prefix + 'fingerprint', queryParam.fp);

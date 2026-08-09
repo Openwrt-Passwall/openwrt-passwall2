@@ -212,7 +212,6 @@ run_singbox() {
 	node_protocol=$(config_n_get $node protocol)
 	[ -n "$log_file" ] || local log_file="/dev/null"
 	[ -z "$loglevel" ] && local loglevel=$(config_t_get global loglevel "warn")
-	[ "$loglevel" = "warning" ] && loglevel="warn"
 	local singbox_tag=$($SINGBOX_BIN version | grep 'Tags:' | awk '{print $2}')
 
 	json_init
@@ -416,13 +415,12 @@ run_socks() {
 		}
 		[ "${log_file}" != "/dev/null" ] && {
 			local loglevel=$(config_t_get global loglevel "warn")
-			[ "$loglevel" = "warning" ] && loglevel="warn"
 			json_add_string "log" "1"
 			json_add_string "loglevel" "${loglevel}"
 			json_add_string "logfile" "${log_file}"
 		}
 		[ -n "$no_run" ] && json_add_string "no_run" "1"
-		json_add_string "flag" "SOCKS_${flag}"
+		json_add_string "flag" "${flag}"
 		json_add_string "local_socks_address" "${bind}"
 		json_add_string "local_socks_port" "${socks_port}"
 		json_add_string "direct_dns_udp_port" "${DIRECT_DNS_UDP_PORT}"
@@ -444,15 +442,20 @@ run_socks() {
 			json_add_null "server_host"
 			json_add_null "server_port"
 		}
+		[ "${log_file}" != "/dev/null" ] && {
+			local loglevel=$(config_t_get global loglevel "warn")
+			json_add_string "log" "1"
+			json_add_string "loglevel" "${loglevel}"
+		}
 		[ -n "$no_run" ] && json_add_string "no_run" "1"
-		json_add_string "flag" "SOCKS_${flag}"
+		json_add_string "flag" "${flag}"
 		json_add_string "local_socks_address" "${bind}"
 		json_add_string "local_socks_port" "${socks_port}"
 		json_add_string "direct_dns_udp_port" "${DIRECT_DNS_UDP_PORT}"
 		json_add_string "direct_dns_udp_server" "${DIRECT_DNS_UDP_SERVER}"
 		json_add_string "direct_dns_query_strategy" "${DIRECT_DNS_QUERY_STRATEGY}"
 		if [ -z "$no_run" ]; then
-			failover_runtime_prefix="SOCKS_${flag}_"
+			failover_runtime_prefix="${flag}_"
 			json_add_string "failover_runtime_dir" "${TMP_PATH}/failover"
 			json_add_string "xray_config_file" "${config_file}"
 		fi
@@ -551,22 +554,22 @@ stop_socks_runtime() {
 	local prefix pf filename
 	# Kill the SS plugin process.
 	for prefix in "" "HTTP_"; do
-		pf="$TMP_PATH/${prefix}SOCKS_${flag}_plugin.pid"
+		pf="$TMP_PATH/${prefix}${flag}_plugin.pid"
 		[ -s "$pf" ] && kill -9 "$(head -n1 "$pf")" >/dev/null 2>&1
 	done
 
 	# Remove monitor entries before stopping processes so they cannot be restarted.
 	for filename in "${TMP_SCRIPT_FUNC_PATH}"/*; do
 		[ -f "$filename" ] || continue
-		grep -Fq "SOCKS_${flag}" "$filename" && rm -f "$filename"
+		grep -Fq "${flag}" "$filename" && rm -f "$filename"
 	done
 
-	busybox pgrep -af "$TMP_BIN_PATH" | awk -v P1="SOCKS_${flag}" 'BEGIN{IGNORECASE=1}$0~P1 && !/acl\/|acl_/{print $1}' | xargs kill -9 >/dev/null 2>&1
+	busybox pgrep -af "$TMP_BIN_PATH" | awk -v P1="${flag}" 'BEGIN{IGNORECASE=1}$0~P1 && !/acl\/|acl_/{print $1}' | xargs kill -9 >/dev/null 2>&1
 	for prefix in "" "HTTP_" "HTTP2"; do
-		rm -rf "$TMP_PATH/${prefix}SOCKS_${flag}"*
+		rm -rf "$TMP_PATH/${prefix}${flag}"*
 	done
-	rm -rf "${TMP_PATH}/failover/SOCKS_${flag}_"*
-	rm -f "${TMP_BIN_PATH}/priority_failover_SOCKS_${flag}_"*
+	rm -rf "${TMP_PATH}/failover/${flag}_"*
+	rm -f "${TMP_BIN_PATH}/priority_failover_${flag}_"*
 }
 
 socks_node_switch() {
@@ -578,8 +581,8 @@ socks_node_switch() {
 		local bind="0.0.0.0"
 		[ "$bind_local" = "1" ] && bind="127.0.0.1"
 		local port=$(config_n_get $flag port)
-		local config_file="SOCKS_${flag}.json"
-		local log_file="SOCKS_${flag}.log"
+		local config_file="${flag}.json"
+		local log_file="${flag}.log"
 		local log=$(config_n_get $flag log 1)
 		[ "$log" == "0" ] && log_file=""
 		local http_port=$(config_n_get $flag http_port 0)
@@ -589,7 +592,7 @@ socks_node_switch() {
 			stop_socks_runtime "$flag"
 			return 1
 		}
-		set_cache_var "socks_${flag}" "$new_node"
+		set_cache_var "${flag}" "$new_node"
 		local USE_TABLES=$(get_cache_var "USE_TABLES")
 		[ -n "$USE_TABLES" ] && source $APP_PATH/${USE_TABLES}.sh filter_direct_node_list
 	}
@@ -846,14 +849,14 @@ start_socks() {
 				local bind="0.0.0.0"
 				[ "$bind_local" = "1" ] && bind="127.0.0.1"
 				local port=$(config_n_get $id port)
-				local config_file="SOCKS_${id}.json"
-				local log_file="SOCKS_${id}.log"
+				local config_file="${id}.json"
+				local log_file="${id}.log"
 				local log=$(config_n_get $id log 1)
 				[ "$log" == "0" ] && log_file=""
 				local http_port=$(config_n_get $id http_port 0)
 				local http_config_file="HTTP2SOCKS_${id}.json"
 				run_socks flag=$id node=$node bind=$bind socks_port=$port config_file=$config_file http_port=$http_port http_config_file=$http_config_file log_file=$log_file
-				set_cache_var "socks_${id}" "$node"
+				set_cache_var "${id}" "$node"
 
 				# Auto switch logic
 				local enable_autoswitch=$(config_n_get $id enable_autoswitch 0)
@@ -951,10 +954,9 @@ start_crontab() {
 	for item in $(uci show ${CONFIG} | grep "=subscribe_list" | cut -d '.' -sf 2 | cut -d '=' -sf 1); do
 		sub_update_week_mode=$(config_n_get $item update_week_mode)
 		if [ -n "$sub_update_week_mode" ]; then
-			cfgid=$(uci show ${CONFIG}.$item | head -n 1 | cut -d '.' -sf 2 | cut -d '=' -sf 1)
 			remark=$(config_n_get $item remark)
 			sub_update_time_mode=$(config_n_get $item update_time_mode)
-			echo "$cfgid" >> $TMP_SUB_PATH/${sub_update_week_mode}_${sub_update_time_mode}
+			echo "$item" >> $TMP_SUB_PATH/${sub_update_week_mode}_${sub_update_time_mode}
 			log_i18n 0 "Scheduled tasks: Auto update [%s] subscription." "${remark}"
 		fi
 	done
@@ -1094,26 +1096,26 @@ run_ipset_dnsmasq() {
 
 acl_app() {
 	local items=$(uci show ${CONFIG} | grep "=acl_rule" | cut -d '.' -sf 2 | cut -d '=' -sf 1)
-	[ -n "$items" ] && {
+	if [ -z "$items" ]; then
+		ENABLED_ACLS=0
+		return
+	else
+		local has_enabled
 		local index=0
-		local item
+		local sid
 		local redir_port dns_port dnsmasq_port socks_port
 		local ipt_tmp msg msg2
 		redir_port=11200
 		socks_port=11600
 		dns_port=11300
 		dnsmasq_port=${GLOBAL_DNSMASQ_PORT:-11400}
-		for item in $items; do
+		for sid in $items; do
 			index=$(expr $index + 1)
 			local enabled sid remarks sources interface tcp_no_redir_ports udp_no_redir_ports node direct_dns_query_strategy remote_dns_protocol remote_dns remote_dns_doh remote_dns_client_ip remote_dns_detour remote_fakedns remote_dns_query_strategy log loglevel log_file
 			local _ip _mac _iprange _ipset _ip_or_mac source_list config_file
-			local sid=$(uci -q show "${CONFIG}.${item}" | grep "=acl_rule" | awk -F '=' '{print $1}' | awk -F '.' '{print $2}')
 			[ "$(config_n_get $sid enabled)" = "1" ] || continue
-			eval $(uci -q show "${CONFIG}.${item}" | cut -d'.' -sf 3-)
-			log=${log:-0}
-			loglevel=${loglevel:-warn}
-			log_file="/dev/null"
-			[ "${log}" = "1" ] && log_file="/tmp/log/passwall2_acl_${sid}.log"
+			has_enabled=1
+			eval $(uci -q show "${CONFIG}.${sid}" | cut -d'.' -sf 3-)
 
 			if [ -n "${sources}" ]; then
 				for s in $sources; do
@@ -1141,6 +1143,11 @@ acl_app() {
 			local acl_path=${TMP_ACL_PATH}/$sid
 			mkdir -p ${acl_path}
 			[ -n "${source_list}" ] && echo -e "${source_list}" | sed '/^$/d' > ${acl_path}/source_list
+
+			log=${log:-0}
+			loglevel=${loglevel:-warn}
+			log_file="/dev/null"
+			[ "${log}" = "1" ] && log_file="${acl_path}/node.log"
 
 			node=${node:-default}
 			tcp_no_redir_ports=${tcp_no_redir_ports:-default}
@@ -1234,7 +1241,8 @@ acl_app() {
 			unset _ip _mac _iprange _ipset _ip_or_mac source_list config_file
 		done
 		unset redir_port dns_port dnsmasq_port
-	}
+		[ -n "${has_enabled}" ] || ENABLED_ACLS=0
+	fi
 }
 
 start() {
@@ -1299,8 +1307,7 @@ start() {
 		local cfgids item
 		for item in $(uci show ${CONFIG} | grep "=subscribe_list" | cut -d '.' -sf 2 | cut -d '=' -sf 1); do
 			if [ "$(config_n_get "$item" boot_update 0)" = "1" ]; then
-				local cfgid=$(uci show ${CONFIG}.$item | head -n 1 | cut -d '.' -sf 2 | cut -d '=' -sf 1)
-				cfgids="${cfgids:+$cfgids,}$cfgid"
+				cfgids="${cfgids:+$cfgids,}$item"
 			fi
 		done
 		[ -n "$cfgids" ] && {
@@ -1388,9 +1395,6 @@ get_config() {
 		[ -n "$NODE" ] && [ "$(config_get_type $NODE)" == "nodes" ] && ENABLED_DEFAULT_ACL=1
 	}
 	ENABLED_ACLS=$(config_t_get global acl_enable 0)
-	[ "$ENABLED_ACLS" == 1 ] && {
-		[ "$(uci show ${CONFIG} | grep "@acl_rule" | grep "enabled='1'" | wc -l)" == 0 ] && ENABLED_ACLS=0
-	}
 	SOCKS_ENABLED=$(config_t_get global socks_enabled 0)
 	REDIR_PORT=$(echo $(get_new_port 1041 tcp,udp))
 	TCP_PROXY_WAY=$(config_t_get global_forwarding tcp_proxy_way redirect)

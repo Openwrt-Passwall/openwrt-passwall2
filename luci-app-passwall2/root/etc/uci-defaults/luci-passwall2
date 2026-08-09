@@ -53,6 +53,25 @@ frag_len=$(uci -q get passwall2.@global_xray[0].fragment_length)
 [ -n "$frag_len" ] && uci -q set passwall2.@global_xray[0].fragment_lengths="$frag_len" && uci -q delete passwall2.@global_xray[0].fragment_length
 frag_dly=$(uci -q get passwall2.@global_xray[0].fragment_delay)
 [ -n "$frag_dly" ] && uci -q set passwall2.@global_xray[0].fragment_delays="$frag_dly" && uci -q delete passwall2.@global_xray[0].fragment_delay
+
+for sid in $(uci show passwall2 | grep "=socks" | awk -F '.' '{print $2}' | awk -F '=' '{print $1}'); do
+	if [ -z "$(echo ${sid} | grep '^socks_')" ]; then
+		new_id="socks_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 5)"
+		uci -q rename passwall2.${sid}="${new_id}"
+		unset sid new_id
+	fi
+done
+for sid in $(uci show passwall2 | grep "@acl_rule" | cut -d '.' -sf 2 | cut -d '=' -sf 1); do
+	new_id="acl_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 5)"
+	uci -q rename passwall2.${sid}="${new_id}"
+	unset sid new_id
+done
+for sid in $(uci show passwall2 | grep "@subscribe_list" | cut -d '.' -sf 2 | cut -d '=' -sf 1); do
+	new_id="sub_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 5)"
+	uci -q rename passwall2.${sid}="${new_id}"
+	unset sid new_id
+done
+
 uci -q commit passwall2
 
 sed -i "s#add_from#group#g" /etc/config/passwall2 2>/dev/null

@@ -1,8 +1,8 @@
-<%
-local api = self.api
--%>
 <script type="text/javascript">
 	//<![CDATA[
+	let node_id = "<%=self.section%>";
+	let node_config_url = '<%=self.api.url("node_config")%>/' + node_id;
+
 	document.addEventListener("DOMContentLoaded", function () {
 		waitForElement('select[name*="<%=self.config%>"][name*="type"]', function(el) {
 			let o_val = el.value;
@@ -11,13 +11,18 @@ local api = self.api
 				if (o_val != el.value) {
 					let save = true;
 					if (save) {
-						//document.getElementsByClassName('cbi-button-save')[0].click();
-						update_node({
-							remarks: getOption("remarks").value,
-							group: getOption("group").value,
-							type: getOption("type").value,
+						/*
+						const saveBtn = document.getElementsByClassName('cbi-button-save');
+						if (saveBtn && saveBtn.length > 0) {
+							saveBtn[saveBtn.length - 1].click();
+						}
+						*/
+						update_config(node_id, {
+							remarks: getOption("<%=self.config%>", "<%=self.section%>", "remarks").value,
+							group: getOption("<%=self.config%>", "<%=self.section%>", "group").value,
+							type: getOption("<%=self.config%>", "<%=self.section%>", "type").value,
 							protocol: ''
-						});
+						}, node_config_url);
 					}
 				}
 			});
@@ -31,12 +36,17 @@ local api = self.api
 					let name = name_split[name_split.length - 1];
 					let save = true;
 					if (save) {
-						//document.getElementsByClassName('cbi-button-save')[0].click();
-						update_node({
-							remarks: getOption("remarks").value,
-							group: getOption("group").value,
-							protocol: getOption(name).value
-						});
+						/*
+						const saveBtn = document.getElementsByClassName('cbi-button-save');
+						if (saveBtn && saveBtn.length > 0) {
+							saveBtn[saveBtn.length - 1].click();
+						}
+						*/
+						update_config(node_id, {
+							remarks: getOption("<%=self.config%>", "<%=self.section%>", "remarks").value,
+							group: getOption("<%=self.config%>", "<%=self.section%>", "group").value,
+							protocol: getOption("<%=self.config%>", "<%=self.section%>", name).value,
+						}, node_config_url);
 					} else {
 						window.location.href = node_config_url + "?select_proto=" + el.value;
 					}

@@ -91,6 +91,11 @@ local function convert_geofile()
 	convert(GEO_VAR.IP_PATH, "geoip", GEO_VAR.IP_TAGS)
 end
 
+local function get_log_level(s)
+	if s == "warning" then s = "warn" end
+	return s
+end
+
 function parseDNS(str)
 	local result_dns_server
 	-- [proto]://[ip]
@@ -256,6 +261,7 @@ function gen_outbound(flag, node, tag, proxy_table)
 				fragment = fragment,
 				record_fragment = record_fragment,
 				certificate = (node.tls_certificate == "1" and node.tls_certificate_pem ~= "") and split(node.tls_certificate_pem, "\n") or nil,
+				cipher_suites = node.cipherSuites or nil,
 				ech = (node.ech == "1") and (function()
 					local function get_ech_domain(s) --兼容xray "域名+DNS" 格式ech
 						local domain, dns = s:match("^([^+]+)%+(.+)$")
@@ -647,6 +653,8 @@ function gen_outbound(flag, node, tag, proxy_table)
 				idle_session_check_interval = "30s",
 				idle_session_timeout = "30s",
 				min_idle_session = 5,
+				disable_reuse = (node.anytls_disable_reuse == "1") and true or nil,
+				client_metadata = api.compare_versions(local_version, ">=", "1.13.16") and "anytls/0.0.13" or nil,
 				tls = tls
 			}
 		end
@@ -1070,7 +1078,7 @@ function gen_config_server(node)
 	local config = {
 		log = {
 			disabled = (not node or node.log == "0") and true or false,
-			level = node.loglevel or "info",
+			level = get_log_level(node.loglevel) or "info",
 			timestamp = true,
 			--output = logfile,
 		},
@@ -1306,36 +1314,25 @@ function gen_config(var)
 			default_node_port = server_port
 		end
 
-		function gen_socks_config_node(node_id, socks_id, remarks)
-			if node_id then
-				socks_id = node_id:sub(1 + #"Socks_")
-			end
-			local result
-			local socks_node = uci:get_all(appname, socks_id) or nil
-			if socks_node then
-				if not remarks then
-					remarks = socks_node.port
-				end
-				result = {
-					[".name"] = "Socksid_" .. socks_id,
-					remarks = remarks,
+		function get_node_by_id(node_id)
+			if not node_id or node_id == "" or node_id == "nil" then return nil end
+			local section = uci:get_all(appname, node_id) or {}
+			if section[".type"] == "socks" then
+				local result = {
+					[".name"] = node_id,
+					remarks = "socks[%s]" % section.port,
 					type = "sing-box",
 					protocol = "socks",
 					address = "127.0.0.1",
-					port = socks_node.port,
+					port = section.port,
 					uot = "1"
 				}
+				return result
 			end
-			return result
-		end
-
-		function get_node_by_id(node_id)
-			if not node_id or node_id == "" or node_id == "nil" then return nil end
-			if node_id:find("Socks_") then
-				return gen_socks_config_node(node_id)
-			else
-				return uci:get_all(appname, node_id)
+			if section[".type"] == "nodes" then
+				return section
 			end
+			return nil
 		end
 
 		function gen_urltest_outbound(_node)
@@ -1599,6 +1596,9 @@ function gen_config(var)
 
 			--shunt rule
 			uci:foreach(appname, "shunt_rules", function(e)
+				if node["shunt_group"] ~= e.group then
+					return
+				end
 				local outboundTag = gen_shunt_node(e[".name"])
 				if outboundTag and e.remarks then
 					if outboundTag == "default" then
@@ -2166,7 +2166,7 @@ function gen_config(var)
 		local config = {
 			log = {
 				disabled = log == "0" and true or false,
-				level = loglevel,
+				level = get_log_level(loglevel),
 				timestamp = true,
 				output = logfile,
 			},

@@ -1,1 +1,18 @@
 <!-- map footer -->
+<script type="text/javascript">
+	document.addEventListener("DOMContentLoaded", function () {
+		setTimeout(updateElements, 200);
+		function updateElements() {
+			// Remove extra line breaks between the value control and its description.
+			document.querySelectorAll("div.cbi-value-description").forEach(function(descDiv) {
+				var prev = descDiv.previousSibling;
+				while (prev && prev.nodeType === Node.TEXT_NODE && prev.textContent.trim() === "") {
+					prev = prev.previousSibling;
+				}
+				if (prev && prev.nodeType === Node.ELEMENT_NODE && prev.tagName === "BR") {
+					prev.remove();
+				}
+			});
+		}
+	});
+</script>

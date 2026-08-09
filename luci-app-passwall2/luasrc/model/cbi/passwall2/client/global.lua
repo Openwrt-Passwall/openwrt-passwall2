@@ -43,7 +43,7 @@ local socks_list = {}
 m.uci:foreach(appname, "socks", function(s)
 	if s.enabled == "1" and s.node then
 		socks_list[#socks_list + 1] = {
-			id = "Socks_" .. s[".name"],
+			id = s[".name"],
 			remark = translate("Socks Config") .. " [" .. s.port .. translate("Port") .. "]",
 			group = "Socks"
 		}
@@ -101,6 +101,7 @@ if (has_singbox or has_xray) and #nodes_table > 0 then
 		if current_node.protocol == "_shunt" then
 			local shunt_lua = loadfile("/usr/lib/lua/luci/model/cbi/passwall2/client/include/shunt_options.lua")
 			setfenv(shunt_lua, getfenv(1))(m, s, {
+				s_cfgid = s:cfgsections()[1],
 				node_id = current_node_id,
 				node = current_node,
 				socks_list = socks_list,
@@ -293,11 +294,25 @@ o.default = "1"
 o.rmempty = false
 
 loglevel = s:taboption("log", ListValue, "loglevel", translate("Log Level"))
-loglevel.default = "warning"
+loglevel.default = "warn"
 loglevel:value("debug")
 loglevel:value("info")
-loglevel:value("warning")
+loglevel:value("warn")
 loglevel:value("error")
+
+o = s:taboption("log", DummyValue, "_log", translate("Log File"))
+o.rawhtml = true
+o.cfgvalue = function(t, n)
+	local log_path = api.TMP_PATH .. "/acl/default/global.log"
+	local log_url = api.url("get_redir_log") .. "?id=default&name=global"
+	return string.format(
+		'<code>%s</code>&nbsp;&nbsp;<input class="btn cbi-button cbi-button-apply" type="button" value="%s" onclick="window.open(\'%s\', \'_blank\')" />',
+		log_path,
+		translate("View Log"),
+		log_url
+	)
+end
+o:depends("log_node", "1")
 
 s:tab("faq", "FAQ")
 
@@ -318,10 +333,9 @@ s2.anonymous = true
 s2.addremove = true
 s2.extedit = api.url("socks_config", "%s")
 function s2.create(e, t)
-	local uuid = api.gen_short_uuid()
-	t = uuid
-	TypedSection.create(e, t)
-	luci.http.redirect(e.extedit:format(t))
+	local uid = "socks_" .. api.gen_random_char(5)
+	TypedSection.create(e, uid)
+	luci.http.redirect(e.extedit:format(uid))
 end
 
 o = s2:option(DummyValue, "status", translate("Status"))
@@ -342,7 +356,7 @@ o.group = {}
 o = s2:option(DummyValue, "now_node", translate("Current Node"))
 o.rawhtml = true
 o.cfgvalue = function(_, n)
-	local current_node = api.get_cache_var("socks_" .. n)
+	local current_node = api.get_cache_var(n)
 	if current_node then
 		local node = m:get(current_node)
 		if node then

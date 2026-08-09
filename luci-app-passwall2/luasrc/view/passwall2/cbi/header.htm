@@ -1,2 +1,24 @@
 <!-- map header -->
 <script src="<%=resource%>/view/<%=self.api.appname%>/cbi.js"></script>
+<script src="<%=resource%>/view/<%=self.api.appname%>/func.js"></script>
+
+<script type="text/javascript">
+	//<![CDATA[
+	function update_config(cfgid, data, redirect_url) {
+		XHR.get('<%=self.api.url("update_config")%>', {
+			id: cfgid,
+			data: JSON.stringify(data)
+		},
+		function(x, data) {
+			if (x && x.status == 200 && data.code == 1) {
+				if (redirect_url) {
+					window.location.href = redirect_url;
+				}
+			}
+			else {
+				alert("<%:Error%>");
+			}
+		});
+	}
+	//]]>
+</script>

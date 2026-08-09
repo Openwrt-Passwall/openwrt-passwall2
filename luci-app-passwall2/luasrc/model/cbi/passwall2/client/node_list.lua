@@ -30,9 +30,6 @@ o:value("https://connectivitycheck.platform.hicloud.com/generate_204", "HiCloud 
 o:value("https://wifi.vivo.com.cn/generate_204", "VIVO (CN)")
 o.default = o.keylist[3]
 
--- [[ Add the node via the link ]]--
-s:append(Template(appname .. "/node_list/link_add_node"))
-
 m:append(Template(appname .. "/node_list/node_list"))
 
 return api.return_map(m)
