@@ -22,6 +22,7 @@ m:append(header)
 
 m:append(Template(appname .. "/cbi/nodes_multivalue_com"))
 m:append(Template(appname .. "/cbi/nodes_listvalue_com"))
+m:append(Template(appname .. "/cbi/nodes_dynamiclist_com"))
 
 groups = {}
 m.uci:foreach(appname, "nodes", function(s)

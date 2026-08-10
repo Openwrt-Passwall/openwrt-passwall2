@@ -7,6 +7,38 @@ local fs = api.fs
 local datatypes = api.datatypes
 local TMP = {}
 
+local function resolve_tcp_connection_limit()
+	local configured = tonumber(uci:get(appname, "@global[0]", "dnsmasq_tcp_max_connections")) or 0
+	if configured > 0 then
+		return math.max(1, math.min(100, math.floor(configured)))
+	end
+
+	local mem_total = tonumber(sys.exec("awk '/^MemTotal:/ {print $2; exit}' /proc/meminfo")) or 0
+	if mem_total > 0 and mem_total <= 524288 then
+		return 8
+	end
+	return 20
+end
+
+local function config_has_tcp_connection_limit(path)
+	local file = io.open(path, "r")
+	if not file then
+		return false
+	end
+	for line in file:lines() do
+		if line:find("^%s*max%-tcp%-connections%s*=") then
+			file:close()
+			return true
+		end
+	end
+	file:close()
+	return false
+end
+
+function get_tcp_connection_limit()
+	io.write(tostring(resolve_tcp_connection_limit()))
+end
+
 local function tinsert(table_name, val)
 	if table_name and type(table_name) == "table" then
 		if not TMP[table_name] then
@@ -120,14 +152,20 @@ function copy_instance(var)
 	local LISTEN_PORT = var["LISTEN_PORT"]
 	local TMP_DNSMASQ_PATH = var["TMP_DNSMASQ_PATH"]
 	local conf_lines = {}
+	local inherited_tcp_limit = false
 	local DEFAULT_DNSMASQ_CFGID = sys.exec("echo -n $(uci -q show dhcp.@dnsmasq[0] | awk 'NR==1 {split($0, conf, /[.=]/); print conf[2]}')")
 	for line in io.lines("/tmp/etc/dnsmasq.conf." .. DEFAULT_DNSMASQ_CFGID) do
 		local filter
+		local included_config = line:match("^%s*conf%-file%s*=%s*(.-)%s*$")
+		if included_config and config_has_tcp_connection_limit(included_config) then
+			inherited_tcp_limit = true
+		end
 		if line:find("passwall2") then filter = true end
 		if line:find("ubus") then filter = true end
 		if line:find("dhcp") then filter = true end
 		if line:find("server=") == 1 then filter = true end
 		if line:find("port=") == 1 then filter = true end
+		if line:find("max%-tcp%-connections=") == 1 then filter = true end
 		if line:find("conf%-dir=") == 1 then
 			filter = true
 			if TMP_DNSMASQ_PATH then
@@ -141,6 +179,9 @@ function copy_instance(var)
 		end
 	end
 	tinsert(conf_lines, "port=" .. LISTEN_PORT)
+	if not inherited_tcp_limit then
+		tinsert(conf_lines, "max-tcp-connections=" .. resolve_tcp_connection_limit())
+	end
 	if TMP_DNSMASQ_PATH then
 		sys.call("rm -rf " .. TMP_DNSMASQ_PATH .. "/*passwall2*")
 	end
@@ -359,6 +400,7 @@ _G.restart = restart
 _G.logic_restart = logic_restart
 _G.copy_instance = copy_instance
 _G.add_rule = add_rule
+_G.get_tcp_connection_limit = get_tcp_connection_limit
 
 if arg[1] then
 	local func =_G[arg[1]]

@@ -271,6 +271,13 @@ o = s:taboption("DNS", Flag, "dns_redirect", translate("DNS Redirect"), translat
 o.default = "1"
 o.rmempty = false
 
+o = s:taboption("DNS", Value, "dnsmasq_tcp_max_connections", translate("Private DNS TCP connection limit"))
+o.default = "0"
+o.placeholder = "0"
+o.datatype = "range(0,100)"
+o.rmempty = false
+o.description = translate("Limits concurrent TCP connections for each private PassWall DNSMasq instance. 0 selects 8 on devices with up to 512 MB RAM and 20 on larger devices.")
+
 local prefer_nft = m:get("@global_forwarding[0]", "prefer_nft") == "1"
 local set_title = api.i18n.translate(prefer_nft and "Clear NFTSET" or "Clear IPSET")
 o = s:taboption("DNS", DummyValue, "clear_ipset", set_title, translate("Try this feature if the rule modification does not take effect."))
@@ -389,7 +396,7 @@ for k, v in pairs(nodes_table) do
 	o_node.group[#o_node.group+1] = (v.group and v.group ~= "") and v.group or translate("default")
 	o_socks:value(v.id, v["remark"])
 	o_socks.group[#o_socks.group+1] = (v.group and v.group ~= "") and v.group or translate("default")
-	if v.node_type == "normal" or v.protocol == "_balancing" or v.protocol == "_urltest" then
+	if v.node_type == "normal" or v.protocol == "_balancing" or v.protocol == "_failover" or v.protocol == "_urltest" then
 		--Shunt node has its own separate options.
 		s.fields["remote_fakedns"]:depends({ node = v.id })
 	end

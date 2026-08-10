@@ -909,6 +909,9 @@ function gen_config(var)
 	local remote_dns_detour = var["remote_dns_detour"]
 	local dns_cache = var["dns_cache"]
 	local no_run = var["no_run"]
+	local failover_runtime_dir = var["failover_runtime_dir"]
+	local xray_config_file = var["xray_config_file"]
+	local runtime_flag = flag
 
 	local dns_domain_rules = {}
 	local dns = {}
@@ -918,7 +921,10 @@ function gen_config(var)
 	local routing = nil
 	local observatory = nil
 	local burstObservatory = nil
- 	local strategy = nil
+	local strategy = nil
+	local xray_api = nil
+	local failover_api_port = nil
+	local failover_profiles = {}
 	local COMMON = {}
 
 	local CACHE_TEXT_FILE = CACHE_PATH .. "/cache_" .. flag .. ".txt"
@@ -1180,6 +1186,137 @@ function gen_config(var)
 		table.insert(rules, { inboundTag = { inbound_tag }, balancerTag = balancer_tag })
 		return balancer_tag, loopback_outbound
 	end
+
+	local function add_failover_api()
+		if failover_api_port then return end
+		failover_api_port = api.get_new_port()
+		xray_api = {
+			tag = "api",
+			listen = "127.0.0.1:" .. failover_api_port,
+			services = { "RoutingService" }
+		}
+	end
+
+	function gen_failover(_node, loopback_tag)
+		local failover_id = _node[".name"]
+		local main_balancer_tag = "failover-main-" .. failover_id
+		local probe_balancer_tag = "failover-probe-" .. failover_id
+		local loopback_dst = "failover-" .. failover_id
+		if not loopback_tag or loopback_tag == "" then loopback_tag = failover_id end
+
+		for _, profile in ipairs(failover_profiles) do
+			if profile.id == failover_id then
+				local loopback_outbound = gen_loopback(loopback_tag, loopback_dst)
+				table.insert(rules, { inboundTag = { loopback_outbound.settings.inboundTag }, balancerTag = main_balancer_tag })
+				return main_balancer_tag, loopback_outbound
+			end
+		end
+
+		local requested_nodes = {}
+		local seen = {}
+		local function add_requested_node(node_id)
+			if node_id and node_id ~= "" and not seen[node_id] and #requested_nodes < 10 then
+				seen[node_id] = true
+				requested_nodes[#requested_nodes + 1] = node_id
+			end
+		end
+		add_requested_node(_node.failover_primary_node)
+		for _, node_id in ipairs(_node.failover_backup_node or {}) do
+			add_requested_node(node_id)
+		end
+
+		local candidates = {}
+		local valid_tags = {}
+		for _, node_id in ipairs(requested_nodes) do
+			local candidate = get_node_by_id(node_id)
+			local chain_proxy = candidate and candidate.chain_proxy
+			local self_contained = not chain_proxy or chain_proxy == "" or chain_proxy == "3"
+			if candidate and candidate.type == "Xray" and candidate.protocol and not candidate.protocol:find("^_") and self_contained then
+				local requested_tag = "fo-" .. failover_id .. "-" .. node_id
+				local outbound_tag = gen_outbound_get_tag(flag, candidate, requested_tag, {
+					fragment = xray_settings.fragment == "1" or nil,
+					noise = xray_settings.noise == "1" or nil,
+					run_socks_instance = not no_run
+				})
+				if outbound_tag then
+					valid_tags[#valid_tags + 1] = outbound_tag
+					candidates[#candidates + 1] = { id = node_id, tag = outbound_tag }
+				end
+			end
+		end
+		if #candidates == 0 then return nil end
+
+		add_failover_api()
+		local probe_port = api.get_new_port()
+		local probe_inbound_tag = "failover-probe-in-" .. failover_id
+		table.insert(inbounds, {
+			tag = probe_inbound_tag,
+			listen = "127.0.0.1",
+			port = probe_port,
+			protocol = "socks",
+			settings = { auth = "noauth", udp = false }
+		})
+		table.insert(rules, 1, {
+			inboundTag = { probe_inbound_tag },
+			balancerTag = probe_balancer_tag
+		})
+
+		table.insert(balancers, {
+			tag = main_balancer_tag,
+			selector = api.clone(valid_tags),
+			strategy = { type = "random" }
+		})
+		table.insert(balancers, {
+			tag = probe_balancer_tag,
+			selector = api.clone(valid_tags),
+			strategy = { type = "random" }
+		})
+
+		local primary_id = _node.failover_primary_node
+		local primary_tag
+		for _, candidate in ipairs(candidates) do
+			if candidate.id == primary_id then
+				primary_tag = candidate.tag
+				break
+			end
+		end
+		if not primary_tag then
+			primary_id = candidates[1].id
+			primary_tag = candidates[1].tag
+		end
+
+		local failure_threshold = tonumber(_node.failover_failure_threshold)
+		if failure_threshold ~= 2 and failure_threshold ~= 3 and failure_threshold ~= 4 and failure_threshold ~= 5 then
+			failure_threshold = 2
+		end
+
+		failover_profiles[#failover_profiles + 1] = {
+			id = failover_id,
+			xray_config_file = xray_config_file,
+			api_port = failover_api_port,
+			probe_port = probe_port,
+			main_balancer = main_balancer_tag,
+			probe_balancer = probe_balancer_tag,
+			primary_id = primary_id,
+			primary_tag = primary_tag,
+			candidates = candidates,
+			direct_fallback = _node.failover_direct_fallback == "1",
+			restore_primary = _node.failover_restore_primary ~= "0",
+			check_interval = tonumber(_node.failover_check_interval) or 20,
+			connect_timeout = tonumber(_node.failover_connect_timeout) or 3,
+			failure_threshold = failure_threshold,
+			minimum_failure_duration = tonumber(_node.failover_minimum_failure_duration) or 10,
+			recovery_interval = tonumber(_node.failover_recovery_interval) or 300,
+			recovery_successes = tonumber(_node.failover_recovery_successes) or 2,
+			minimum_dwell = tonumber(_node.failover_minimum_dwell) or 600,
+			primary_url = _node.failover_primary_url or "https://www.gstatic.com/generate_204",
+			secondary_url = _node.failover_secondary_url or "https://cp.cloudflare.com/generate_204"
+		}
+
+		local loopback_outbound = gen_loopback(loopback_tag, loopback_dst)
+		table.insert(rules, { inboundTag = { loopback_outbound.settings.inboundTag }, balancerTag = main_balancer_tag })
+		return main_balancer_tag, loopback_outbound
+	end
 	
 	function set_outbound_detour(node, outbound, outbounds_table)
 		if not node or not outbound or not outbounds_table then return nil end
@@ -1308,6 +1445,13 @@ function gen_config(var)
 			end
 			if node.protocol == "_balancing" then
 				local balancer_tag, loopback_outbound = gen_balancer(node, tag)
+				if loopback_outbound then
+					outbound = loopback_outbound
+					node[".name"] = outbound.tag
+					has_add_outbound = true
+				end
+			elseif node.protocol == "_failover" then
+				local balancer_tag, loopback_outbound = gen_failover(node, tag)
 				if loopback_outbound then
 					outbound = loopback_outbound
 					node[".name"] = outbound.tag
@@ -1992,6 +2136,13 @@ function gen_config(var)
 	end
 	
 	if inbounds or outbounds then
+		if failover_runtime_dir and #failover_profiles > 0 then
+			fs.mkdirr(failover_runtime_dir)
+			for _, profile in ipairs(failover_profiles) do
+				local runtime_name = string.format("%s_%s.json", tostring(runtime_flag):gsub("[^%w_-]", "_"), profile.id)
+				fs.writefile(failover_runtime_dir .. "/" .. runtime_name, jsonc.stringify(profile))
+			end
+		end
 		local config = {
 			env = (function()
 				local asset_location = uci:get(appname, "@global_rules[0]", "v2ray_location_asset") or "/usr/share/v2ray/"
@@ -2009,6 +2160,7 @@ function gen_config(var)
 			outbounds = outbounds,
 			observatory = (not burstObservatory) and observatory or nil,
 			burstObservatory = burstObservatory,
+			api = xray_api,
 			routing = routing,
 			policy = {
 				levels = {

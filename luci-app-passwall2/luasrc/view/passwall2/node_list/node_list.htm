@@ -1350,6 +1350,8 @@ table td, .table .td {
 			let p = "";
 			if (protocol == "_balancing") {
 				p = "<%:Balancing%>";
+			} else if (protocol == "_failover") {
+				p = "<%:Priority Failover%>";
 			} else if (protocol == "_urltest") {
 				p = "URLTest";
 			} else if (protocol == "_shunt") {

@@ -390,7 +390,7 @@ end
 datatypes.timehhmm = is_timehhmm
 
 function is_normal_node(e)
-	if e and e.type and e.protocol and (e.protocol == "_balancing" or e.protocol == "_shunt" or e.protocol == "_iface" or e.protocol == "_urltest") then
+	if e and e.type and e.protocol and (e.protocol == "_balancing" or e.protocol == "_failover" or e.protocol == "_shunt" or e.protocol == "_iface" or e.protocol == "_urltest") then
 		return false
 	end
 	return true
@@ -492,7 +492,7 @@ function get_node_name(node_id)
 	end
 	if e then
 		if e.type and e.remarks then
-			if e.protocol and (e.protocol == "_balancing" or e.protocol == "_shunt" or e.protocol == "_iface") then
+			if e.protocol and (e.protocol == "_balancing" or e.protocol == "_failover" or e.protocol == "_shunt" or e.protocol == "_iface") then
 				local type_name = e.type
 				if e.type == "sing-box" then type_name = "Sing-Box" end
 				local remark = "%s：[%s] " % {type_name .. " " .. i18n.translatef(e.protocol), e.remarks}
@@ -513,7 +513,7 @@ function get_valid_nodes()
 		if e.type and e.remarks then
 			local type_name = e.type
 			if e.type == "sing-box" then type_name = "Sing-Box" end
-			if e.protocol and (e.protocol == "_balancing" or e.protocol == "_shunt" or e.protocol == "_iface" or e.protocol == "_urltest") then
+			if e.protocol and (e.protocol == "_balancing" or e.protocol == "_failover" or e.protocol == "_shunt" or e.protocol == "_iface" or e.protocol == "_urltest") then
 				e["remark"] = trim("%s：[%s]" % {type_name .. " " .. i18n.translatef(e.protocol), e.remarks})
 				e["node_type"] = "special"
 				if not e.group or e.group == "" then
@@ -621,7 +621,7 @@ function get_node_remarks(n)
 	if n then
 		local type_name = n.type
 		if n.type == "sing-box" then type_name = "Sing-Box" end
-		if n.protocol and (n.protocol == "_balancing" or n.protocol == "_shunt" or n.protocol == "_iface" or n.protocol == "_urltest") then
+		if n.protocol and (n.protocol == "_balancing" or n.protocol == "_failover" or n.protocol == "_shunt" or n.protocol == "_iface" or n.protocol == "_urltest") then
 			remarks = trim("%s：[%s]" % {type_name .. " " .. i18n.translatef(n.protocol), n.remarks})
 		else
 			if (n.type == "sing-box" or n.type == "Xray") and n.protocol then

@@ -56,6 +56,8 @@ url_test_node() {
 		local pid_file="/tmp/etc/${CONFIG}/url_test_${node_id}_plugin.pid"
 		[ -s "$pid_file" ] && kill -9 "$(head -n 1 "$pid_file")" >/dev/null 2>&1
 		busybox pgrep -af "url_test_${node_id}" | awk '! /test\.sh/{print $1}' | xargs kill -9 >/dev/null 2>&1
+		rm -rf /tmp/etc/${CONFIG}/failover/url_test_${node_id}_*
+		rm -f /tmp/etc/${CONFIG}/bin/priority_failover_url_test_${node_id}_*
 		rm -rf /tmp/etc/${CONFIG}/*url_test_${node_id}*.*
 	}
 	echo $result

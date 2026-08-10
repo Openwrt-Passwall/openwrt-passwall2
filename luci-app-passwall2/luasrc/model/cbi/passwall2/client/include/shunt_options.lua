@@ -211,8 +211,10 @@ for k1, v1 in pairs(node_list) do
 			_node:value(v.id, v.remark)
 			_node.group[#_node.group+1] = (v.group and v.group ~= "") and v.group or translate("default")
 
-			proxy_tag_node:value(v.id, v.remark)
-			proxy_tag_node.group[#proxy_tag_node.group+1] = (v.group and v.group ~= "") and v.group or translate("default")
+			if k1 ~= "failover_list" then
+				proxy_tag_node:value(v.id, v.remark)
+				proxy_tag_node.group[#proxy_tag_node.group+1] = (v.group and v.group ~= "") and v.group or translate("default")
+			end
 		end
 	end
 end

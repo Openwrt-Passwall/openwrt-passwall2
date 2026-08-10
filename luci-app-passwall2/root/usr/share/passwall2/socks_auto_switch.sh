@@ -64,6 +64,8 @@ test_node() {
 		local pid_file="/tmp/etc/${CONFIG}/test_node_${node_id}_plugin.pid"
 		[ -s "$pid_file" ] && kill -9 "$(head -n 1 "$pid_file")" >/dev/null 2>&1
 		busybox pgrep -af "test_node_${node_id}" | awk '! /socks_auto_switch\.sh/{print $1}' | xargs kill -9 >/dev/null 2>&1
+		rm -rf /tmp/etc/${CONFIG}/failover/test_node_${node_id}_*
+		rm -f /tmp/etc/${CONFIG}/bin/priority_failover_test_node_${node_id}_*
 		rm -rf /tmp/etc/${CONFIG}/test_node_${node_id}*.*
 		if [ "${_proxy_status}" -eq 200 ]; then
 			return 0

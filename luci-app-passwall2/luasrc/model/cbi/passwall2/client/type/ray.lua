@@ -56,6 +56,7 @@ if api.compare_versions(xray_version, ">=", "26.1.13") then
 end
 if api.compare_versions(xray_version, ">=", "1.8.12") then
 	o:value("_balancing", translate("Balancing"))
+	o:value("_failover", translate("Priority Failover"))
 end
 o:value("_shunt", translate("Shunt"))
 o:value("_iface", translate("Custom Interface"))
@@ -68,10 +69,11 @@ function o.custom_cfgvalue(self, section)
 end
 
 local load_balancing_options = s.val["protocol"] == "_balancing" or arg_select_proto == "_balancing"
+local load_failover_options = s.val["protocol"] == "_failover" or arg_select_proto == "_failover"
 local load_shunt_options = s.val["protocol"] == "_shunt" or arg_select_proto == "_shunt"
 local load_iface_options = s.val["protocol"] == "_iface" or arg_select_proto == "_iface"
 local load_normal_options = true
-if load_balancing_options or load_shunt_options or load_iface_options then
+if load_balancing_options or load_failover_options or load_shunt_options or load_iface_options then
 	load_normal_options = nil
 end
 if not arg_select_proto:find("_") then
@@ -271,6 +273,120 @@ if load_balancing_options then -- [[ Load balancing Start ]]
 	o.placeholder = "10"
 	o.description = translate("The maximum acceptable speed test failure rate. For example, 1 means allowing a 1% failure rate.")
 end -- [[ Load balancing End ]]
+
+if load_failover_options then -- [[ Priority failover Start ]]
+	local candidate_ids = {}
+	local candidate_groups = {}
+	local function is_failover_candidate(candidate)
+		local chain_proxy = candidate.chain_proxy
+		local self_contained = not chain_proxy or chain_proxy == "" or chain_proxy == "3"
+		return candidate.id ~= arg[1] and candidate.type == "Xray" and self_contained
+	end
+	for _, candidate in ipairs(node_list.normal_list or {}) do
+		if is_failover_candidate(candidate) then
+			candidate_ids[candidate.id] = true
+			candidate_groups[candidate.id] = (candidate.group and candidate.group ~= "") and candidate.group or translate("default")
+		end
+	end
+
+	local configured_primary = m.uci:get(appname, arg[1], "failover_primary_node")
+	local configured_backups = m.uci:get_list(appname, arg[1], "failover_backup_node") or {}
+
+	o = s:option(DummyValue, _n("failover_status"), translate("Failover status"))
+	o:depends({ [_n("protocol")] = "_failover" })
+	o.cfgvalue = function()
+		local raw = api.sys.exec("for f in /tmp/etc/passwall2/failover/*_" .. arg[1] .. ".state; do [ -s \"$f\" ] && { cat \"$f\"; break; }; done 2>/dev/null")
+		local status = raw and jsonc.parse(raw) or nil
+		if not status then return translate("Not running") end
+		local current = status.current_id or translate("Unknown")
+		local current_node = m.uci:get_all(appname, current)
+		if current_node then current = api.get_node_remarks(current_node) end
+		return string.format("%s: %s; %s: %s; %s: %s", translate("State"), status.state or translate("Unknown"), translate("Current Node"), current, translate("Reason"), status.reason or translate("Unknown"))
+	end
+
+	o = s:option(ListValue, _n("failover_primary_node"), translate("Primary Node"))
+	o:depends({ [_n("protocol")] = "_failover" })
+	o.template = appname .. "/cbi/nodes_listvalue"
+	o.group = {}
+	o.rmempty = false
+	for _, candidate in ipairs(node_list.normal_list or {}) do
+		if is_failover_candidate(candidate) then
+			o:value(candidate.id, candidate.remark)
+			o.group[#o.group + 1] = candidate_groups[candidate.id]
+		end
+	end
+	if configured_primary and not candidate_ids[configured_primary] then
+		o:value(configured_primary, translate("Missing node") .. ": " .. configured_primary)
+		o.group[#o.group + 1] = translate("Missing")
+	end
+
+	o = s:option(DynamicList, _n("failover_backup_node"), translate("Backup Nodes"), translate("Backup nodes are tested serially in this order. The primary and backup list are limited to 10 nodes in total."))
+	o:depends({ [_n("protocol")] = "_failover" })
+	o.template = appname .. "/cbi/nodes_dynamiclist"
+	o.group = {}
+	for _, candidate in ipairs(node_list.normal_list or {}) do
+		if is_failover_candidate(candidate) then
+			o:value(candidate.id, candidate.remark)
+			o.group[#o.group + 1] = candidate_groups[candidate.id]
+		end
+	end
+	for _, candidate_id in ipairs(configured_backups) do
+		if not candidate_ids[candidate_id] then
+			o:value(candidate_id, translate("Missing node") .. ": " .. candidate_id)
+			o.group[#o.group + 1] = translate("Missing")
+		end
+	end
+	o.write = function(self, section, value)
+		local primary = s.fields[_n("failover_primary_node")]:formvalue(section)
+		local values = type(value) == "table" and value or { value }
+		local result, seen = {}, {}
+		local backup_limit = 10
+		if primary and primary ~= "" then seen[primary] = true end
+		if primary and primary ~= "" then backup_limit = 9 end
+		for _, candidate_id in ipairs(values) do
+			if candidate_id and candidate_id ~= "" and candidate_id ~= arg[1] and not seen[candidate_id] and #result < backup_limit then
+				result[#result + 1] = candidate_id
+				seen[candidate_id] = true
+			end
+		end
+		return DynamicList.write(self, section, result)
+	end
+
+	o = s:option(Flag, _n("failover_restore_primary"), translate("Return to primary when stable"))
+	o:depends({ [_n("protocol")] = "_failover" })
+	o.default = "1"
+	o.rmempty = false
+
+	o = s:option(Flag, _n("failover_show_advanced"), translate("Show advanced failover settings"))
+	o:depends({ [_n("protocol")] = "_failover" })
+	o.default = "0"
+	o.rmempty = false
+
+	o = s:option(Flag, _n("failover_direct_fallback"), translate("Direct fallback if all nodes fail"), translate("Warning: enabling this option exposes the direct public IP and sends remote DNS directly while all configured nodes are unavailable."))
+	o:depends({ [_n("protocol")] = "_failover", [_n("failover_show_advanced")] = "1" })
+	o.default = "0"
+	o.rmempty = false
+
+	local function advanced_value(name, title, default, datatype, description)
+		local option = s:option(Value, _n(name), title, description)
+		option:depends({ [_n("protocol")] = "_failover", [_n("failover_show_advanced")] = "1" })
+		option.default = default
+		option.placeholder = default
+		option.datatype = datatype
+		option.rmempty = false
+		return option
+	end
+
+	advanced_value("failover_check_interval", translate("Active check interval"), "20", "min(10)", translate("Units: seconds"))
+	advanced_value("failover_connect_timeout", translate("Connection timeout"), "3", "range(1,10)", translate("Units: seconds"))
+	advanced_value("failover_failure_threshold", translate("Failure threshold"), "2", "range(2,5)")
+	advanced_value("failover_minimum_failure_duration", translate("Minimum failure duration"), "10", "range(0,60)", translate("The next failed probe cycle must be separated from the first failure by at least this duration.") .. "<br>" .. translate("Units: seconds"))
+	advanced_value("failover_recovery_interval", translate("Primary recovery interval"), "300", "min(60)", translate("Units: seconds"))
+	advanced_value("failover_recovery_successes", translate("Recovery success threshold"), "2", "range(1,5)")
+	advanced_value("failover_minimum_dwell", translate("Minimum backup dwell time"), "600", "min(0)", translate("Units: seconds"))
+	advanced_value("failover_primary_url", translate("Primary probe URL"), "https://www.gstatic.com/generate_204", "string", translate("Any final HTTP 2xx response is treated as healthy."))
+	advanced_value("failover_secondary_url", translate("Secondary probe URL"), "https://cp.cloudflare.com/generate_204", "string", translate("Any final HTTP 2xx response is treated as healthy."))
+end -- [[ Priority failover End ]]
 
 if load_iface_options then -- [[ Custom Interface Start ]]
 	o = s:option(Value, _n("iface"), translate("Interface"))
@@ -851,10 +967,10 @@ end
 end
 -- [[ Normal single node End ]]
 
-if not load_shunt_options then
+if not load_shunt_options and not load_failover_options then
 	o = s:option(ListValue, _n("chain_proxy"), translate("Chain Proxy"))
 	o:value("", translate("Close(Not use)"))
-	if not (load_iface_options or load_balancing_options) then
+	if not (load_iface_options or load_balancing_options or load_failover_options) then
 		-- Special node cannot be use pre-proxy.
 		o:value("1", translate("Preproxy Node"))
 		o:value("3", translate("Outbound Interface"))
@@ -879,7 +995,7 @@ if not load_shunt_options then
 	o2.group = {}
 
 	for k1, v1 in pairs(node_list) do
-		if k1 ~= "shunt_list" and k1 ~= "iface_list" then
+		if k1 ~= "shunt_list" and k1 ~= "iface_list" and k1 ~= "failover_list" then
 			for i, v in ipairs(v1) do
 				if v.id ~= arg[1] then
 					o1:value(v.id, v.remark)
