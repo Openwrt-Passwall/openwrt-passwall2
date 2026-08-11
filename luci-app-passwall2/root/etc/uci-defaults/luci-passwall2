@@ -55,11 +55,15 @@ frag_dly=$(uci -q get passwall2.@global_xray[0].fragment_delay)
 [ -n "$frag_dly" ] && uci -q set passwall2.@global_xray[0].fragment_delays="$frag_dly" && uci -q delete passwall2.@global_xray[0].fragment_delay
 
 for sid in $(uci show passwall2 | grep "=socks" | awk -F '.' '{print $2}' | awk -F '=' '{print $1}'); do
-	if [ -z "$(echo ${sid} | grep '^socks_')" ]; then
-		new_id="socks_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 5)"
-		uci -q rename passwall2.${sid}="${new_id}"
-		unset sid new_id
-	fi
+    if [ -z "$(echo ${sid} | grep '^socks_')" ]; then
+        new_id="socks_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 5)"
+        old_ref="Socks_${sid}"
+        uci -q rename passwall2.${sid}="${new_id}"
+        for item in $(uci show passwall2 | grep "='${old_ref}'\$" | cut -d '=' -sf 1); do
+            uci -q set ${item}="${new_id}"
+        done
+        unset sid new_id old_ref item
+    fi
 done
 for sid in $(uci show passwall2 | grep "@acl_rule" | cut -d '.' -sf 2 | cut -d '=' -sf 1); do
 	new_id="acl_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 5)"
