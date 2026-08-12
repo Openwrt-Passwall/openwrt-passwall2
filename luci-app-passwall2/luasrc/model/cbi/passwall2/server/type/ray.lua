@@ -111,7 +111,7 @@ o:depends({ [_n("protocol")] = "socks" })
 
 o = s:option(DynamicList, _n("uuid"), translate("ID") .. "/" .. translate("Password"))
 for i = 1, 3 do
-	o:value(api.gen_uuid(1))
+	o:value(api.gen_uuid())
 end
 o:depends({ [_n("protocol")] = "vmess" })
 o:depends({ [_n("protocol")] = "vless" })
@@ -218,24 +218,6 @@ o:depends({ [_n("reality")] = true })
 
 o = s:option(DynamicList, _n("reality_serverNames"), translate("serverNames"))
 o:depends({ [_n("reality")] = true })
-function o.write(self, section, value)
-	local t = {}
-	local t2 = {}
-	if type(value) == "table" then
-		local x
-		for _, x in ipairs(value) do
-			if x and #x > 0 then
-				if not t2[x] then
-					t2[x] = x
-					t[#t+1] = x
-				end
-			end
-		end
-	else
-		t = { value }
-	end
-	return DynamicList.write(self, section, t)
-end
 
 o = s:option(ListValue, _n("alpn"), translate("alpn"))
 o.default = "default"

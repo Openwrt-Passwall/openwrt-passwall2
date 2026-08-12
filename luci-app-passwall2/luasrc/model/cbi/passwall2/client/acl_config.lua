@@ -23,25 +23,6 @@ for k, e in ipairs(api.get_valid_nodes()) do
 	nodes_table[#nodes_table + 1] = e
 end
 
-local dynamicList_write = function(self, section, value)
-	local t = {}
-	local t2 = {}
-	if type(value) == "table" then
-		local x
-		for _, x in ipairs(value) do
-			if x and #x > 0 then
-				if not t2[x] then
-					t2[x] = x
-					t[#t+1] = x
-				end
-			end
-		end
-	else
-		t = { value }
-	end
-	t = table.concat(t, " ")
-	return DynamicList.write(self, section, t)
-end
 local doh_validate = function(self, value, t)
 	if value ~= "" then
 		local flag = 0
@@ -77,33 +58,6 @@ o.rmempty = false
 o = s:option(Value, "remarks", translate("Remarks"))
 o.default = arg[1]
 o.rmempty = false
-
----- Log
-o = s:option(Flag, "log", translate("Enable Log"))
-o.default = 0
-o.rmempty = false
-
-o = s:option(ListValue, "loglevel", translate("Log Level"))
-o.default = "warn"
-o:value("debug", "Debug")
-o:value("info", "Info")
-o:value("warn", "Warning")
-o:value("error", "Error")
-o:depends("log", "1")
-
-o = s:option(DummyValue, "_acl_log", translate("Log File"))
-o.rawhtml = true
-o.cfgvalue = function(t, n)
-	local log_path = "/tmp/log/passwall2_acl_" .. arg[1] .. ".log"
-	local log_url = api.url("get_acl_log") .. "?id=" .. arg[1]
-	return string.format(
-		'<code>%s</code>&nbsp;&nbsp;<input class="btn cbi-button cbi-button-apply" type="button" value="%s" onclick="window.open(\'%s\', \'_blank\')" />',
-		log_path,
-		translate("View Log"),
-		log_url
-	)
-end
-o:depends("log", "1")
 
 o = s:option(Value, "interface", translate("Source Interface"))
 o:value("", translate("All"))
@@ -203,7 +157,10 @@ sources.validate = function(self, value, t)
 
 	return value
 end
-sources.write = dynamicList_write
+
+o = s:option(ListValue, "mode", translate("Mode"))
+o:value("0", translate("No Proxy"))
+o:value("1", translate("Proxy"))
 
 ---- TCP No Redir Ports
 local TCP_NO_REDIR_PORTS = m:get("@global_forwarding[0]", "tcp_no_redir_ports")
@@ -211,22 +168,22 @@ o = s:option(Value, "tcp_no_redir_ports", translate("TCP No Redir Ports"))
 o:value("", translate("Use global config") .. "(" .. TCP_NO_REDIR_PORTS .. ")")
 o:value("disable", translate("No patterns are used"))
 o:value("1:65535", translate("All"))
+o:depends("mode", "1")
 o.validate = port_validate
 
 ---- UDP No Redir Ports
 local UDP_NO_REDIR_PORTS = m:get("@global_forwarding[0]", "udp_no_redir_ports")
-o = s:option(Value, "udp_no_redir_ports", translate("UDP No Redir Ports"),
-	"<font color='red'>" ..
-	translate("If you don't want to let the device in the list to go proxy, please choose all.") ..
-	"</font>")
+o = s:option(Value, "udp_no_redir_ports", translate("UDP No Redir Ports"))
 o:value("", translate("Use global config") .. "(" .. UDP_NO_REDIR_PORTS .. ")")
 o:value("disable", translate("No patterns are used"))
 o:value("1:65535", translate("All"))
+o:depends("mode", "1")
 o.validate = port_validate
 
 o = s:option(DummyValue, "_hide_node_option", "")
 o.template = "passwall2/cbi/hidevalue"
 o.value = "1"
+o:depends("mode", "0")
 o:depends({ tcp_no_redir_ports = "1:65535", udp_no_redir_ports = "1:65535" })
 if TCP_NO_REDIR_PORTS == "1:65535" and UDP_NO_REDIR_PORTS == "1:65535" then
 	o:depends({ tcp_no_redir_ports = "", udp_no_redir_ports = "" })
@@ -250,13 +207,30 @@ if not current_node_id then
 end
 current_node = current_node_id and m.uci:get_all(appname, current_node_id) or {}
 
-o = s:option(DummyValue, "_hide_dns_option", "")
-o.template = "passwall2/cbi/hidevalue"
-o.value = "1"
-o:depends({ node = "" })
-if GLOBAL_ENABLED == "1" and NODE then
-	o:depends({ node = NODE })
+o = s:option(Flag, "log", translate("Enable Node Log"))
+o:depends({ _hide_node_option = "1",  ['!reverse'] = true })
+
+o = s:option(ListValue, "loglevel", translate("Log Level"))
+o.default = "warn"
+o:value("debug", "Debug")
+o:value("info", "Info")
+o:value("warn", "Warning")
+o:value("error", "Error")
+o:depends("log", "1")
+
+o = s:option(DummyValue, "_acl_log", translate("Log File"))
+o.rawhtml = true
+o.cfgvalue = function(t, n)
+	local log_path = api.TMP_PATH .. "/acl/" .. arg[1] .. "/node.log"
+	local log_url = api.url("get_acl_log") .. "?id=" .. arg[1]
+	return string.format(
+		'<code>%s</code>&nbsp;&nbsp;<input class="btn cbi-button cbi-button-apply" type="button" value="%s" onclick="window.open(\'%s\', \'_blank\')" />',
+		log_path,
+		translate("View Log"),
+		log_url
+	)
 end
+o:depends("log", "1")
 
 ---- TCP Redir Ports
 local TCP_REDIR_PORTS = m:get("@global_forwarding[0]", "tcp_redir_ports")
@@ -281,6 +255,15 @@ o.rawhtml = true
 o.cfgvalue = function(t, n)
 	return string.format('<font color="red">%s</font>',
 	translate("The port settings support single ports and ranges.<br>Separate multiple ports with commas (,).<br>Example: 21,80,443,1000:2000."))
+end
+o:depends({ _hide_node_option = "1",  ['!reverse'] = true })
+
+o = s:option(DummyValue, "_hide_dns_option", "")
+o.template = "passwall2/cbi/hidevalue"
+o.value = "1"
+o:depends({ node = "" })
+if GLOBAL_ENABLED == "1" and NODE then
+	o:depends({ node = NODE })
 end
 
 o = s:option(ListValue, "direct_dns_query_strategy", translate("Direct Query Strategy"))
@@ -377,6 +360,7 @@ o = s:option(ListValue, "dns_hosts_mode", translate("Domain Override"))
 o:value("default", translate("Use global config"))
 o:value("disable", translate("No patterns are used"))
 o:value("custom", translate("-- custom --"))
+o:depends({ _hide_dns_option = "1",  ['!reverse'] = true })
 
 o = s:option(TextValue, "dns_hosts", translate("Domain Override"))
 o.rows = 5

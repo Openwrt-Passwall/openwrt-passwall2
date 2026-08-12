@@ -121,12 +121,6 @@ msgstr "0 به معنای عدم استفاده است"
 msgid "Current node: %s"
 msgstr "گره فعلی: %s"
 
-msgid "Direct domain DNS routing"
-msgstr "مسیریابی مستقیم DNS دامنه"
-
-msgid "Please note that the program will not start if the format is incorrect!"
-msgstr "لطفا توجه داشته باشید که اگر قالب نادرست باشد، برنامه شروع نخواهد شد!"
-
 msgid "IP:Port mode acceptable, multi value split with english comma."
 msgstr "حالت IP:Port قابل قبول است، مقادیر متعدد را با کاما انگلیسی جدا کنید."
 
@@ -337,8 +331,8 @@ msgstr "آیا از حذف گره‌های انتخاب شده اطمینان د
 msgid "You no select nodes !"
 msgstr "شما هیچ گره‌ای انتخاب نکرده‌اید!"
 
-msgid "Are you sure set to"
-msgstr "آیا مطمئن هستید که تنظیم شود به"
+msgid "Are you sure set this node?"
+msgstr "مطمئنی این گره رو تنظیم کردی؟"
 
 msgid "the server?"
 msgstr "سرور؟"
@@ -970,6 +964,9 @@ msgstr "توجه: مصرف منابع را افزایش می‌دهد."
 msgid "Shunt Rule"
 msgstr "قانون شنت"
 
+msgid "Shunt Rule Group"
+msgstr "گروه قوانین شنت"
+
 msgid "Please note attention to the priority, the higher the order, the higher the priority."
 msgstr "لطفاً به اولویت توجه کنید، هرچه ترتیب بالاتر باشد، اولویت بیشتر است."
 
@@ -1504,6 +1501,12 @@ msgstr "فعال‌سازی گزارش گره"
 msgid "Log Level"
 msgstr "سطح گزارش"
 
+msgid "Log File"
+msgstr "فایل لاگ"
+
+msgid "View Log"
+msgstr "مشاهده گزارش"
+
 msgid "Not enabled log"
 msgstr "گزارش فعال نیست"
 
@@ -1749,6 +1752,12 @@ msgstr "حل مشکل DNS دامنه"
 
 msgid "If the node address is a domain name, this DNS will be used for resolution."
 msgstr "اگر آدرس گره یک نام دامنه باشد، از این DNS برای حل مسئله استفاده خواهد شد."
+
+msgid "Enable Happy Eyeballs"
+msgstr "فعال کردن چشم‌های خوشحال"
+
+msgid "Attempts IPv4 and IPv6 simultaneously; automatically uses the faster connection."
+msgstr "IPv4 و IPv6 را همزمان امتحان می‌کند؛ به‌طور خودکار از اتصال سریع‌تر استفاده می‌کند."
 
 msgid "Supports only Xray or Sing-box node types."
 msgstr "فقط گره‌های نوع Xray یا Sing-box پشتیبانی می‌شوند."
@@ -2372,6 +2381,9 @@ msgstr "گره [%s] با موفقیت حل شد، تعداد: %s"
 msgid "Get subscription content for [%s] is empty. This may be due to an invalid subscription address or a network problem. Please diagnose the issue!"
 msgstr "دریافت محتوای اشتراک برای [%s] خالی است. این ممکن است به دلیل آدرس اشتراک نامعتبر یا مشکل شبکه باشد. لطفاً مشکل را بررسی کنید!"
 
+msgid "No Proxy"
+msgstr "بدون پروکسی"
+
 msgid "Proxy"
 msgstr "پروکسی"
 
@@ -2413,3 +2425,15 @@ msgstr "اندازه بسته Gecko (حداکثر)"
 
 msgid "valid time (hh:mm)"
 msgstr "زمان معتبر (ساعت:میلی‌متر)"
+
+msgid "Disable TLS Reuse"
+msgstr "غیرفعال کردن استفاده مجدد از TLS"
+
+msgid "Not Set"
+msgstr "تنظیم نشده"
+
+msgid "Cipher Suites"
+msgstr "سوئیت‌های رمزدار"
+
+msgid "Configures the list of supported cipher suites."
+msgstr "فهرست مجموعه‌های رمز پشتیبانی‌شده را پیکربندی می‌کند."

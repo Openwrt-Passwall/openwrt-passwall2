@@ -21,10 +21,9 @@ t.sortable = true
 t.template = "cbi/tblsection"
 t.extedit = api.url("server_user", "%s")
 function t.create(e, t)
-	local uuid = api.gen_uuid()
-	t = uuid
-	TypedSection.create(e, t)
-	luci.http.redirect(e.extedit:format(t))
+	local uid = api.gen_random_char()
+	TypedSection.create(e, uid)
+	luci.http.redirect(e.extedit:format(uid))
 end
 function t.remove(e, t)
 	e.map.proceed = true

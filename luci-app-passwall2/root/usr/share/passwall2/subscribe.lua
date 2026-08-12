@@ -170,10 +170,10 @@ do
 				local flag = i18n.translatef("Socks node list [%s]", i) .. " " .. i18n.translatef("Backup node list")
 				local currentNodes = {}
 				local newNodes = {}
-				for k, node_id in ipairs(t.autoswitch_backup_node) do
-					if node_id then
-						local currentNode = uci:get_all(appname, node_id) or nil
-						if currentNode then
+				for k, asb_node_id in ipairs(t.autoswitch_backup_node) do
+					if asb_node_id then
+						local currentNode = uci:get_all(appname, asb_node_id) or {}
+						if currentNode[".type"] == "nodes" then
 							currentNodes[#currentNodes + 1] = {
 								log = true,
 								remarks = flag .. "[" .. k .. "]",
@@ -278,36 +278,39 @@ do
 
 			for k, e in pairs(rules) do
 				local _node_id = node[e[".name"]] or nil
-				if _node_id and not _node_id:find("Socks_") then
-					CONFIG[#CONFIG + 1] = {
-						log = false,
-						currentNode = _node_id and uci:get_all(appname, _node_id) or nil,
-						remarks = i18n.translatef("Shunt [%s] node", e.remarks),
-						set = function(o, server)
-							if not server then server = "" end
-							uci:set(appname, node_id, e[".name"], server)
-							o.newNodeId = server
-						end
-					}
+				if _node_id then
+					local section = uci:get_all(appname, _node_id) or {}
+					if section[".type"] == "nodes" then
+						CONFIG[#CONFIG + 1] = {
+							log = false,
+							currentNode = section,
+							remarks = i18n.translatef("Shunt [%s] node", e.remarks),
+							set = function(o, server)
+								if not server then server = "" end
+								uci:set(appname, node_id, e[".name"], server)
+								o.newNodeId = server
+							end
+						}
+					end
 				end
-
 			end
 		elseif node.protocol and node.protocol == '_balancing' then
 			local flag = i18n.translatef("Xray Load Balancing node [%s] list", node_id)
 			local currentNodes = {}
 			local newNodes = {}
 			if node.balancing_node then
-				for k, node in pairs(node.balancing_node) do
+				for k, b_node_id in pairs(node.balancing_node) do
 					currentNodes[#currentNodes + 1] = {
 						log = true,
-						node = node,
+						node = b_node_id,
 						currentNode = (function()
-							if node and node:find("Socks_") then
-								return { Socks = node }
+							local section = uci:get_all(appname, b_node_id) or {}
+							if section[".type"] == "socks" then
+								return { Socks = b_node_id }
 							end
-							return node and uci:get_all(appname, node) or nil
+							return section
 						end)(),
-						remarks = node,
+						remarks = b_node_id,
 						set = function(o, server)
 							if o and server and server ~= "nil" then
 								table.insert(o.newNodes, server)
@@ -330,37 +333,41 @@ do
 
 			-- Backup Node
 			local currentNode = uci:get_all(appname, node_id) or nil
-			if currentNode and currentNode.fallback_node and not currentNode.fallback_node:find("Socks_") then
-				CONFIG[#CONFIG + 1] = {
-					log = true,
-					id = node_id,
-					remarks = i18n.translatef("Xray Load Balancing node [%s] backup node", node_id),
-					currentNode = uci:get_all(appname, currentNode.fallback_node) or nil,
-					set = function(o, server)
-						uci:set(appname, node_id, "fallback_node", server)
-						o.newNodeId = server
-					end,
-					delete = function(o)
-						uci:delete(appname, node_id, "fallback_node")
-					end
-				}
+			if currentNode and currentNode.fallback_node then
+				local section = uci:get_all(appname, currentNode.fallback_node) or {}
+				if section[".type"] == "nodes" then
+					CONFIG[#CONFIG + 1] = {
+						log = true,
+						id = node_id,
+						remarks = i18n.translatef("Xray Load Balancing node [%s] backup node", node_id),
+						currentNode = section,
+						set = function(o, server)
+							uci:set(appname, node_id, "fallback_node", server)
+							o.newNodeId = server
+						end,
+						delete = function(o)
+							uci:delete(appname, node_id, "fallback_node")
+						end
+					}
+				end
 			end
 		elseif node.protocol and node.protocol == '_urltest' then
 			local flag = i18n.translatef("Sing-Box URLTest node [%s] list", node_id)
 			local currentNodes = {}
 			local newNodes = {}
 			if node.urltest_node then
-				for k, node in pairs(node.urltest_node) do
+				for k, u_node_id in pairs(node.urltest_node) do
 					currentNodes[#currentNodes + 1] = {
 						log = true,
-						node = node,
+						node = u_node_id,
 						currentNode = (function()
-							if node and node:find("Socks_") then
-								return { Socks = node }
+							local section = uci:get_all(appname, u_node_id) or {}
+							if section[".type"] == "socks" then
+								return { Socks = u_node_id }
 							end
-							return node and uci:get_all(appname, node) or nil
+							return section
 						end)(),
-						remarks = node,
+						remarks = u_node_id,
 						set = function(o, server)
 							if o and server and server ~= "nil" then
 								table.insert(o.newNodes, server)
@@ -383,37 +390,43 @@ do
 		else
 			-- Preproxy Node
 			local currentNode = uci:get_all(appname, node_id) or nil
-			if currentNode and currentNode.preproxy_node and not currentNode.preproxy_node:find("Socks_") then
-				CONFIG[#CONFIG + 1] = {
-					log = true,
-					id = node_id,
-					remarks = i18n.translatef("Node [%s] preproxy node", node_id),
-					currentNode = uci:get_all(appname, currentNode.preproxy_node) or nil,
-					set = function(o, server)
-						uci:set(appname, node_id, "preproxy_node", server)
-						o.newNodeId = server
-					end,
-					delete = function(o)
-						uci:delete(appname, node_id, "preproxy_node")
-					end
-				}
+			if currentNode and currentNode.preproxy_node then
+				local section = uci:get_all(appname, currentNode.preproxy_node) or {}
+				if section[".type"] == "nodes" then
+					CONFIG[#CONFIG + 1] = {
+						log = true,
+						id = node_id,
+						remarks = i18n.translatef("Node [%s] preproxy node", node_id),
+						currentNode = uci:get_all(appname, currentNode.preproxy_node) or nil,
+						set = function(o, server)
+							uci:set(appname, node_id, "preproxy_node", server)
+							o.newNodeId = server
+						end,
+						delete = function(o)
+							uci:delete(appname, node_id, "preproxy_node")
+						end
+					}
+				end
 			end
 			-- Landing node
 			local currentNode = uci:get_all(appname, node_id) or nil
-			if currentNode and currentNode.to_node and not currentNode.to_node:find("Socks_") then
-				CONFIG[#CONFIG + 1] = {
-					log = true,
-					id = node_id,
-					remarks = i18n.translatef("Node [%s] landing node", node_id),
-					currentNode = uci:get_all(appname, currentNode.to_node) or nil,
-					set = function(o, server)
-						uci:set(appname, node_id, "to_node", server)
-						o.newNodeId = server
-					end,
-					delete = function(o)
-						uci:delete(appname, node_id, "to_node")
-					end
-				}
+			if currentNode and currentNode.to_node then
+				local section = uci:get_all(appname, currentNode.to_node) or {}
+				if section[".type"] == "nodes" then
+					CONFIG[#CONFIG + 1] = {
+						log = true,
+						id = node_id,
+						remarks = i18n.translatef("Node [%s] landing node", node_id),
+						currentNode = uci:get_all(appname, currentNode.to_node) or nil,
+						set = function(o, server)
+							uci:set(appname, node_id, "to_node", server)
+							o.newNodeId = server
+						end,
+						delete = function(o)
+							uci:delete(appname, node_id, "to_node")
+						end
+					}
+				end
 			end
 		end
 	end)
@@ -769,6 +782,9 @@ local function parseClashNode(node, add_mode, group, sub_cfg)
 			result.reality = "1"
 			result.reality_publicKey = node["reality-opts"]["public-key"]
 			result.reality_shortId = node["reality-opts"]["short-id"]
+		end
+		if node["disable-reuse"] then
+			result.anytls_disable_reuse = "1"
 		end
 	end
 	if not result.remarks or result.remarks == "" then
@@ -1867,7 +1883,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 			end
 			if params.security == "tls" or params.security == "reality" then
 				result.tls = "1"
-				result.tls_serverName = params.sni
+				result.tls_serverName = params.sni or params.peer
 				result.alpn = params.alpn
 				if params.fp and params.fp ~= "" then
 					result.utls = "1"
@@ -2373,7 +2389,7 @@ local function update_node(manual)
 			chain_node_type = (outbound_iface_group ~= "") and "iface" or chain_node_type
 		end
 		for _, vv in ipairs(list) do
-			local cfgid = uci:section(appname, "nodes", api.gen_short_uuid())
+			local cfgid = uci:section(appname, "nodes", api.gen_random_char())
 			for kkk, vvv in pairs(vv) do
 				if type(vvv) == "table" and next(vvv) ~= nil then
 					uci:set_list(appname, cfgid, kkk, vvv)

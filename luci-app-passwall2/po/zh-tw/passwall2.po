@@ -118,12 +118,6 @@ msgstr "0為不使用"
 msgid "Current node: %s"
 msgstr "當前節點：%s"
 
-msgid "Direct domain DNS routing"
-msgstr "直連網域 DNS 分流"
-
-msgid "Please note that the program will not start if the format is incorrect!"
-msgstr "請注意，格式不正確將無法啟動！"
-
 msgid "IP:Port mode acceptable, multi value split with english comma."
 msgstr "接受 IP:Port 形式的輸入，多個以英文逗号分隔。"
 
@@ -334,8 +328,8 @@ msgstr "你確定要刪除選择的節點吗？"
 msgid "You no select nodes !"
 msgstr "你沒有選择任何節點！"
 
-msgid "Are you sure set to"
-msgstr "你確定要設為"
+msgid "Are you sure set this node?"
+msgstr "你確定要設定這個節點嗎？"
 
 msgid "the server?"
 msgstr "服務器吗？"
@@ -962,6 +956,9 @@ msgstr "注：会增加一些系統资源的開销。"
 msgid "Shunt Rule"
 msgstr "分流規則"
 
+msgid "Shunt Rule Group"
+msgstr "分流規則組"
+
 msgid "Please note attention to the priority, the higher the order, the higher the priority."
 msgstr "請注意優先級問題，排序越上面優先級越高。"
 
@@ -1496,6 +1493,12 @@ msgstr "啟用節點日誌"
 msgid "Log Level"
 msgstr "日誌等級"
 
+msgid "Log File"
+msgstr "日誌檔案"
+
+msgid "View Log"
+msgstr "查看日誌"
+
 msgid "Not enabled log"
 msgstr "未啟用日誌"
 
@@ -1741,6 +1744,12 @@ msgstr "域名 DNS 解析"
 
 msgid "If the node address is a domain name, this DNS will be used for resolution."
 msgstr "如果節點地址是域名，則將使用此 DNS 進行解析。"
+
+msgid "Enable Happy Eyeballs"
+msgstr "啓用 Happy Eyeballs"
+
+msgid "Attempts IPv4 and IPv6 simultaneously; automatically uses the faster connection."
+msgstr "同時嘗試 IPv4 和 IPv6 鏈接，自動使用更快的鏈接。"
 
 msgid "Supports only Xray or Sing-box node types."
 msgstr "僅支援 Xray 或 Sing-box 類型節點。"
@@ -2364,6 +2373,9 @@ msgstr "成功解析【%s】節點，數量：%s"
 msgid "Get subscription content for [%s] is empty. This may be due to an invalid subscription address or a network problem. Please diagnose the issue!"
 msgstr "獲取到的【%s】訂閱內容為空，可能是訂閱地址無效，或是網絡問題，請診斷！"
 
+msgid "No Proxy"
+msgstr "不代理"
+
 msgid "Proxy"
 msgstr "代理"
 
@@ -2405,3 +2417,15 @@ msgstr "Gecko 包大小（最大）"
 
 msgid "valid time (hh:mm)"
 msgstr "有效時間（hh:mm）"
+
+msgid "Disable TLS Reuse"
+msgstr "禁用 TLS 連接復用"
+
+msgid "Not Set"
+msgstr "未設置"
+
+msgid "Cipher Suites"
+msgstr "密碼套件"
+
+msgid "Configures the list of supported cipher suites."
+msgstr "配置支援的密碼套件列表。"

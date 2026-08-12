@@ -209,7 +209,6 @@ run_singbox() {
 	node_protocol=$(config_n_get $node protocol)
 	[ -n "$log_file" ] || local log_file="/dev/null"
 	[ -z "$loglevel" ] && local loglevel=$(config_t_get global loglevel "warn")
-	[ "$loglevel" = "warning" ] && loglevel="warn"
 	local singbox_tag=$($SINGBOX_BIN version | grep 'Tags:' | awk '{print $2}')
 
 	json_init
@@ -403,7 +402,7 @@ run_socks() {
 	sing-box)
 		[ "$http_port" != "0" ] && {
 			http_flag=1
-			config_file="${config_file//SOCKS/HTTP_SOCKS}"
+			config_file="${config_file%%.*}+http${config_file#${config_file%%.*}}"
 			json_add_string "local_http_address" "${bind}"
 			json_add_string "local_http_port" "${http_port}"
 		}
@@ -413,13 +412,12 @@ run_socks() {
 		}
 		[ "${log_file}" != "/dev/null" ] && {
 			local loglevel=$(config_t_get global loglevel "warn")
-			[ "$loglevel" = "warning" ] && loglevel="warn"
 			json_add_string "log" "1"
 			json_add_string "loglevel" "${loglevel}"
 			json_add_string "logfile" "${log_file}"
 		}
 		[ -n "$no_run" ] && json_add_string "no_run" "1"
-		json_add_string "flag" "SOCKS_${flag}"
+		json_add_string "flag" "${flag}"
 		json_add_string "local_socks_address" "${bind}"
 		json_add_string "local_socks_port" "${socks_port}"
 		json_add_string "direct_dns_udp_port" "${DIRECT_DNS_UDP_PORT}"
@@ -432,7 +430,7 @@ run_socks() {
 	xray)
 		[ "$http_port" != "0" ] && {
 			http_flag=1
-			config_file="${config_file//SOCKS/HTTP_SOCKS}"
+			config_file="${config_file%%.*}+http${config_file#${config_file%%.*}}"
 			json_add_string "local_http_address" "${bind}"
 			json_add_string "local_http_port" "${http_port}"
 		}
@@ -440,8 +438,13 @@ run_socks() {
 			json_add_null "server_host"
 			json_add_null "server_port"
 		}
+		[ "${log_file}" != "/dev/null" ] && {
+			local loglevel=$(config_t_get global loglevel "warn")
+			json_add_string "log" "1"
+			json_add_string "loglevel" "${loglevel}"
+		}
 		[ -n "$no_run" ] && json_add_string "no_run" "1"
-		json_add_string "flag" "SOCKS_${flag}"
+		json_add_string "flag" "${flag}"
 		json_add_string "local_socks_address" "${bind}"
 		json_add_string "local_socks_port" "${socks_port}"
 		json_add_string "direct_dns_udp_port" "${DIRECT_DNS_UDP_PORT}"
@@ -471,7 +474,7 @@ run_socks() {
 		json_add_string "local_socks_port" "${socks_port}"
 		[ "$http_port" != "0" ] && {
 			http_flag=1
-			config_file="${config_file//SOCKS/HTTP_SOCKS}"
+			config_file="${config_file%%.*}+http${config_file#${config_file%%.*}}"
 			json_add_string "local_http_address" "${bind}"
 			json_add_string "local_http_port" "${http_port}"
 		}
@@ -488,7 +491,7 @@ run_socks() {
 		json_add_string "local_socks_port" "${socks_port}"
 		[ "$http_port" != "0" ] && {
 			http_flag=1
-			config_file="${config_file//SOCKS/HTTP_SOCKS}"
+			config_file="${config_file%%.*}+http${config_file#${config_file%%.*}}"
 			json_add_string "local_http_address" "${bind}"
 			json_add_string "local_http_port" "${http_port}"
 		}
@@ -532,16 +535,16 @@ socks_node_switch() {
 	local flag new_node
 	eval_set_val $@
 	[ -n "$flag" ] && [ -n "$new_node" ] && {
-		local prefix pf filename
+		local suffix pf filename
 		# Kill the SS plugin process
-		for prefix in "" "HTTP_"; do
-			pf="$TMP_PATH/${prefix}SOCKS_${flag}_plugin.pid"
+		for suffix in "" "+http"; do
+			pf="$TMP_PATH/${flag}${suffix}_plugin.pid"
 			[ -s "$pf" ] && kill -9 "$(head -n1 "$pf")" >/dev/null 2>&1
 		done
 
 		busybox pgrep -af "$TMP_BIN_PATH" | awk -v P1="${flag}" 'BEGIN{IGNORECASE=1}$0~P1 && !/acl\/|acl_/{print $1}' | xargs kill -9 >/dev/null 2>&1
-		for prefix in "" "HTTP_" "HTTP2"; do
-			rm -rf "$TMP_PATH/${prefix}SOCKS_${flag}"*
+		for suffix in "" "+http" "_http"; do
+			rm -rf "$TMP_PATH/${flag}${suffix}"*
 		done
 
 		for filename in $(ls ${TMP_SCRIPT_FUNC_PATH}); do
@@ -552,15 +555,15 @@ socks_node_switch() {
 		local bind="0.0.0.0"
 		[ "$bind_local" = "1" ] && bind="127.0.0.1"
 		local port=$(config_n_get $flag port)
-		local config_file="SOCKS_${flag}.json"
-		local log_file="SOCKS_${flag}.log"
+		local config_file="${flag}.json"
+		local log_file="${flag}.log"
 		local log=$(config_n_get $flag log 1)
 		[ "$log" == "0" ] && log_file=""
 		local http_port=$(config_n_get $flag http_port 0)
-		local http_config_file="HTTP2SOCKS_${flag}.json"
+		local http_config_file="${flag}_http.json"
 		LOG_FILE="/dev/null"
 		run_socks flag=$flag node=$new_node bind=$bind socks_port=$port config_file=$config_file http_port=$http_port http_config_file=$http_config_file log_file=$log_file
-		set_cache_var "socks_${flag}" "$new_node"
+		set_cache_var "${flag}" "$new_node"
 		local USE_TABLES=$(get_cache_var "USE_TABLES")
 		[ -n "$USE_TABLES" ] && source $APP_PATH/${USE_TABLES}.sh filter_direct_node_list
 	}
@@ -652,58 +655,13 @@ run_global() {
 	set_cache_var "ACL_GLOBAL_redir_port" "$REDIR_PORT"
 }
 
-run_front_dns() {
-	local switch=0
-	direct_dns_shunt=$(config_t_get global direct_dns_shunt)
-	direct_dns_shunt=$(echo "${direct_dns_shunt}" | grep -v "^#")
-	[ -n "${direct_dns_shunt}" ] && switch=1
-	[ "${switch}" == "1" ] && {
-		local config_file="${TMP_PATH}/direct_dns.json"
-		local log_file="${TMP_PATH}/direct_dns.log"
-		log_file="/dev/null"
-		local listen_port=$(get_new_port 10553)
-		json_init
-		json_add_string "dns_listen_port" "${listen_port}"
-		json_add_string "direct_dns_udp_server" "${DIRECT_DNS_UDP_SERVER}"
-		json_add_string "direct_dns_udp_port" "${DIRECT_DNS_UDP_PORT}"
-		json_add_string "direct_dns_query_strategy" "${DIRECT_DNS_QUERY_STRATEGY}"
-		[ -n "${ACL_GLOBAL_node}" ] && [ -n "${TUN_DNS_PORT}" ] && {
-			json_add_string "default_dns_udp_server" "127.0.0.1"
-			json_add_string "default_dns_udp_port" "${TUN_DNS_PORT}"
-		}
-		local _json_arg="$(json_dump)"
-
-		local prefer_core=""
-		[ -n "${XRAY_BIN}" ] && prefer_core="xray"
-		[ -n "${SINGBOX_BIN}" ] && prefer_core="sing-box"
-
-		if [ "${prefer_core}" = "xray" ]; then
-			lua $UTIL_XRAY gen_front_dns_config "${_json_arg}" > $config_file
-			ln_run 0 "$XRAY_BIN" "xray" "${log_file}" run -c "$config_file"
-		elif [ "${prefer_core}" = "sing-box" ]; then
-			lua $UTIL_SINGBOX gen_front_dns_config "${_json_arg}" > $config_file
-			ln_run 0 "$SINGBOX_BIN" "sing-box" "${log_file}" run -c "$config_file"
-		else
-			return 1
-		fi
-
-		FRONT_DNS_SERVER="127.0.0.1"
-		FRONT_DNS_PORT="${listen_port}"
-	}
-}
-
 run_global_dnsmasq() {
-	[ -z "${ACL_GLOBAL_node}" ] && [ -z "${FRONT_DNS_PORT}" ] && return
+	[ -z "${ACL_GLOBAL_node}" ] && return
 	local RUN_NEW_DNSMASQ=1
 	RUN_NEW_DNSMASQ=${DNS_REDIRECT}
 	DNSMASQ_DEFAULT_DNS="${AUTO_DNS}"
 	DNSMASQ_LOCAL_DNS="${LOCAL_DNS:-${AUTO_DNS}}"
 	DNSMASQ_TUN_DNS="${TUN_DNS}"
-	[ -n "${FRONT_DNS_PORT}" ] && {
-		DNSMASQ_DEFAULT_DNS="${FRONT_DNS_SERVER}#${FRONT_DNS_PORT}"
-		DNSMASQ_LOCAL_DNS="${DNSMASQ_DEFAULT_DNS}"
-		DNSMASQ_TUN_DNS="${DNSMASQ_DEFAULT_DNS}"
-	}
 	if [ "${RUN_NEW_DNSMASQ}" == "0" ]; then
 		#The old logic will be removed in the future.
 		#Run a copy dnsmasq instance, DNS hijack that don't need a proxy devices.
@@ -764,14 +722,14 @@ start_socks() {
 				local bind="0.0.0.0"
 				[ "$bind_local" = "1" ] && bind="127.0.0.1"
 				local port=$(config_n_get $id port)
-				local config_file="SOCKS_${id}.json"
-				local log_file="SOCKS_${id}.log"
+				local config_file="${id}.json"
+				local log_file="${id}.log"
 				local log=$(config_n_get $id log 1)
 				[ "$log" == "0" ] && log_file=""
 				local http_port=$(config_n_get $id http_port 0)
-				local http_config_file="HTTP2SOCKS_${id}.json"
+				local http_config_file="${id}_http.json"
 				run_socks flag=$id node=$node bind=$bind socks_port=$port config_file=$config_file http_port=$http_port http_config_file=$http_config_file log_file=$log_file
-				set_cache_var "socks_${id}" "$node"
+				set_cache_var "${id}" "$node"
 
 				# Auto switch logic
 				local enable_autoswitch=$(config_n_get $id enable_autoswitch 0)
@@ -869,10 +827,9 @@ start_crontab() {
 	for item in $(uci show ${CONFIG} | grep "=subscribe_list" | cut -d '.' -sf 2 | cut -d '=' -sf 1); do
 		sub_update_week_mode=$(config_n_get $item update_week_mode)
 		if [ -n "$sub_update_week_mode" ]; then
-			cfgid=$(uci show ${CONFIG}.$item | head -n 1 | cut -d '.' -sf 2 | cut -d '=' -sf 1)
 			remark=$(config_n_get $item remark)
 			sub_update_time_mode=$(config_n_get $item update_time_mode)
-			echo "$cfgid" >> $TMP_SUB_PATH/${sub_update_week_mode}_${sub_update_time_mode}
+			echo "$item" >> $TMP_SUB_PATH/${sub_update_week_mode}_${sub_update_time_mode}
 			log_i18n 0 "Scheduled tasks: Auto update [%s] subscription." "${remark}"
 		fi
 	done
@@ -1010,26 +967,26 @@ run_ipset_dnsmasq() {
 
 acl_app() {
 	local items=$(uci show ${CONFIG} | grep "=acl_rule" | cut -d '.' -sf 2 | cut -d '=' -sf 1)
-	[ -n "$items" ] && {
+	if [ -z "$items" ]; then
+		ENABLED_ACLS=0
+		return
+	else
+		local has_enabled
 		local index=0
-		local item
+		local sid
 		local redir_port dns_port dnsmasq_port socks_port
 		local ipt_tmp msg msg2
 		redir_port=11200
 		socks_port=11600
 		dns_port=11300
 		dnsmasq_port=${GLOBAL_DNSMASQ_PORT:-11400}
-		for item in $items; do
+		for sid in $items; do
 			index=$(expr $index + 1)
 			local enabled sid remarks sources interface tcp_no_redir_ports udp_no_redir_ports node direct_dns_query_strategy remote_dns_protocol remote_dns remote_dns_doh remote_dns_client_ip remote_dns_detour remote_fakedns remote_dns_query_strategy log loglevel log_file
 			local _ip _mac _iprange _ipset _ip_or_mac source_list config_file
-			local sid=$(uci -q show "${CONFIG}.${item}" | grep "=acl_rule" | awk -F '=' '{print $1}' | awk -F '.' '{print $2}')
 			[ "$(config_n_get $sid enabled)" = "1" ] || continue
-			eval $(uci -q show "${CONFIG}.${item}" | cut -d'.' -sf 3-)
-			log=${log:-0}
-			loglevel=${loglevel:-warn}
-			log_file="/dev/null"
-			[ "${log}" = "1" ] && log_file="/tmp/log/passwall2_acl_${sid}.log"
+			has_enabled=1
+			eval $(uci -q show "${CONFIG}.${sid}" | cut -d'.' -sf 3-)
 
 			if [ -n "${sources}" ]; then
 				for s in $sources; do
@@ -1057,6 +1014,11 @@ acl_app() {
 			local acl_path=${TMP_ACL_PATH}/$sid
 			mkdir -p ${acl_path}
 			[ -n "${source_list}" ] && echo -e "${source_list}" | sed '/^$/d' > ${acl_path}/source_list
+
+			log=${log:-0}
+			loglevel=${loglevel:-warn}
+			log_file="/dev/null"
+			[ "${log}" = "1" ] && log_file="${acl_path}/node.log"
 
 			node=${node:-default}
 			tcp_no_redir_ports=${tcp_no_redir_ports:-default}
@@ -1150,7 +1112,8 @@ acl_app() {
 			unset _ip _mac _iprange _ipset _ip_or_mac source_list config_file
 		done
 		unset redir_port dns_port dnsmasq_port
-	}
+		[ -n "${has_enabled}" ] || ENABLED_ACLS=0
+	fi
 }
 
 start() {
@@ -1186,7 +1149,6 @@ start() {
 	fi
 	mkdir -p ${GLOBAL_ACL_PATH}
 	[ "$ENABLED_DEFAULT_ACL" == 1 ] && run_global
-	run_front_dns
 	run_global_dnsmasq
 	[ -n "$USE_TABLES" ] && source $APP_PATH/${USE_TABLES}.sh start
 	set_cache_var "USE_TABLES" "$USE_TABLES"
@@ -1209,8 +1171,7 @@ start() {
 		local cfgids item
 		for item in $(uci show ${CONFIG} | grep "=subscribe_list" | cut -d '.' -sf 2 | cut -d '=' -sf 1); do
 			if [ "$(config_n_get "$item" boot_update 0)" = "1" ]; then
-				local cfgid=$(uci show ${CONFIG}.$item | head -n 1 | cut -d '.' -sf 2 | cut -d '=' -sf 1)
-				cfgids="${cfgids:+$cfgids,}$cfgid"
+				cfgids="${cfgids:+$cfgids,}$item"
 			fi
 		done
 		[ -n "$cfgids" ] && {
@@ -1298,9 +1259,6 @@ get_config() {
 		[ -n "$NODE" ] && [ "$(config_get_type $NODE)" == "nodes" ] && ENABLED_DEFAULT_ACL=1
 	}
 	ENABLED_ACLS=$(config_t_get global acl_enable 0)
-	[ "$ENABLED_ACLS" == 1 ] && {
-		[ "$(uci show ${CONFIG} | grep "@acl_rule" | grep "enabled='1'" | wc -l)" == 0 ] && ENABLED_ACLS=0
-	}
 	SOCKS_ENABLED=$(config_t_get global socks_enabled 0)
 	REDIR_PORT=$(echo $(get_new_port 1041 tcp,udp))
 	TCP_PROXY_WAY=$(config_t_get global_forwarding tcp_proxy_way redirect)

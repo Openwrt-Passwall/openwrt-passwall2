@@ -55,8 +55,8 @@ local appname = api.appname
 			return;
 		}
 		let to_url = '<%=api.url("node_config")%>/' + node_select_value;
-		if (node_select_value.indexOf("Socks_") === 0) {
-			to_url = '<%=api.url("socks_config")%>/' + node_select_value.substring("Socks_".length);
+		if (node_select_value.indexOf("socks_") === 0) {
+			to_url = '<%=api.url("socks_config")%>/' + node_select_value;
 		}
 		location.href = to_url;
 	}
@@ -207,7 +207,7 @@ local appname = api.appname
 			let new_val = el.target.value
 			const new_hasItem = shunt_list.find(element => element.id == new_val);
 			if (new_hasItem) {
-				XHR.get('<%=api.url("update_node")%>', {
+				XHR.get('<%=api.url("update_config")%>', {
 					id: "<%=self.global_cfgid%>",
 					data: JSON.stringify({
 						node: new_val

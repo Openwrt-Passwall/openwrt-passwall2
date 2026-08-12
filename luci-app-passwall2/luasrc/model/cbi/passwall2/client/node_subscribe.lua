@@ -134,8 +134,11 @@ s.sortable = true
 s.template = "cbi/tblsection"
 s.extedit = api.url("node_subscribe_config", "%s")
 function s.create(e, t)
-	local id = TypedSection.create(e, t)
-	luci.http.redirect(e.extedit:format(id))
+	local uid = "sub_" .. api.gen_random_char(5)
+	TypedSection.create(e, uid)
+	m:set(uid, "hysteria_up_mbps", "100")
+	m:set(uid, "hysteria_down_mbps", "100")
+	luci.http.redirect(e.extedit:format(uid))
 end
 
 o = s:option(Value, "remark", translate("Remarks"))

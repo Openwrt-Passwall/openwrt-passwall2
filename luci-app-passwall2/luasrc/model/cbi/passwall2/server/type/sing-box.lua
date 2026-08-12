@@ -235,7 +235,7 @@ o:depends({ [_n("protocol")] = "shadowsocks" })
 
 o = s:option(DynamicList, _n("uuid"), translate("ID") .. "/" .. translate("Password"))
 for i = 1, 3 do
-	o:value(api.gen_uuid(1))
+	o:value(api.gen_uuid())
 end
 o:depends({ [_n("protocol")] = "vmess" })
 o:depends({ [_n("protocol")] = "vless" })

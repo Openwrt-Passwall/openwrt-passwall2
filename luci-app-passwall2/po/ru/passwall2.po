@@ -118,12 +118,6 @@ msgstr "0 — отключить функцию"
 msgid "Current node: %s"
 msgstr "Текущий узел: %s"
 
-msgid "Direct domain DNS routing"
-msgstr "Прямая маршрутизация DNS домена"
-
-msgid "Please note that the program will not start if the format is incorrect!"
-msgstr "Обратите внимание, что программа не запустится, если формат указан неверно!"
-
 msgid "IP:Port mode acceptable, multi value split with english comma."
 msgstr "Допустим формат IP:Port. Несколько значений указывайте через запятую."
 
@@ -334,8 +328,8 @@ msgstr "Вы действительно хотите удалить выбран
 msgid "You no select nodes !"
 msgstr "Вы не выбрали ни одного узла!"
 
-msgid "Are you sure set to"
-msgstr "Вы действительно хотите назначить"
+msgid "Are you sure set this node?"
+msgstr "Вы уверены, что задали этот узел?"
 
 msgid "the server?"
 msgstr "активным сервером?"
@@ -971,6 +965,9 @@ msgstr "Примечание: увеличивает нагрузку на си�
 msgid "Shunt Rule"
 msgstr "Правила разделения трафика"
 
+msgid "Shunt Rule Group"
+msgstr "Группа правил шунтирования"
+
 msgid "Please note attention to the priority, the higher the order, the higher the priority."
 msgstr "Обратите внимание: правила выше в списке имеют более высокий приоритет."
 
@@ -1505,6 +1502,12 @@ msgstr "Запись журнала"
 msgid "Log Level"
 msgstr "Уровень записи журнала"
 
+msgid "Log File"
+msgstr "Файл журнала"
+
+msgid "View Log"
+msgstr "Просмотреть журнал"
+
 msgid "Not enabled log"
 msgstr "Запись журнала отключена"
 
@@ -1750,6 +1753,12 @@ msgstr "Разрешение DNS-запросов для домена"
 
 msgid "If the node address is a domain name, this DNS will be used for resolution."
 msgstr "Если адрес узла является доменным именем, для разрешения будет использоваться этот DNS-сервер."
+
+msgid "Enable Happy Eyeballs"
+msgstr "Включить счастливые глаза"
+
+msgid "Attempts IPv4 and IPv6 simultaneously; automatically uses the faster connection."
+msgstr "Одновременно пытается использовать IPv4 и IPv6; автоматически выбирает более быстрое соединение."
 
 msgid "Supports only Xray or Sing-box node types."
 msgstr "Поддерживаются только узлы типа Xray или Sing-box."
@@ -2370,6 +2379,9 @@ msgstr "Успешно разобран [%s], количество узлов: %
 msgid "Get subscription content for [%s] is empty. This may be due to an invalid subscription address or a network problem. Please diagnose the issue!"
 msgstr "Содержимое подписки [%s] пусто. Возможно, адрес подписки неверен или есть проблема с сетью. Пожалуйста, проведите диагностику!"
 
+msgid "No Proxy"
+msgstr "Без прокси"
+
 msgid "Proxy"
 msgstr "Прокси"
 
@@ -2411,3 +2423,15 @@ msgstr "Размер упаковки Gecko (макс)"
 
 msgid "valid time (hh:mm)"
 msgstr "Время действия (чч:мм)"
+
+msgid "Disable TLS Reuse"
+msgstr "Отключить повторное использование TLS"
+
+msgid "Not Set"
+msgstr "Не задано"
+
+msgid "Cipher Suites"
+msgstr "Наборы шифров"
+
+msgid "Configures the list of supported cipher suites."
+msgstr "Задает список поддерживаемых наборов шифров."
