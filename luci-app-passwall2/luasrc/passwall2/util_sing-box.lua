@@ -1982,7 +1982,12 @@ function gen_config(var)
 		else default_dns_flag = "direct"
 		end
 		dns.final = default_dns_flag
-		dns.strategy = default_dns_flag == "remote" and remote_strategy or direct_strategy
+		-- Single-stack (ipv4_only / ipv6_only) is enforced per-domain via the
+		-- query_type / reject rules generated below. The global dns.strategy applies
+		-- to every DNS server that does not set its own query_strategy, so keep it
+		-- dual-stack; otherwise a single-stack choice on one path would also force the
+		-- other path (e.g. direct / CN domains) into single-stack. See issue #1220.
+		dns.strategy = "prefer_ipv6"
 
 		-- DNS in order of shunt
 		if dns_domain_rules and #dns_domain_rules > 0 then
