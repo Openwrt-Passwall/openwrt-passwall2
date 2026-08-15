@@ -8,7 +8,6 @@ if not arg[1] or not m:get(arg[1]) then
 	luci.http.redirect(m.redirect)
 end
 
-fs = require "nixio.fs"
 formvalue_key = "cbid." .. m.config .. "." .. arg[1] .. "."
 
 m:appendTemplate("/node_config/header", {section = arg[1]})
@@ -24,7 +23,7 @@ m:foreach("nodes", function(s)
 	end
 end)
 
-s = m:section(NamedSection, arg[1], "nodes", translate("Node Config"))
+local s = m:section(NamedSection, arg[1], "nodes", translate("Node Config"))
 s.addremove = false
 s.dynamic = false
 
@@ -74,7 +73,7 @@ end
 o = s:option(ListValue, "type", translate("Type"))
 
 local type_table = {}
-for filename in fs.dir(types_dir) do
+for filename in api.fs.dir(types_dir) do
 	table.insert(type_table, filename)
 end
 table.sort(type_table)

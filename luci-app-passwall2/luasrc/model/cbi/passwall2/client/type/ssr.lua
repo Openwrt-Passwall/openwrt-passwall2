@@ -1,24 +1,20 @@
-local m, s = ...
-
 if not api.is_finded("ssr-local") then
 	return
 end
 
-type_name = "SSR"
-
 -- [[ ShadowsocksR Libev ]]
+local m, s1 = ...
+local type_name = "SSR"
 
-s.fields["type"]:value(type_name, "ShadowsocksR Libev")
+s1.fields["type"]:value(type_name, "ShadowsocksR Libev")
 
-if s.val["type"] ~= type_name then
+if s1.val["type"] ~= type_name then
 	return
 end
 
-local option_prefix = "ssr_"
-
-local function _n(name)
-	return option_prefix .. name
-end
+local s = NamedSection(m, arg[1], "server")
+s.type_name = type_name
+s.option_prefix = "ssr_"
 
 local ssr_encrypt_method_list = {
 	"none", "table", "rc2-cfb", "rc4", "rc4-md5", "rc4-md5-6", "aes-128-cfb",
@@ -39,32 +35,32 @@ local ssr_obfs_list = {
 	"tls1.0_session_auth", "tls1.2_ticket_auth"
 }
 
-o = s:option(Value, _n("address"), translate("Address (Support Domain Name)"))
+o = s:option(Value, "address", translate("Address (Support Domain Name)"))
 
-o = s:option(Value, _n("port"), translate("Port"))
+o = s:option(Value, "port", translate("Port"))
 o.datatype = "port"
 
-o = s:option(Value, _n("password"), translate("Password"))
+o = s:option(Value, "password", translate("Password"))
 o.password = true
 
-o = s:option(ListValue, _n("method"), translate("Encrypt Method"))
+o = s:option(ListValue, "method", translate("Encrypt Method"))
 for a, t in ipairs(ssr_encrypt_method_list) do o:value(t) end
 
-o = s:option(ListValue, _n("protocol"), translate("Protocol"))
+o = s:option(ListValue, "protocol", translate("Protocol"))
 for a, t in ipairs(ssr_protocol_list) do o:value(t) end
 
-o = s:option(Value, _n("protocol_param"), translate("Protocol_param"))
+o = s:option(Value, "protocol_param", translate("Protocol_param"))
 
-o = s:option(ListValue, _n("obfs"), translate("Obfs"))
+o = s:option(ListValue, "obfs", translate("Obfs"))
 for a, t in ipairs(ssr_obfs_list) do o:value(t) end
 
-o = s:option(Value, _n("obfs_param"), translate("Obfs_param"))
+o = s:option(Value, "obfs_param", translate("Obfs_param"))
 
-o = s:option(Value, _n("timeout"), translate("Connection Timeout"))
+o = s:option(Value, "timeout", translate("Connection Timeout"))
 o.datatype = "uinteger"
 o.default = 300
 
-o = s:option(Flag, _n("tcp_fast_open"), "TCP " .. translate("Fast Open"), translate("Need node support required"))
+o = s:option(Flag, "tcp_fast_open", "TCP " .. translate("Fast Open"), translate("Need node support required"))
 o.default = 0
 
-api.luci_types(arg[1], m, s, type_name, option_prefix)
+api.luci_types(s1, s)

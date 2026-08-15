@@ -388,8 +388,8 @@ function gen_outbound(flag, node, tag, proxy_table)
 				user = (node.protocol == "socks" or node.protocol == "http") and node.username or nil,
 				pass = (node.protocol == "socks" or node.protocol == "http") and node.password or nil,
 				password = (node.protocol == "shadowsocks" or node.protocol == "trojan") and node.password or nil,
-				method = (node.protocol == "shadowsocks") and ((node.method == "chacha20-ietf-poly1305" and "chacha20-poly1305") or
-					(node.method == "xchacha20-ietf-poly1305" and "xchacha20-poly1305") or (node.method ~= "" and node.method) or nil) or nil,
+				method = (node.protocol == "shadowsocks") and ((node.ss_method == "chacha20-ietf-poly1305" and "chacha20-poly1305") or
+					(node.ss_method == "xchacha20-ietf-poly1305" and "xchacha20-poly1305") or (node.ss_method ~= "" and node.ss_method) or nil) or nil,
 				secretKey = (node.protocol == "wireguard") and node.wireguard_secret_key or nil,
 				peers = (node.protocol == "wireguard") and {
 					{
@@ -559,7 +559,7 @@ function gen_config_server(node)
 		node.tcp_guise = "none"
 	elseif node.protocol == "shadowsocks" then
 		settings = {
-			method = node.method,
+			method = node.ss_method,
 			password = node.ss_password,
 			users = users,
 			network = node.ss_network or "tcp,udp"

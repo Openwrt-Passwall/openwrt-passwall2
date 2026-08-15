@@ -402,7 +402,7 @@ function gen_outbound(flag, node, tag, proxy_table)
 
 		if node.protocol == "shadowsocks" then
 			protocol_table = {
-				method = node.method or nil,
+				method = node.ss_method or nil,
 				password = node.password or "",
 				plugin = (node.plugin_enabled and node.plugin) or nil,
 				plugin_opts = (node.plugin_enabled and node.plugin_opts) or nil,
@@ -416,7 +416,7 @@ function gen_outbound(flag, node, tag, proxy_table)
 
 		if node.protocol == "shadowsocksr" then
 			protocol_table = {
-				method = node.method or nil,
+				method = node.ssr_method or nil,
 				password = node.password or "",
 				obfs = node.ssr_obfs,
 				obfs_param = node.ssr_obfs_param,
@@ -865,7 +865,7 @@ function gen_config_server(node)
 
 	if node.protocol == "shadowsocks" then
 		protocol_table = {
-			method = node.method,
+			method = node.ss_method,
 			password = node.ss_password,
 			users = users,
 			multiplex = mux,

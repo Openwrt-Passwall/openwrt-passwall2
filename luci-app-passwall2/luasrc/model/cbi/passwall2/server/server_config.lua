@@ -17,7 +17,7 @@ m:foreach("user", function(s)
 	user_list[#user_list + 1] = s
 end)
 
-s = m:section(NamedSection, arg[1], "server", translate("Server Config"))
+local s = m:section(NamedSection, arg[1], "server", translate("Server Config"))
 s.addremove = false
 s.dynamic = false
 

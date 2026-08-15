@@ -18,8 +18,8 @@ function gen_config_server(node)
 	end
 	local config = {
 		listen = (function()
-			if node.hysteria2_realms and node.hysteria2_realm_url then
-				local url = node.hysteria2_realm_url:gsub("/+$", "")
+			if node.realms and node.realm_url then
+				local url = node.realm_url:gsub("/+$", "")
 				if node.port then
 					url = url .. (url:find("?") and "&lport=" or "?lport=") .. node.port
 				end
@@ -31,30 +31,30 @@ function gen_config_server(node)
 			cert = node.tls_certificateFile,
 			key = node.tls_keyFile,
 		},
-		obfs = (node.hysteria2_obfs_type and node.hysteria2_obfs_password) and {
-			type = node.hysteria2_obfs_type,
-			[node.hysteria2_obfs_type] = {
-				password = node.hysteria2_obfs_password
+		obfs = (node.obfs_type and node.obfs_password) and {
+			type = node.obfs_type,
+			[node.obfs_type] = {
+				password = node.obfs_password
 			}
 		} or nil,
 		auth = users and {
 			type = "userpass",
 			userpass = users
 		} or nil,
-		bandwidth = (node.hysteria2_up_mbps or node.hysteria2_down_mbps) and {
-			up = node.hysteria2_up_mbps and node.hysteria2_up_mbps .. " mbps" or nil,
-			down = node.hysteria2_down_mbps and node.hysteria2_down_mbps .. " mbps" or nil
+		bandwidth = (node.up_mbps or node.down_mbps) and {
+			up = node.up_mbps and node.up_mbps .. " mbps" or nil,
+			down = node.down_mbps and node.down_mbps .. " mbps" or nil
 		} or nil,
-		ignoreClientBandwidth = (node.hysteria2_ignoreClientBandwidth == "1") and true or false,
-		disableUDP = (node.hysteria2_udp == "0") and true or false,
-		realm = (node.hysteria2_realms and node.hysteria2_realm_stun) and {
-			stunServers = node.hysteria2_realm_stun
+		ignoreClientBandwidth = (node.ignoreClientBandwidth == "1") and true or false,
+		disableUDP = (node.udp == "0") and true or false,
+		realm = (node.realms and node.realm_stun) and {
+			stunServers = node.realm_stun
 		} or nil
 	}
 
 	if config.obfs and config.obfs.gecko then
-		local min = tonumber(node.hysteria2_obfs_MinPacketSize) or 512
-		local max = tonumber(node.hysteria2_obfs_MaxPacketSize) or 1200
+		local min = tonumber(node.obfs_MinPacketSize) or 512
+		local max = tonumber(node.obfs_MaxPacketSize) or 1200
 		if min <= 0 or min > max or max > 2048 then
 			min = 512
 			max = 1200

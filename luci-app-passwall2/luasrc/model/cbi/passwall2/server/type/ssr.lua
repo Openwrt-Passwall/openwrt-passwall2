@@ -1,24 +1,20 @@
-local m, s = ...
-
 if not api.is_finded("ssr-server") then
 	return
 end
 
+-- [[ ShadowsocksR ]]
+local m, s1 = ...
 local type_name = "SSR"
 
--- [[ ShadowsocksR ]]
+s1.fields["type"]:value(type_name, translate("ShadowsocksR"))
 
-s.fields["type"]:value(type_name, translate("ShadowsocksR"))
-
-if s.val["type"] and s.val["type"] ~= type_name then
+if s1.val["type"] and s1.val["type"] ~= type_name then
 	return
 end
 
-local option_prefix = "ssr_"
-
-local function _n(name)
-	return option_prefix .. name
-end
+local s = NamedSection(m, arg[1], "server")
+s.type_name = type_name
+s.option_prefix = "ssr_"
 
 local ssr_encrypt_method_list = {
 	"none", "table", "rc2-cfb", "rc4", "rc4-md5", "rc4-md5-6", "aes-128-cfb",
@@ -39,49 +35,12 @@ local ssr_obfs_list = {
 	"tls1.0_session_auth", "tls1.2_ticket_auth"
 }
 
-o = s:option(Flag, _n("custom"), translate("Use Custom Config"))
+o = s:option(Flag, "custom", translate("Use Custom Config"))
 
-o = s:option(Value, _n("port"), translate("Listen Port"))
-o.datatype = "port"
-o:depends({ [_n("custom")] = false })
-
-o = s:option(ListValue, _n("user"), translate("User"))
-for i, v in ipairs(user_list) do
-	o:value(v[".name"], v.username)
-end
-o:depends({ [_n("custom")] = false })
-
-o = s:option(ListValue, _n("method"), translate("Encrypt Method"))
-for a, t in ipairs(ssr_encrypt_method_list) do o:value(t) end
-o:depends({ [_n("custom")] = false })
-
-o = s:option(ListValue, _n("protocol"), translate("Protocol"))
-for a, t in ipairs(ssr_protocol_list) do o:value(t) end
-o:depends({ [_n("custom")] = false })
-
-o = s:option(Value, _n("protocol_param"), translate("Protocol_param"))
-o:depends({ [_n("custom")] = false })
-
-o = s:option(ListValue, _n("obfs"), translate("Obfs"))
-for a, t in ipairs(ssr_obfs_list) do o:value(t) end
-o:depends({ [_n("custom")] = false })
-
-o = s:option(Value, _n("obfs_param"), translate("Obfs_param"))
-o:depends({ [_n("custom")] = false })
-
-o = s:option(Value, _n("timeout"), translate("Connection Timeout"))
-o.datatype = "uinteger"
-o.default = 300
-o:depends({ [_n("custom")] = false })
-
-o = s:option(Flag, _n("tcp_fast_open"), "TCP " .. translate("Fast Open"))
-o.default = "0"
-o:depends({ [_n("custom")] = false })
-
-o = s:option(TextValue, _n("custom_config"), translate("Custom Config") .. " (JSON)")
+o = s:option(TextValue, "custom_config", translate("Custom Config") .. " (JSON)")
 o.rows = 10
 o.wrap = "off"
-o:depends({ [_n("custom")] = true })
+o:depends({ custom = true })
 o.datatype = "json"
 local o_validate = o.validate
 o.validate = function(self, value)
@@ -99,12 +58,49 @@ o.custom_write = function(self, section, value)
 	m:set(section, "config_str", api.base64Encode(value) or "")
 end
 
-o = s:option(Flag, _n("udp_forward"), translate("UDP Forward"))
+o = s:option(Value, "port", translate("Listen Port"))
+o.datatype = "port"
+o:depends({ custom = false })
+
+o = s:option(ListValue, "user", translate("User"))
+for i, v in ipairs(user_list) do
+	o:value(v[".name"], v.username)
+end
+o:depends({ custom = false })
+
+o = s:option(ListValue, "method", translate("Encrypt Method"))
+for a, t in ipairs(ssr_encrypt_method_list) do o:value(t) end
+o:depends({ custom = false })
+
+o = s:option(ListValue, "protocol", translate("Protocol"))
+for a, t in ipairs(ssr_protocol_list) do o:value(t) end
+o:depends({ custom = false })
+
+o = s:option(Value, "protocol_param", translate("Protocol_param"))
+o:depends({ custom = false })
+
+o = s:option(ListValue, "obfs", translate("Obfs"))
+for a, t in ipairs(ssr_obfs_list) do o:value(t) end
+o:depends({ custom = false })
+
+o = s:option(Value, "obfs_param", translate("Obfs_param"))
+o:depends({ custom = false })
+
+o = s:option(Value, "timeout", translate("Connection Timeout"))
+o.datatype = "uinteger"
+o.default = 300
+o:depends({ custom = false })
+
+o = s:option(Flag, "tcp_fast_open", "TCP " .. translate("Fast Open"))
+o.default = "0"
+o:depends({ custom = false })
+
+o = s:option(Flag, "udp_forward", translate("UDP Forward"))
 o.default = "1"
 o.rmempty = false
 
-o = s:option(Flag, _n("log"), translate("Log"))
+o = s:option(Flag, "log", translate("Log"))
 o.default = "1"
 o.rmempty = false
 
-api.luci_types(arg[1], m, s, type_name, option_prefix)
+api.luci_types(s1, s)
