@@ -1,18 +1,14 @@
 local api = require "luci.passwall2.api"
-local appname = api.appname
-
 api.set_default_cbi()
 
-m = Map(appname)
-api.set_apply_on_parse(m)
+m = Map()
+m.redirect = api.url("acl")
 
 if not arg[1] or not m:get(arg[1]) then
-	luci.http.redirect(api.url("acl"))
+	luci.http.redirect(m.redirect)
 end
 
-m:append(Template(appname .. "/cbi/nodes_listvalue_com"))
-
-local sys = api.sys
+m:appendTemplate("/cbi/nodes_listvalue_com")
 
 local port_validate = function(self, value, t)
 	return value:gsub("-", ":")
@@ -23,25 +19,6 @@ for k, e in ipairs(api.get_valid_nodes()) do
 	nodes_table[#nodes_table + 1] = e
 end
 
-local dynamicList_write = function(self, section, value)
-	local t = {}
-	local t2 = {}
-	if type(value) == "table" then
-		local x
-		for _, x in ipairs(value) do
-			if x and #x > 0 then
-				if not t2[x] then
-					t2[x] = x
-					t[#t+1] = x
-				end
-			end
-		end
-	else
-		t = { value }
-	end
-	t = table.concat(t, " ")
-	return DynamicList.write(self, section, t)
-end
 local doh_validate = function(self, value, t)
 	if value ~= "" then
 		local flag = 0
@@ -63,6 +40,7 @@ local doh_validate = function(self, value, t)
 	end
 	return nil, translate("DoH request address") .. " " .. translate("Format must be:") .. " URL,IP"
 end
+
 -- [[ ACLs Settings ]]--
 s = m:section(NamedSection, arg[1], translate("ACLs"), translate("ACLs"))
 s.addremove = false
@@ -92,7 +70,7 @@ o.validate = function(self, value, section)
 end
 
 local mac_t = {}
-sys.net.mac_hints(function(e, t)
+api.sys.net.mac_hints(function(e, t)
 	mac_t[#mac_t + 1] = {
 		ip = t,
 		mac = e
@@ -176,7 +154,6 @@ sources.validate = function(self, value, t)
 
 	return value
 end
-sources.write = dynamicList_write
 
 o = s:option(ListValue, "mode", translate("Mode"))
 o:value("0", translate("No Proxy"))
@@ -201,7 +178,7 @@ o:depends("mode", "1")
 o.validate = port_validate
 
 o = s:option(DummyValue, "_hide_node_option", "")
-o.template = "passwall2/cbi/hidevalue"
+o.template = m:template_path("/cbi/hidevalue")
 o.value = "1"
 o:depends("mode", "0")
 o:depends({ tcp_no_redir_ports = "1:65535", udp_no_redir_ports = "1:65535" })
@@ -219,16 +196,16 @@ else
 	o.group = {}
 end
 o:depends({ _hide_node_option = "1",  ['!reverse'] = true })
-o.template = appname .. "/cbi/nodes_listvalue"
+o.template = m:template_path("/cbi/nodes_listvalue")
 
 current_node_id = o:formvalue(arg[1])
 if not current_node_id then
-	current_node_id = m.uci:get(appname, arg[1], "node")
+	current_node_id = m:get(arg[1], "node")
 end
-current_node = current_node_id and m.uci:get_all(appname, current_node_id) or {}
+current_node = current_node_id and m:get(current_node_id) or {}
 
 o = s:option(Flag, "log", translate("Enable Node Log"))
-o:depends({ _hide_node_option = "1",  ['!reverse'] = true })
+o:depends({ node = "",  ['!reverse'] = true })
 
 o = s:option(ListValue, "loglevel", translate("Log Level"))
 o.default = "warn"
@@ -279,7 +256,7 @@ end
 o:depends({ _hide_node_option = "1",  ['!reverse'] = true })
 
 o = s:option(DummyValue, "_hide_dns_option", "")
-o.template = "passwall2/cbi/hidevalue"
+o.template = m:template_path("/cbi/hidevalue")
 o.value = "1"
 o:depends({ node = "" })
 if GLOBAL_ENABLED == "1" and NODE then
@@ -376,6 +353,10 @@ o:depends("remote_dns_protocol", "http3")
 o:depends("remote_dns_protocol", "quic")
 o:depends("remote_dns_protocol", "tls")
 
+o = s:option(Value, "remote_rewrite_ttl", translate("Remote DNS") .. " TTL")
+o.datatype = "min(1)"
+o.default = "30"
+
 o = s:option(ListValue, "dns_hosts_mode", translate("Domain Override"))
 o:value("default", translate("Use global config"))
 o:value("disable", translate("No patterns are used"))
@@ -401,6 +382,9 @@ local o_node = s.fields["node"]
 for k, v in pairs(nodes_table) do
 	o_node:value(v.id, v["remark"])
 	o_node.group[#o_node.group+1] = (v.group and v.group ~= "") and v.group or translate("default")
+	if v.type == "sing-box" then
+		s.fields["remote_rewrite_ttl"]:depends({ node = v.id })
+	end
 	if v.node_type == "normal" or v.protocol == "_balancing" or v.protocol == "_urltest" then
 		--Shunt node has its own separate options.
 		s.fields["remote_fakedns"]:depends({ node = v.id, remote_dns_protocol = "tcp" })

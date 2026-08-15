@@ -121,12 +121,6 @@ msgstr "0 به معنای عدم استفاده است"
 msgid "Current node: %s"
 msgstr "گره فعلی: %s"
 
-msgid "Direct domain DNS routing"
-msgstr "مسیریابی مستقیم DNS دامنه"
-
-msgid "Please note that the program will not start if the format is incorrect!"
-msgstr "لطفا توجه داشته باشید که اگر قالب نادرست باشد، برنامه شروع نخواهد شد!"
-
 msgid "IP:Port mode acceptable, multi value split with english comma."
 msgstr "حالت IP:Port قابل قبول است، مقادیر متعدد را با کاما انگلیسی جدا کنید."
 
@@ -976,6 +970,9 @@ msgstr "گروه قوانین شنت"
 msgid "Please note attention to the priority, the higher the order, the higher the priority."
 msgstr "لطفاً به اولویت توجه کنید، هرچه ترتیب بالاتر باشد، اولویت بیشتر است."
 
+msgid "This ID already exists."
+msgstr "این شناسه از قبل وجود دارد."
+
 msgid "Update..."
 msgstr "به‌روزرسانی..."
 
@@ -1309,6 +1306,12 @@ msgstr "کلید خصوصی"
 msgid "Pre shared key"
 msgstr "کلید از پیش به اشتراک گذاشته شده"
 
+msgid "Allowed IPs"
+msgstr "آی‌پی‌های مجاز"
+
+msgid "Generate key"
+msgstr "کلید تولید کنید"
+
 msgid "Local Address"
 msgstr "آدرس محلی"
 
@@ -1381,24 +1384,6 @@ msgstr "<br />none: پیش‌فرض، بدون استتار، داده‌های 
 msgid "Use it together with the DNS disguised type. You can fill in any domain."
 msgstr "از آن همراه با نوع استتار DNS استفاده کنید. می‌توانید هر دامنه‌ای را وارد کنید."
 
-msgid "Auth"
-msgstr "احراز هویت"
-
-msgid "Socks for authentication"
-msgstr "Socks برای احراز هویت"
-
-msgid "Socks protocol authentication, support anonymous and password."
-msgstr "احراز هویت پروتکل Socks، پشتیبانی از ناشناس و رمز عبور."
-
-msgid "anonymous"
-msgstr "ناشناس"
-
-msgid "User Password"
-msgstr "رمز عبور کاربر"
-
-msgid "Username and Password must be used together!"
-msgstr "نام کاربری و رمز عبور باید با هم استفاده شوند!"
-
 msgid "Prefer firewall tools"
 msgstr "ترجیح ابزارهای فایروال"
 
@@ -1407,18 +1392,6 @@ msgstr "IPv6 TProxy"
 
 msgid "Experimental feature. Make sure that your node supports IPv6."
 msgstr "ویژگی آزمایشی. مطمئن شوید که گره شما از IPv6 پشتیبانی می‌کند."
-
-msgid "Status info"
-msgstr "اطلاعات وضعیت"
-
-msgid "Big icon"
-msgstr "آیکون بزرگ"
-
-msgid "Show node check"
-msgstr "نمایش بررسی گره"
-
-msgid "Show Show IP111"
-msgstr "نمایش نمایش IP111"
 
 msgid "Destination protocol"
 msgstr "پروتکل مقصد"
@@ -1492,8 +1465,14 @@ msgstr "سمت سرور"
 msgid "Server Config"
 msgstr "پیکربندی سرور"
 
+msgid "Servers Manager"
+msgstr "مدیر سرورها"
+
 msgid "Users Manager"
 msgstr "مدیریت کاربران"
+
+msgid "User Config"
+msgstr "پیکربندی کاربر"
 
 msgid "Logs"
 msgstr "گزارش‌ها (Logs)"
@@ -1922,8 +1901,14 @@ msgstr "استفاده از پیکربندی سفارشی"
 msgid "Custom Config"
 msgstr "پیکربندی سفارشی"
 
+msgid "Must be Base64 text!"
+msgstr "متن باید Base64 باشد!"
+
 msgid "Must be JSON text!"
 msgstr "باید متن JSON باشد!"
+
+msgid "Must be UUID format!"
+msgstr "باید فرمت UUID باشه!"
 
 msgid "Geo View"
 msgstr "نمای Geo"
@@ -2441,5 +2426,8 @@ msgstr "تنظیم نشده"
 msgid "Cipher Suites"
 msgstr "سوئیت‌های رمزدار"
 
-msgid "Configures the list of supported cipher suites, separated by :"
-msgstr "فهرست مجموعه‌های رمز پشتیبانی‌شده را که با موارد زیر از هم جدا شده‌اند، پیکربندی می‌کند:"
+msgid "Configures the list of supported cipher suites."
+msgstr "فهرست مجموعه‌های رمز پشتیبانی‌شده را پیکربندی می‌کند."
+
+msgid "This username already exists."
+msgstr "این نام کاربری از قبل وجود دارد."

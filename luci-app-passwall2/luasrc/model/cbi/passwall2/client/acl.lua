@@ -1,22 +1,16 @@
 local api = require "luci.passwall2.api"
-local appname = api.appname
-local sys = api.sys
-
 api.set_default_cbi()
 
-m = Map(appname)
-api.set_apply_on_parse(m)
+m = Map()
 
-s = m:section(TypedSection, "global", translate("ACLs"), "<font color='red'>" .. translate("ACLs is a tools which used to designate specific IP proxy mode.") .. "</font>")
-s.anonymous = true
+s = m:section(NamedSection, "@global[0]", "global", translate("ACLs"), "<font color='red'>" .. translate("ACLs is a tools which used to designate specific IP proxy mode.") .. "</font>")
 
 o = s:option(Flag, "acl_enable", translate("Main switch"))
 o.rmempty = false
 o.default = false
 
 -- [[ ACLs Settings ]]--
-local cfgname = "acl_rule"
-s = m:section(TypedSection, cfgname)
+s = m:section(TypedSection, "acl_rule")
 s.template = "cbi/tblsection"
 s.sortable = true
 s.anonymous = true
@@ -38,7 +32,7 @@ o = s:option(Value, "remarks", translate("Remarks"))
 o.rmempty = true
 
 local mac_t = {}
-sys.net.mac_hints(function(e, t)
+api.sys.net.mac_hints(function(e, t)
 	mac_t[e] = {
 		ip = t,
 		mac = e
@@ -81,9 +75,6 @@ i.cfgvalue = function(t, n)
 	return translate("No Proxy")
 end
 
-local sortable = Template(appname .. "/cbi/sortable")
-sortable.api = api
-sortable.target_cfgname = cfgname
-m:append(sortable)
+m:appendTemplate("/cbi/sortable", {sectiontype = s.sectiontype})
 
 return api.return_map(m)

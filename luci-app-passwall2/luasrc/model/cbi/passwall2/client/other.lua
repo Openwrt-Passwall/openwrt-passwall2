@@ -1,5 +1,6 @@
 local api = require "luci.passwall2.api"
-local appname = api.appname
+api.set_default_cbi()
+
 local fs = api.fs
 local has_singbox = api.finded_com("sing-box")
 local has_xray = api.finded_com("xray")
@@ -8,15 +9,10 @@ local port_validate = function(self, value, t)
 	return value:gsub("-", ":")
 end
 
-api.set_default_cbi()
-
-m = Map(appname)
-api.set_apply_on_parse(m)
+m = Map()
 
 -- [[ Delay Settings ]]--
-s = m:section(TypedSection, "global_delay", translate("Delay Settings"))
-s.anonymous = true
-s.addremove = false
+s = m:section(NamedSection, "@global_delay[0]", "global_delay", translate("Delay Settings"))
 
 ---- Open and close Daemon
 o = s:option(Flag, "start_daemon", translate("Open and close Daemon"))
@@ -72,9 +68,7 @@ for index, value in ipairs({"stop", "start", "restart"}) do
 end
 
 -- [[ Forwarding Settings ]]--
-s = m:section(TypedSection, "global_forwarding", translate("Forwarding Settings"))
-s.anonymous = true
-s.addremove = false
+s = m:section(NamedSection, "@global_forwarding[0]", "global_forwarding", translate("Forwarding Settings"))
 
 ---- TCP No Redir Ports
 o = s:option(Value, "tcp_no_redir_ports", translate("TCP No Redir Ports"))
@@ -205,9 +199,7 @@ o.validate = function(self, value)
 end
 
 if has_xray then
-	s_xray = m:section(TypedSection, "global_xray", "Xray " .. translate("Settings"))
-	s_xray.anonymous = true
-	s_xray.addremove = false
+	s_xray = m:section(NamedSection, "@global_xray[0]", "global_xray", "Xray " .. translate("Settings"))
 
 	o = s_xray:option(Flag, "fragment", translate("Fragment"), translate("TCP fragments, which can deceive the censorship system in some cases, such as bypassing SNI blacklists."))
 	o.default = 0
@@ -245,7 +237,7 @@ if has_xray then
 	o.default = 0
 	o:depends("sniffing", true)
 
-	local domains_excluded = string.format("/usr/share/%s/domains_excluded", appname)
+	local domains_excluded = string.format("/usr/share/%s/domains_excluded", m.config)
 	o = s_xray:option(TextValue, "excluded_domains", translate("Excluded Domains"), translate("If the traffic sniffing result is in this list, the destination address will not be overridden."))
 	o.rows = 15
 	o.wrap = "off"
@@ -268,11 +260,14 @@ if has_xray then
 	end
 
 	s_xray_noise.remove = function(self, section)
-		for k, v in pairs(self.children) do
-			v.rmempty = true
-			v.validate = nil
+		local o = m:get(section) or {}
+		if o[".type"] == self.sectiontype then
+			for k, v in pairs(self.children) do
+				v.rmempty = true
+				v.validate = nil
+			end
+			TypedSection.remove(self, section)
 		end
-		TypedSection.remove(self, section)
 	end
 
 	o = s_xray_noise:option(Flag, "enabled", translate("Enable"))
@@ -296,9 +291,7 @@ if has_xray then
 end
 
 if has_singbox then
-	s = m:section(TypedSection, "global_singbox", "Sing-Box " .. translate("Settings"))
-	s.anonymous = true
-	s.addremove = false
+	s = m:section(NamedSection, "@global_singbox[0]", "global_singbox", "Sing-Box " .. translate("Settings"))
 
 	o = s:option(Flag, "record_fragment", "TLS Record " .. translate("Fragment"),
 		translate("Split handshake data into multiple TLS records for better censorship evasion. Low overhead. Recommended to enable first."))

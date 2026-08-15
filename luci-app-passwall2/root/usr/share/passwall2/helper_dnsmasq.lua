@@ -1,6 +1,5 @@
 local api = require "luci.passwall2.api"
-local appname = "passwall2"
-local uci = api.uci
+local c_config = api.c_config
 local sys = api.sys
 local jsonc = api.jsonc
 local fs = api.fs
@@ -23,38 +22,38 @@ local function tinsert(table_name, val)
 end
 
 local function backup_servers()
-	local DNSMASQ_DNS = uci:get("dhcp", "@dnsmasq[0]", "server")
+	local DNSMASQ_DNS = api.uci_get("dhcp", "@dnsmasq[0]", "server")
 	if DNSMASQ_DNS and #DNSMASQ_DNS > 0 then
-		uci:set(appname, "@global[0]", "dnsmasq_servers", DNSMASQ_DNS)
-		api.uci_save(uci, appname, true)
+		api.uci_set_c("@global[0]", "dnsmasq_servers", DNSMASQ_DNS)
+		api.uci_save_c(true)
 	end
 end
 
 local function restore_servers()
 	local dns_table = {}
-	local DNSMASQ_DNS = uci:get("dhcp", "@dnsmasq[0]", "server")
+	local DNSMASQ_DNS = api.uci_get("dhcp", "@dnsmasq[0]", "server")
 	if DNSMASQ_DNS and #DNSMASQ_DNS > 0 then
 		for k, v in ipairs(DNSMASQ_DNS) do
 			tinsert(dns_table, v)
 		end
 	end
-	local OLD_SERVER = uci:get(appname, "@global[0]", "dnsmasq_servers")
+	local OLD_SERVER = api.uci_get_c("@global[0]", "dnsmasq_servers")
 	if OLD_SERVER and #OLD_SERVER > 0 then
 		for k, v in ipairs(OLD_SERVER) do
 			tinsert(dns_table, v)
 		end
-		uci:delete(appname, "@global[0]", "dnsmasq_servers")
-		api.uci_save(uci, appname, true)
+		api.uci_del_c("@global[0]", "dnsmasq_servers")
+		api.uci_save_c(true)
 	end
 	if dns_table and #dns_table > 0 then
-		uci:set_list("dhcp", "@dnsmasq[0]", "server", dns_table)
-		api.uci_save(uci, "dhcp", true)
+		api.uci_set("dhcp", "@dnsmasq[0]", "server", dns_table)
+		api.uci_save(nil, "dhcp", true)
 	end
 end
 
 function stretch()
-	local dnsmasq_server = uci:get("dhcp", "@dnsmasq[0]", "server")
-	local dnsmasq_noresolv = uci:get("dhcp", "@dnsmasq[0]", "noresolv")
+	local dnsmasq_server = api.uci_get("dhcp", "@dnsmasq[0]", "server")
+	local dnsmasq_noresolv = api.uci_get("dhcp", "@dnsmasq[0]", "noresolv")
 	local _flag
 	if dnsmasq_server and #dnsmasq_server > 0 then
 		for k, v in ipairs(dnsmasq_server) do
@@ -64,7 +63,7 @@ function stretch()
 		end
 	end
 	if not _flag and dnsmasq_noresolv == "1" then
-		uci:delete("dhcp", "@dnsmasq[0]", "noresolv")
+		api.uci_del("dhcp", "@dnsmasq[0]", "noresolv")
 		local RESOLVFILE = "/tmp/resolv.conf.d/resolv.conf.auto"
 		local file = io.open(RESOLVFILE, "r")
 		if not file then
@@ -76,8 +75,8 @@ function stretch()
 				RESOLVFILE = "/tmp/resolv.conf.auto"
 			end
 		end
-		uci:set("dhcp", "@dnsmasq[0]", "resolvfile", RESOLVFILE)
-		api.uci_save(uci, "dhcp", true)
+		api.uci_set("dhcp", "@dnsmasq[0]", "resolvfile", RESOLVFILE)
+		api.uci_save(nil, "dhcp", true)
 	end
 end
 
@@ -96,15 +95,15 @@ function logic_restart(var)
 		backup_servers()
 		--sys.call("sed -i '/list server/d' /etc/config/dhcp >/dev/null 2>&1")
 		local dns_table = {}
-		local dnsmasq_server = uci:get("dhcp", "@dnsmasq[0]", "server")
+		local dnsmasq_server = api.uci_get("dhcp", "@dnsmasq[0]", "server")
 		if dnsmasq_server and #dnsmasq_server > 0 then
 			for k, v in ipairs(dnsmasq_server) do
 				if v:find("/") then
 					tinsert(dns_table, v)
 				end
 			end
-			uci:set_list("dhcp", "@dnsmasq[0]", "server", dns_table)
-			api.uci_save(uci, "dhcp", true)
+			api.uci_set("dhcp", "@dnsmasq[0]", "server", dns_table)
+			api.uci_save(nil, "dhcp", true)
 		end
 		sys.call("/etc/init.d/dnsmasq restart >/dev/null 2>&1")
 		restore_servers()
@@ -243,7 +242,7 @@ function add_rule(var)
 	end
 
 	local cache_text = ""
-	local nodes_address_md5 = sys.exec("echo -n $(uci show passwall2 | grep '\\.address') | md5sum")
+	local nodes_address_md5 = sys.exec("echo -n $(uci show %s | grep '\\.address') | md5sum" % c_config)
 	local new_text = TMP_DNSMASQ_PATH .. DNSMASQ_CONF_FILE .. DEFAULT_DNS .. LOCAL_DNS .. TUN_DNS .. nodes_address_md5 .. NFTFLAG
 	if fs.access(CACHE_TEXT_FILE) then
 		for line in io.lines(CACHE_TEXT_FILE) do
@@ -268,7 +267,7 @@ function add_rule(var)
 		-- Always use domestic DNS to resolve node domain names
 		if true then
 			fwd_dns = LOCAL_DNS
-			uci:foreach(appname, "nodes", function(t)
+			api.uci_foreach_c("nodes", function(t)
 				local function process_address(address)
 					address = (address or ""):lower()
 					if address == "engage.cloudflareclient.com" then return end
@@ -326,7 +325,7 @@ function add_rule(var)
 				["return"] = "1"
 			})
 			--dhcp.leases to hostsMore actions
-			local hosts = "/tmp/etc/" .. appname .. "_tmp/dhcp-hosts"
+			local hosts = api.CACHE_PATH .. "/dhcp-hosts"
 			sys.call("touch " .. hosts)
 			tinsert(conf_lines, "addn-hosts=" .. hosts)
 		else

@@ -1,12 +1,16 @@
 module("luci.passwall2.util_shadowsocks", package.seeall)
 local api = require "luci.passwall2.api"
-local uci = api.uci
 local jsonc = api.jsonc
 
 function gen_config_server(node)
+	local user = nil
+	if node.user then
+		user = api.uci_get_s(node.user)
+	end
+
 	local config = {}
 	config.server_port = tonumber(node.port)
-	config.password = node.password
+	config.password = user and user.password or ""
 	config.timeout = tonumber(node.timeout)
 	config.fast_open = (node.tcp_fast_open and node.tcp_fast_open == "1") and true or false
 	config.method = node.method
@@ -36,7 +40,7 @@ function gen_config(var)
 		print("node Cannot be empty!")
 		return
 	end
-	local node = uci:get_all("passwall2", node_id)
+	local node = api.uci_get_c(node_id)
 	local server_host = var["server_host"] or (node.address or ""):lower()
 	local server_port = var["server_port"] or node.port
 	local local_addr = var["local_addr"]

@@ -118,12 +118,6 @@ msgstr "0为不使用"
 msgid "Current node: %s"
 msgstr "当前节点：%s"
 
-msgid "Direct domain DNS routing"
-msgstr "直连域名 DNS 分流"
-
-msgid "Please note that the program will not start if the format is incorrect!"
-msgstr "请注意，格式不正确将无法启动！"
-
 msgid "IP:Port mode acceptable, multi value split with english comma."
 msgstr "接受 IP:Port 形式的输入，多个以英文逗号分隔。"
 
@@ -968,6 +962,9 @@ msgstr "分流规则组"
 msgid "Please note attention to the priority, the higher the order, the higher the priority."
 msgstr "请注意优先级问题，排序越上面优先级越高。"
 
+msgid "This ID already exists."
+msgstr "该 ID 已存在。"
+
 msgid "Update..."
 msgstr "更新中"
 
@@ -1301,6 +1298,12 @@ msgstr "私钥"
 msgid "Pre shared key"
 msgstr "额外的对称加密密钥"
 
+msgid "Allowed IPs"
+msgstr "允许的 IP"
+
+msgid "Generate key"
+msgstr "生成密钥"
+
 msgid "Local Address"
 msgstr "本地地址"
 
@@ -1373,24 +1376,6 @@ msgstr "<br />none：默认值，不进行伪装，发送的数据是没有特�
 msgid "Use it together with the DNS disguised type. You can fill in any domain."
 msgstr "配合伪装类型 DNS 使用，可随便填一个域名。"
 
-msgid "Auth"
-msgstr "身份认证"
-
-msgid "Socks for authentication"
-msgstr "Socks认证方式"
-
-msgid "Socks protocol authentication, support anonymous and password."
-msgstr "Socks 协议的认证方式，支持匿名方式和账号密码方式。"
-
-msgid "anonymous"
-msgstr "匿名"
-
-msgid "User Password"
-msgstr "账号密码"
-
-msgid "Username and Password must be used together!"
-msgstr "账号和密码必须同时使用！"
-
 msgid "Prefer firewall tools"
 msgstr "首选防火墙工具"
 
@@ -1399,18 +1384,6 @@ msgstr "IPv6透明代理(TProxy)"
 
 msgid "Experimental feature. Make sure that your node supports IPv6."
 msgstr "实验特性，请确保你的节点支持IPv6"
-
-msgid "Status info"
-msgstr "状态信息"
-
-msgid "Big icon"
-msgstr "大图标"
-
-msgid "Show node check"
-msgstr "显示节点检测"
-
-msgid "Show Show IP111"
-msgstr "显示IP111"
 
 msgid "Destination protocol"
 msgstr "目标协议"
@@ -1484,8 +1457,14 @@ msgstr "服务器端"
 msgid "Server Config"
 msgstr "服务器配置"
 
+msgid "Servers Manager"
+msgstr "服务器管理"
+
 msgid "Users Manager"
 msgstr "用户管理"
+
+msgid "User Config"
+msgstr "用户配置"
 
 msgid "Logs"
 msgstr "日志"
@@ -1908,8 +1887,14 @@ msgstr "使用自定义配置"
 msgid "Custom Config"
 msgstr "自定义配置"
 
+msgid "Must be Base64 text!"
+msgstr "必须是 Base64 内容！"
+
 msgid "Must be JSON text!"
 msgstr "必须是 JSON 文本内容！"
+
+msgid "Must be UUID format!"
+msgstr "必须是 UUID 格式！"
 
 msgid "Geo View"
 msgstr "Geo 查询"
@@ -2427,5 +2412,8 @@ msgstr "未设置"
 msgid "Cipher Suites"
 msgstr "密码套件"
 
-msgid "Configures the list of supported cipher suites, separated by :"
-msgstr "配置支持的密码套件列表，以冒号 (:) 分隔。"
+msgid "Configures the list of supported cipher suites."
+msgstr "配置支持的密码套件列表。"
+
+msgid "This username already exists."
+msgstr "该用户名已存在。"

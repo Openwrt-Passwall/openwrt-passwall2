@@ -1,0 +1,54 @@
+api = require "luci.passwall2.api"
+api.set_default_cbi()
+
+m = Map(api.s_config)
+m.redirect = api.url("server")
+
+if not arg[1] or not m:get(arg[1]) then
+	luci.http.redirect(m.redirect)
+end
+
+s = m:section(NamedSection, arg[1], "user", translate("User Config"))
+s.addremove = false
+s.dynamic = false
+
+o = s:option(Value, "username", translate("Username"))
+o.datatype = "and(uciname,maxlength(24))"
+o.rmempty = false
+function o.validate(self, value, section)
+	local exists = false
+	m:foreach("user", function(s)
+		if s[".name"] ~= section and s.username == value then
+			exists = true
+			return false
+		end
+	end)
+	if exists then
+		return nil, translate("This username already exists.")
+	end
+	return value
+end
+
+o = s:option(Value, "password",  translate("Password"))
+o.rmempty = false
+
+o = s:option(Value, "uuid",  "UUID")
+o.datatype = "uuid"
+o.default = api.gen_uuid()
+o.rmempty = false
+
+o = s:option(Value, "wireguard_public_key", "Wireguard " .. translate("Public Key"))
+o.datatype = "base64"
+
+o = s:option(Value, "wireguard_private_key", "Wireguard " .. translate("Private Key"))
+o.datatype = "base64"
+
+o = s:option(DummyValue, "gen_wireguard_key")
+o.template = m:template_path("/server/server_wireguard")
+
+o = s:option(Value, "wireguard_pre_shared_key", "Wireguard " .. translate("Pre shared key"))
+o.datatype = "base64"
+
+o = s:option(DynamicList, "allowed_ips", "Wireguard " .. translate("Allowed IPs"))
+
+return api.return_map(m)

@@ -1,14 +1,10 @@
 local api = require "luci.passwall2.api"
-local appname = api.appname
-
 api.set_default_cbi()
 
-m = Map(appname)
-api.set_apply_on_parse(m)
+m = Map()
 
 -- [[ Rule Settings ]]--
-s = m:section(TypedSection, "global_rules", translate("Rule status"))
-s.anonymous = true
+s = m:section(NamedSection, "@global_rules[0]", "global_rules", translate("Rule status"))
 
 o = s:option(Value, "geoip_url", translate("GeoIP Update URL"))
 o:value("https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat", translate("Loyalsoldier/geoip"))
@@ -86,8 +82,27 @@ for _, f in ipairs(flags) do
 	o.rmempty = false
 end
 
-s:append(Template(appname .. "/rule/rule_version"))
+s:appendTemplate("/rule/rule_version")
 
-m:append(Template(appname .. "/rule/shunt_rule_list"))
+if true then
+	m:appendTemplate("/rule/shunt_rule_list")
+
+	if luci.http.formvalue("cbi.submit") == "1" then
+		local group_order = luci.http.formvaluetable("group.order")
+		if group_order then
+			for k, v in pairs(group_order) do
+				if v and v~= "" then
+					local new_order = {}
+					string.gsub(v, "[^" .. " " .. "]+", function(w)
+						new_order[#new_order + 1] = w
+					end)
+					for idx, name in ipairs(new_order) do
+						m.uci:reorder(m.config, name, idx - 1)
+					end
+				end
+			end
+		end
+	end
+end
 
 return api.return_map(m)

@@ -1,19 +1,17 @@
 local api = require "luci.passwall2.api"
-local appname = api.appname
-local datatypes = api.datatypes
-
 api.set_default_cbi()
 
-m = Map(appname, "Sing-Box/Xray " .. translate("Shunt Rule"))
+local datatypes = api.datatypes
+
+m = Map()
 m.redirect = api.url("rule")
-api.set_apply_on_parse(m)
 
 if not arg[1] or not m:get(arg[1]) then
 	luci.http.redirect(m.redirect)
 end
 
 function m.on_before_save(self)
-	m:set("@global[0]", "flush_set", "1")
+	self:set("@global[0]", "flush_set", "1")
 end
 
 -- Add inline CSS to map description
@@ -47,7 +45,7 @@ end
 
 local remarks_lookup = {}
 local groups = {}
-m.uci:foreach(appname, "shunt_rules", function(s)
+m:foreach("shunt_rules", function(s)
 	if s[".name"] ~= arg[1] then
 		if s.remarks then
 			remarks_lookup[s.remarks] = s[".name"]
@@ -58,7 +56,7 @@ m.uci:foreach(appname, "shunt_rules", function(s)
 	end
 end)
 
-s = m:section(NamedSection, arg[1], "shunt_rules", "")
+s = m:section(NamedSection, arg[1], "shunt_rules", "Sing-Box/Xray " .. translate("Shunt Rule"))
 s.addremove = false
 s.dynamic = false
 
@@ -166,28 +164,6 @@ source.validate = function(self, value, t)
 
 	return value
 end
-
-local dynamicList_write = function(self, section, value)
-	local t = {}
-	local t2 = {}
-	if type(value) == "table" then
-		local x
-		for _, x in ipairs(value) do
-			if x and #x > 0 then
-				if not t2[x] then
-					t2[x] = x
-					t[#t+1] = x
-				end
-			end
-		end
-	else
-		t = { value }
-	end
-	t = table.concat(t, " ")
-	return DynamicList.write(self, section, t)
-end
-
-source.write = dynamicList_write
 
 --[[
 -- Too low usage rate, hidden

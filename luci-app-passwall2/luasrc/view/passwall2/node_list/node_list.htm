@@ -1,18 +1,18 @@
 <%
-local api = require "luci.passwall2.api"
-local appname = api.appname
-local uci = api.uci
+local map = self.map
+local api = map.api
+local appname = map.config
 
 local default_node_type = ""
 local shunt_rule_list = {}
-local node = api.uci_get_type("global", "node")
+local node = map:get("@global[0]", "node")
 if node then
-	local node_type = api.uci_get_type_id(node, "type")
-	local node_protocol = api.uci_get_type_id(node, "protocol")
+	local node_type = map:get(node, "type")
+	local node_protocol = map:get(node, "protocol")
 	if (node_type == "Xray" or node_type == "sing-box") and node_protocol == "_shunt" then
 		default_node_type = node_protocol
-		local node_shunt_group = api.uci_get_type_id(node, "shunt_group")
-		uci:foreach(appname, "shunt_rules", function(e)
+		local node_shunt_group = map:get(node, "shunt_group")
+		map:foreach("shunt_rules", function(e)
 			if e[".name"] and e.remarks and e.group == node_shunt_group then
 				shunt_rule_list[#shunt_rule_list + 1] = e
 			end
@@ -431,8 +431,8 @@ table td, .table .td {
 
 <script type="text/javascript">
 	//<![CDATA[
-	let auto_detection_time = "<%=api.uci_get_type("global_other", "auto_detection_time", "0")%>"
-	let show_node_info = "<%=api.uci_get_type("global_other", "show_node_info", "0")%>"
+	let auto_detection_time = "<%=map:get("@global_other[0]", "auto_detection_time") or "0"%>"
+	let show_node_info = "<%=map:get("@global_other[0]", "show_node_info") or "0"%>"
 
 	var ajax = {
 		list: [],
@@ -517,15 +517,7 @@ table td, .table .td {
 				let firstDataRow = parent.querySelector("tr:not(.cbi-section-table-titles)");
 				if (firstDataRow && firstDataRow !== row) {
 					parent.insertBefore(row, firstDataRow);
-					let save_order_btn = document.getElementById("save_order_btn_" + group);
-					if (save_order_btn) {
-						const new_order = get_node_order(group);
-						if (!arraysEqual(new_order, origin_group_node_order[group])) {
-							save_order_btn.style.display = null;
-						} else {
-							save_order_btn.style.display = "none";
-						}
-					}
+					set_order(group);
 				}
 				break;
 			case "del_all":
@@ -669,48 +661,24 @@ table td, .table .td {
 		return ids;
 	}
 
-	function save_current_page_order(group) {
-		var table = document.getElementById("cbi-<%=appname%>-nodes-" + group + "-table");
+	function set_order(group) {
+		let table = document.getElementById("cbi-<%=appname%>-nodes-" + group + "-table");
 		if (!table) {
 			alert("<%:No table!%>");
 			return;
 		}
-		var rows = table.querySelectorAll("tr.cbi-section-table-row");
+		let rows = table.querySelectorAll("tr.cbi-section-table-row");
 		if (!rows || rows.length === 0) {
 			alert("<%:No nodes!%>");
 			return;
 		}
-		var btn = document.getElementById("save_order_btn_" + group);
-		if (btn) {
-			btn.style.display = "none";
-			btn.disabled = true;
-		}
-		var ids = [];
+		let ids = [];
 		rows.forEach(function(row) {
-			var id = row.id.replace("cbi-<%=appname%>-", "");
+			let id = row.id.replace("cbi-<%=appname%>-", "");
 			ids.push(id);
 		});
-		ajax.abortAll();
-		XHR.get('<%=api.url("save_node_order")%>', {
-				group: group,
-				ids: ids.join(",")
-			},
-			function(x, result) {
-				if (btn) {
-					btn.style.display = null;
-					btn.disabled = false;
-				}
-				if (x && x.status === 200) {
-					origin_group_node_order[group] = get_node_order(group);
-					alert("<%:Saved current page order successfully.%>");
-					if (btn) {
-						btn.style.display = "none";
-					}
-				} else {
-					alert("<%:Save failed!%>");
-				}
-			}
-		);
+		const input_order = document.getElementsByName(`group.order.${group}`)[0];
+		input_order.value = ids.join(" ");
 	}
 
 	function get_now_use_node() {
@@ -947,16 +915,7 @@ table td, .table .td {
 			forceFallback: false,
 			swapThreshold: 0.65,
 			onEnd: function (evt) {
-				//save_current_page_order(group); // Auto save
-				let save_order_btn = document.getElementById("save_order_btn_" + group);
-				if (save_order_btn) {
-					const new_order = get_node_order(group);
-					if (!arraysEqual(new_order, origin_group_node_order[group])) {
-						save_order_btn.style.display = null;
-					} else {
-						save_order_btn.style.display = "none";
-					}
-				}
+				set_order(group);
 			}
 		};
 		try {
@@ -1257,16 +1216,16 @@ table td, .table .td {
 			this.section = cbi_id;
 			document.getElementById("set_node_div").style.display="block";
 			const node_name = document.getElementById("cbid.<%=appname%>." + cbi_id + ".remarks").value;
-			document.getElementById("set_node_name").innerHTML = node_name;
+			document.getElementById("set_node_name").textContent = node_name;
 		},
 		close() {
 			document.getElementById("set_node_div").style.display="none";
-			document.getElementById("set_node_name").innerHTML = "";
+			document.getElementById("set_node_name").textContent = "";
 		},
 		set(type, config) {
 			if (confirm('<%:Are you sure set this node?%>') == true){
 				ajax.abortAll();
-				window.location.href = '<%=api.url("set_node")%>?type=' + type + '&config=' + config + '&section=' + section;
+				window.location.href = '<%=api.url("set_node")%>?type=' + type + '&config=' + config + '&section=' + this.section;
 			}
 		}
 	}
@@ -1302,9 +1261,9 @@ table td, .table .td {
 			</tr>
 			{{node-tr}}
 		</table>
+		<input type="hidden" name="group.order.{{group}}">
 		<div class="cbi-section-create cbi-tblsection-create">
 			<input class="cbi-button cbi-button-add" type="button" value="<%:Add%>" onclick="node_action('add')">
-			<input class="cbi-button cbi-button-apply" style="display: none" type="button" id="save_order_btn_{{group}}" value="<%:Save Order%>" onclick="save_current_page_order('{{group}}')">
 		</div>
 	</fieldset>
 </script>

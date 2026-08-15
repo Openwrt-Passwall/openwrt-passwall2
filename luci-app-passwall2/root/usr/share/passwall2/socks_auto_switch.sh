@@ -18,15 +18,35 @@ test_url() {
 	local timeout=2
 	[ -n "$3" ] && timeout=$3
 	local extra_params=$4
-	if /usr/bin/curl --help all | grep -q "\-\-retry-all-errors"; then
-		extra_params="--retry-all-errors ${extra_params}"
+	local repeat=$5
+
+	if [ -z "$curl_retry_all_errors" ]; then
+		if /usr/bin/curl --help all | grep -q "\-\-retry-all-errors"; then
+			curl_retry_all_errors=1
+		fi
 	fi
-	local status=$(/usr/bin/curl -I -o /dev/null -skL ${extra_params} --connect-timeout ${timeout} --retry ${try} -w %{http_code} "$url")
+	[ "$curl_retry_all_errors" = "1" ] && extra_params="--retry-all-errors ${extra_params}"
+
+	local max_time=$((timeout * (try + 1) + try + 3))
+	curl_test() {
+		/usr/bin/curl -I -o /dev/null -skL ${extra_params} --max-time ${max_time} --connect-timeout ${timeout} --retry ${try} --retry-delay 1 -w "%{http_code}" "$url"
+	}
+
+	local status=$(curl_test)
 	case "$status" in
 		204)
 			status=200
 		;;
 	esac
+	if [ "$status" = "200" ] && [ "$repeat" = "1" ]; then
+		sleep 3s
+		status=$(curl_test)
+		case "$status" in
+			204)
+				status=200
+			;;
+		esac
+	fi
 	echo $status
 }
 
@@ -59,12 +79,12 @@ test_node() {
 		NO_REC_PROCESS=1 $APP_FILE run_socks flag="test_node_${node_id}" node=${node_id} bind=127.0.0.1 socks_port=${_tmp_port} config_file=test_node_${node_id}.json
 		sleep 2s
 		local curlx="socks5h://127.0.0.1:${_tmp_port}"
-		local _proxy_status=$(test_url "${probe_url}" ${retry_num} ${connect_timeout} "-x $curlx")
+		local _proxy_status=$(test_url "${probe_url}" ${retry_num} ${connect_timeout} "-x $curlx" 1)
 		# Kill the SS plugin process
-		local pid_file="/tmp/etc/${CONFIG}/test_node_${node_id}_plugin.pid"
+		local pid_file="${TMP_PATH}/test_node_${node_id}_plugin.pid"
 		[ -s "$pid_file" ] && kill -9 "$(head -n 1 "$pid_file")" >/dev/null 2>&1
 		busybox pgrep -af "test_node_${node_id}" | awk '! /socks_auto_switch\.sh/{print $1}' | xargs kill -9 >/dev/null 2>&1
-		rm -rf /tmp/etc/${CONFIG}/test_node_${node_id}*.*
+		rm -rf ${TMP_PATH}/test_node_${node_id}*.*
 		if [ "${_proxy_status}" -eq 200 ]; then
 			return 0
 		fi
