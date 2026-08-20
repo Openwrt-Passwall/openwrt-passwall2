@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# Devices without a hardware RTC boot with a wrong system clock: sysfixtime can
+# only restore the mtime of the newest file under /etc, so the clock is usually
+# hours behind after a cold boot. passwall2 is then started by
+# /etc/hotplug.d/iface/98-passwall2 on ifup, which typically happens before NTP
+# has corrected the time, and time-sensitive handshakes (VMess AEAD, TLS) fail.
+#
+# Nothing restarts passwall2 once the clock is corrected, so it stays broken
+# until the user restarts it manually. Restart once when ntpd reports that the
+# time is valid -- the same approach dnsmasq uses for DNSSEC in
+# /etc/hotplug.d/ntp/25-dnsmasqsec.
+
+[ "$ACTION" = "stratum" ] || exit 0
+
+. /usr/share/passwall2/utils.sh
+
+NTP_LOCK_FILE="${LOCK_PATH}/${CONFIG}_ntp.lock"
+[ -f "${NTP_LOCK_FILE}" ] && exit 0
+
+([ "$(get_cache_var "ENABLED_DEFAULT_ACL")" = "1" ] || [ "$(get_cache_var "ENABLED_ACLS")" = "1" ]) && [ -f ${LOCK_PATH}/${CONFIG}_ready.lock ] && {
+
+	echo $$ > ${NTP_LOCK_FILE}
+
+	/etc/init.d/${CONFIG} restart >/dev/null 2>&1 &
+	logger -p notice -t network -s "${CONFIG}: restart after NTP time became valid"
+}
