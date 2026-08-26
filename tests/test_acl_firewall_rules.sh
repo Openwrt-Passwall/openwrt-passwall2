@@ -13,4 +13,18 @@ for backend in nftables iptables; do
 	fi
 done
 
+nftables_file="$repo_root/luci-app-passwall2/root/usr/share/passwall2/nftables.sh"
+dns_insert_count=$(grep -F 'insert rule $NFTABLE_NAME PSW2_MANGLE' "$nftables_file" | grep -F 'dport 53 counter accept' | wc -l)
+if [ "$dns_insert_count" -ne 4 ]; then
+	echo "nftables: DNS exclusions must be inserted before transparent proxy rules" >&2
+	exit 1
+fi
+
+iptables_file="$repo_root/luci-app-passwall2/root/usr/share/passwall2/iptables.sh"
+dns_insert_count=$(grep -E '\$ipt_m -I PSW2|-I PSW2 -p' "$iptables_file" | grep -F -- '--dport 53 -j ACCEPT' | wc -l)
+if [ "$dns_insert_count" -ne 4 ]; then
+	echo "iptables: DNS exclusions must be inserted before transparent proxy rules" >&2
+	exit 1
+fi
+
 echo "ACL firewall rule tests passed"

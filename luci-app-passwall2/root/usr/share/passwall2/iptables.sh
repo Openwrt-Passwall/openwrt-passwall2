@@ -544,10 +544,10 @@ load_acl() {
 			$ip6t_m -I OUTPUT $(comment "mangle-OUTPUT-PSW2") -o lo -j RETURN
 			insert_rule_before "$ip6t_m" "OUTPUT" "mwan3" "$(comment mangle-OUTPUT-PSW2) -m mark --mark ${FWMARK} -j RETURN"
 
-			$ipt_m -A PSW2 -p tcp --dport 53 -j ACCEPT
-			$ipt_m -A PSW2 -p udp --dport 53 -j ACCEPT
-			$ip6t_m -A PSW2 -p tcp --dport 53 -j ACCEPT
-			$ip6t_m -A PSW2 -p udp --dport 53 -j ACCEPT
+			$ipt_m -I PSW2 -p tcp --dport 53 -j ACCEPT
+			$ipt_m -I PSW2 -p udp --dport 53 -j ACCEPT
+			$ip6t_m -I PSW2 -p tcp --dport 53 -j ACCEPT
+			$ip6t_m -I PSW2 -p udp --dport 53 -j ACCEPT
 
 			unset msg msg2 comment_l
 		}
