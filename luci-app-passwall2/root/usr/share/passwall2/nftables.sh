@@ -430,7 +430,7 @@ load_acl() {
 				nft "add rule $NFTABLE_NAME $nft_prerouting_chain ip protocol tcp ${_ipt_source} counter return comment \"$remarks\""
 				[ "$_ipv4" != "1" ] && nft "add rule $NFTABLE_NAME PSW2_MANGLE_V6 meta l4proto tcp ${_ipt_source} counter return comment \"$remarks\"" 2>/dev/null
 
-				[ -z "$no_tcp_proxy" ] && [ -n "$redir_port" ] && {
+				[ -z "$no_udp_proxy" ] && [ -n "$redir_port" ] && {
 					msg2="${msg}$(i18n "Use the %s node [%s]" "UDP" "${node_remarks}")(TPROXY:${redir_port})"
 
 					nft "add rule $NFTABLE_NAME PSW2_MANGLE ip protocol udp ${_ipt_source} ip daddr $FAKE_IP counter jump PSW2_RULE comment \"$remarks\""
