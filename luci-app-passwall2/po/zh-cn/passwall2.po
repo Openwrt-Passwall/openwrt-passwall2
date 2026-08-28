@@ -2098,10 +2098,10 @@ msgid "Access Control:"
 msgstr "访问控制："
 
 msgid "Add node to the load balancer is directly connected to %s[%s]."
-msgstr "加入负载均衡的节点到%s[%s]直连完成。"
+msgstr "加入负载均衡节点IP到%s[%s]直连豁免(防回环)完成。"
 
 msgid "Add all %s nodes to %s[%s] direct connection complete."
-msgstr "加入所有%s节点到%s[%s]直连完成。"
+msgstr "加入所有%s节点服务器IP到%s[%s]直连豁免(防回环)完成。"
 
 msgid "Starting to load %s firewall rules..."
 msgstr "开始加载 %s 防火墙规则..."
