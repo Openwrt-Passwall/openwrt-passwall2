@@ -118,12 +118,6 @@ msgstr "0为不使用"
 msgid "Current node: %s"
 msgstr "当前节点：%s"
 
-msgid "Direct domain DNS routing"
-msgstr "直连域名 DNS 分流"
-
-msgid "Please note that the program will not start if the format is incorrect!"
-msgstr "请注意，格式不正确将无法启动！"
-
 msgid "IP:Port mode acceptable, multi value split with english comma."
 msgstr "接受 IP:Port 形式的输入，多个以英文逗号分隔。"
 
@@ -334,8 +328,8 @@ msgstr "你确定要删除选择的节点吗？"
 msgid "You no select nodes !"
 msgstr "你没有选择任何节点！"
 
-msgid "Are you sure set to"
-msgstr "你确定要设为"
+msgid "Are you sure set this node?"
+msgstr "你确定要设置这个节点吗？"
 
 msgid "the server?"
 msgstr "服务器吗？"
@@ -962,8 +956,14 @@ msgstr "注：会增加一些系统资源的开销。"
 msgid "Shunt Rule"
 msgstr "分流规则"
 
+msgid "Shunt Rule Group"
+msgstr "分流规则组"
+
 msgid "Please note attention to the priority, the higher the order, the higher the priority."
 msgstr "请注意优先级问题，排序越上面优先级越高。"
+
+msgid "This ID already exists."
+msgstr "该 ID 已存在。"
 
 msgid "Update..."
 msgstr "更新中"
@@ -1298,6 +1298,12 @@ msgstr "私钥"
 msgid "Pre shared key"
 msgstr "额外的对称加密密钥"
 
+msgid "Allowed IPs"
+msgstr "允许的 IP"
+
+msgid "Generate key"
+msgstr "生成密钥"
+
 msgid "Local Address"
 msgstr "本地地址"
 
@@ -1370,24 +1376,6 @@ msgstr "<br />none：默认值，不进行伪装，发送的数据是没有特�
 msgid "Use it together with the DNS disguised type. You can fill in any domain."
 msgstr "配合伪装类型 DNS 使用，可随便填一个域名。"
 
-msgid "Auth"
-msgstr "身份认证"
-
-msgid "Socks for authentication"
-msgstr "Socks认证方式"
-
-msgid "Socks protocol authentication, support anonymous and password."
-msgstr "Socks 协议的认证方式，支持匿名方式和账号密码方式。"
-
-msgid "anonymous"
-msgstr "匿名"
-
-msgid "User Password"
-msgstr "账号密码"
-
-msgid "Username and Password must be used together!"
-msgstr "账号和密码必须同时使用！"
-
 msgid "Prefer firewall tools"
 msgstr "首选防火墙工具"
 
@@ -1396,18 +1384,6 @@ msgstr "IPv6透明代理(TProxy)"
 
 msgid "Experimental feature. Make sure that your node supports IPv6."
 msgstr "实验特性，请确保你的节点支持IPv6"
-
-msgid "Status info"
-msgstr "状态信息"
-
-msgid "Big icon"
-msgstr "大图标"
-
-msgid "Show node check"
-msgstr "显示节点检测"
-
-msgid "Show Show IP111"
-msgstr "显示IP111"
 
 msgid "Destination protocol"
 msgstr "目标协议"
@@ -1441,6 +1417,12 @@ msgstr "本机监听"
 
 msgid "When selected, it can only be accessed localhost."
 msgstr "当勾选时，只能本机访问。"
+
+msgid "Firewall Allow"
+msgstr "允许通过防火墙"
+
+msgid "Source zone"
+msgstr "源区域"
 
 msgid "Accept LAN Access"
 msgstr "接受局域网访问"
@@ -1481,8 +1463,14 @@ msgstr "服务器端"
 msgid "Server Config"
 msgstr "服务器配置"
 
+msgid "Servers Manager"
+msgstr "服务器管理"
+
 msgid "Users Manager"
 msgstr "用户管理"
+
+msgid "User Config"
+msgstr "用户配置"
 
 msgid "Logs"
 msgstr "日志"
@@ -1495,6 +1483,12 @@ msgstr "启用节点日志"
 
 msgid "Log Level"
 msgstr "日志等级"
+
+msgid "Log File"
+msgstr "日志文件"
+
+msgid "View Log"
+msgstr "查看日志"
 
 msgid "Not enabled log"
 msgstr "未启用日志"
@@ -1736,6 +1730,12 @@ msgstr "域名 DNS 解析"
 msgid "If the node address is a domain name, this DNS will be used for resolution."
 msgstr "如果节点地址是域名，则将使用此 DNS 进行解析。"
 
+msgid "Enable Happy Eyeballs"
+msgstr "启用 Happy Eyeballs"
+
+msgid "Attempts IPv4 and IPv6 simultaneously; automatically uses the faster connection."
+msgstr "同时尝试 IPv4 和 IPv6 连接，自动使用更快的连接。"
+
 msgid "Supports only Xray or Sing-box node types."
 msgstr "仅支持 Xray 或 Sing-box 类型节点。"
 
@@ -1893,8 +1893,14 @@ msgstr "使用自定义配置"
 msgid "Custom Config"
 msgstr "自定义配置"
 
+msgid "Must be Base64 text!"
+msgstr "必须是 Base64 内容！"
+
 msgid "Must be JSON text!"
 msgstr "必须是 JSON 文本内容！"
+
+msgid "Must be UUID format!"
+msgstr "必须是 UUID 格式！"
 
 msgid "Geo View"
 msgstr "Geo 查询"
@@ -2092,10 +2098,10 @@ msgid "Access Control:"
 msgstr "访问控制："
 
 msgid "Add node to the load balancer is directly connected to %s[%s]."
-msgstr "加入负载均衡的节点到%s[%s]直连完成。"
+msgstr "加入负载均衡节点IP到%s[%s]直连豁免(防回环)完成。"
 
 msgid "Add all %s nodes to %s[%s] direct connection complete."
-msgstr "加入所有%s节点到%s[%s]直连完成。"
+msgstr "加入所有%s节点服务器IP到%s[%s]直连豁免(防回环)完成。"
 
 msgid "Starting to load %s firewall rules..."
 msgstr "开始加载 %s 防火墙规则..."
@@ -2133,8 +2139,8 @@ msgstr "不代理所有 %s"
 msgid "Use the %s node [%s]"
 msgstr "使用 %s 节点[%s]"
 
-msgid "Using a node that is different from the global configuration, DNS has been forcibly redirected to a dedicated DNS server."
-msgstr "使用与全局配置不相同节点，已将DNS强制重定向到专用 DNS 服务器。"
+msgid "DNS will redirected to the dedicated DNS server [%s]."
+msgstr "DNS 将重定向到专用 DNS 服务器 [%s]。"
 
 msgid "Add direct DNS to %s: %s"
 msgstr "追加直连 DNS 到 %s： %s"
@@ -2358,6 +2364,9 @@ msgstr "成功解析【%s】节点，数量：%s"
 msgid "Get subscription content for [%s] is empty. This may be due to an invalid subscription address or a network problem. Please diagnose the issue!"
 msgstr "获取到的【%s】订阅内容为空，可能是订阅地址无效，或是网络问题，请诊断！"
 
+msgid "No Proxy"
+msgstr "不代理"
+
 msgid "Proxy"
 msgstr "代理"
 
@@ -2397,5 +2406,23 @@ msgstr "Gecko 包大小（最小）"
 msgid "Gecko Packet Size (max)"
 msgstr "Gecko 包大小（最大）"
 
+msgid "Enable UPnP/NAT-PMP port mapping on your gateway to improve hole punching success."
+msgstr "在网关上启用 UPnP/NAT-PMP 端口映射以提升打洞成功率。"
+
 msgid "valid time (hh:mm)"
 msgstr "有效时间（hh:mm）"
+
+msgid "Disable TLS Reuse"
+msgstr "禁用 TLS 连接复用"
+
+msgid "Not Set"
+msgstr "未设置"
+
+msgid "Cipher Suites"
+msgstr "密码套件"
+
+msgid "Configures the list of supported cipher suites."
+msgstr "配置支持的密码套件列表。"
+
+msgid "This username already exists."
+msgstr "该用户名已存在。"

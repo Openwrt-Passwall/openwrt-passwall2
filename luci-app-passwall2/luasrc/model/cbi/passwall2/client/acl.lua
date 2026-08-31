@@ -1,30 +1,25 @@
 local api = require "luci.passwall2.api"
-local appname = api.appname
-local sys = api.sys
-
 api.set_default_cbi()
 
-m = Map(appname)
-api.set_apply_on_parse(m)
+m = Map()
 
-s = m:section(TypedSection, "global", translate("ACLs"), "<font color='red'>" .. translate("ACLs is a tools which used to designate specific IP proxy mode.") .. "</font>")
-s.anonymous = true
+s = m:section(NamedSection, "@global[0]", "global", translate("ACLs"), "<font color='red'>" .. translate("ACLs is a tools which used to designate specific IP proxy mode.") .. "</font>")
 
 o = s:option(Flag, "acl_enable", translate("Main switch"))
 o.rmempty = false
 o.default = false
 
 -- [[ ACLs Settings ]]--
-local cfgname = "acl_rule"
-s = m:section(TypedSection, cfgname)
+s = m:section(TypedSection, "acl_rule")
 s.template = "cbi/tblsection"
 s.sortable = true
 s.anonymous = true
 s.addremove = true
 s.extedit = api.url("acl_config", "%s")
 function s.create(e, t)
-	t = TypedSection.create(e, t)
-	luci.http.redirect(e.extedit:format(t))
+	local uid = "acl_" .. api.gen_random_char(5)
+	TypedSection.create(e, uid)
+	luci.http.redirect(e.extedit:format(uid))
 end
 
 ---- Enable
@@ -37,40 +32,42 @@ o = s:option(Value, "remarks", translate("Remarks"))
 o.rmempty = true
 
 local mac_t = {}
-sys.net.mac_hints(function(e, t)
+api.sys.net.mac_hints(function(e, t)
 	mac_t[e] = {
 		ip = t,
 		mac = e
 	}
 end)
 
-o = s:option(DummyValue, "sources", translate("Source"))
-o.rawhtml = true
-o.cfgvalue = function(t, n)
-	local e = ''
-	local v = Value.cfgvalue(t, n) or '-'
-	string.gsub(v, '[^' .. " " .. ']+', function(w)
-		local a = w
-		if mac_t[w] then
-			a = a .. ' (' .. mac_t[w].ip .. ')'
-		end
-		if #e > 0 then
-			e = e .. "<br />"
-		end
-		e = e .. a
-	end)
-	return e
-end
-
 i = s:option(DummyValue, "interface", translate("Source Interface"))
 i.cfgvalue = function(t, n)
-	local v = Value.cfgvalue(t, n) or '-'
+	local v = Value.cfgvalue(t, n) or ''
+	if v == "" then
+		return translate("All")
+	end
 	return v
 end
 
-local sortable = Template(appname .. "/cbi/sortable")
-sortable.api = api
-sortable.target_cfgname = cfgname
-m:append(sortable)
+o = s:option(DummyValue, "sources", translate("Source"))
+o.rawhtml = true
+o.cfgvalue = function(self, section)
+	local v = self.map:get(section, self.option) or {}
+	if type(v) == "table" then
+		return table.concat(v, "<br/>")
+	end
+end
+
+i = s:option(DummyValue, "mode", translate("Mode"))
+i.cfgvalue = function(t, n)
+	local v = Value.cfgvalue(t, n) or '0'
+	if v == "1" then
+		return translate("Proxy")
+	elseif v == "2" then
+		return translate("Proxy") .. " " .. translate("Use global config")
+	end
+	return translate("No Proxy")
+end
+
+m:appendTemplate("/cbi/sortable", {sectiontype = s.sectiontype})
 
 return api.return_map(m)

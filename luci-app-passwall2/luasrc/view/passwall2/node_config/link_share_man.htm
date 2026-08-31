@@ -7,13 +7,12 @@ local map = self.map
 local has_ss_rust = api.is_finded("sslocal")
 local has_singbox = api.finded_com("sing-box")
 local has_xray = api.finded_com("xray")
-local has_hysteria2 = api.finded_com("hysteria")
 
 local ss_type = api.get_core("ss_type", {{has_ss_rust,"shadowsocks-rust"},{has_singbox,"sing-box"},{has_xray,"xray"}})
 local trojan_type = api.get_core("trojan_type", {{has_singbox,"sing-box"},{has_xray,"xray"}})
 local vmess_type = api.get_core("vmess_type", {{has_xray,"xray"},{has_singbox,"sing-box"}})
 local vless_type = api.get_core("vless_type", {{has_xray,"xray"},{has_singbox,"sing-box"}})
-local hysteria2_type = api.get_core("hysteria2_type", {{has_hysteria2,"hysteria2"},{has_singbox,"sing-box"}, {has_xray,"xray"}})
+local hysteria2_type = api.get_core("hysteria2_type", {{has_singbox,"sing-box"}, {has_xray,"xray"}})
 
 local current_node = map:get(section)
 -%>
@@ -21,7 +20,6 @@ local current_node = map:get(section)
 <script type="text/javascript">//<![CDATA[
 	let has_singbox = "<%=has_singbox%>"
 	let has_xray = "<%=has_xray%>"
-	let has_hysteria2 = "<%=has_hysteria2%>"
 	let ss_type = "<%=ss_type%>"
 	let trojan_type = "<%=trojan_type%>"
 	let vmess_type = "<%=vmess_type%>"
@@ -585,7 +583,7 @@ local current_node = map:get(section)
 				params = params.substring(1);
 			}
 			url += params;
-		} else if ((v_type === "Hysteria2") || ((v_type === "sing-box" || v_type === "Xray") && opt.get(dom_prefix + "protocol").value === "hysteria2")) {
+		} else if (((v_type === "sing-box" || v_type === "Xray") && opt.get(dom_prefix + "protocol").value === "hysteria2")) {
 			protocol = "hysteria2"
 			var v_port = opt.get(dom_prefix + "port");
 			var params = "";
@@ -595,35 +593,19 @@ local current_node = map:get(section)
 			params += opt.query("pcs", dom_prefix + "tls_pinSHA256");
 			params += opt.query("vcn", dom_prefix + "tls_CertByName");
 			
-			var v_password = null;
-			
-			if (v_type === "Hysteria2") {
-				v_password = opt.get("hysteria2_auth_password");
-				var dom_obfs_type = opt.get("hysteria2_obfs_type");
-				if (dom_obfs_type && dom_obfs_type.value != "") {
-					params += opt.query("obfs", "hysteria2_obfs_type");
-					params += opt.query("obfs-password", "hysteria2_obfs_password");
-					if (dom_obfs_type.value === "gecko") {
-						params += opt.query("minPacketSize", "hysteria2_obfs_MinPacketSize");
-						params += opt.query("maxPacketSize", "hysteria2_obfs_MaxPacketSize");
-					}
+			var v_password = opt.get(dom_prefix + "hysteria2_auth_password");
+			var dom_obfs_type = opt.get(dom_prefix + "hysteria2_obfs_type");
+			if (dom_obfs_type && dom_obfs_type.value != "") {
+				params += opt.query("obfs", dom_prefix + "hysteria2_obfs_type");
+				params += opt.query("obfs-password", dom_prefix + "hysteria2_obfs_password");
+				if (dom_obfs_type.value === "gecko") {
+					params += opt.query("minPacketSize", dom_prefix + "hysteria2_obfs_MinPacketSize");
+					params += opt.query("maxPacketSize", dom_prefix + "hysteria2_obfs_MaxPacketSize");
 				}
-				params += opt.query("mport", "hysteria2_hop");
-			} else {
-				v_password = opt.get(dom_prefix + "hysteria2_auth_password");
-				var dom_obfs_type = opt.get(dom_prefix + "hysteria2_obfs_type");
-				if (dom_obfs_type && dom_obfs_type.value != "") {
-					params += opt.query("obfs", dom_prefix + "hysteria2_obfs_type");
-					params += opt.query("obfs-password", dom_prefix + "hysteria2_obfs_password");
-					if (dom_obfs_type.value === "gecko") {
-						params += opt.query("minPacketSize", dom_prefix + "hysteria2_obfs_MinPacketSize");
-						params += opt.query("maxPacketSize", dom_prefix + "hysteria2_obfs_MaxPacketSize");
-					}
-				}
-				params += opt.query("mport", dom_prefix + "hysteria2_hop");
-				if (opt.get(dom_prefix + "use_finalmask")?.checked) {
-					params += opt.query("fm", dom_prefix + "finalmask");
-				}
+			}
+			params += opt.query("mport", dom_prefix + "hysteria2_hop");
+			if (opt.get(dom_prefix + "use_finalmask")?.checked) {
+				params += opt.query("fm", dom_prefix + "finalmask");
 			}
 			params = params.replace(/^&/, "");
 			url =
@@ -1640,19 +1622,6 @@ local current_node = map:get(section)
 				opt.set(dom_prefix + 'hysteria2_hop', queryParam.mport || "");
 				opt.set(dom_prefix + 'use_finalmask', !!queryParam.fm);
 				opt.set(dom_prefix + 'finalmask', queryParam.fm || "");
-			} else if (has_hysteria2) {
-				opt.set('type', "Hysteria2");
-				dom_prefix = "hysteria2_"
-				opt.set(dom_prefix + 'auth_password', decodeURIComponent(password));
-				if (queryParam["obfs-password"] || queryParam["obfs_password"]) {
-					opt.set(dom_prefix + 'obfs_type', queryParam.obfs || "salamander");
-					opt.set(dom_prefix + 'obfs_password', queryParam["obfs-password"] || queryParam["obfs_password"]);
-				}
-				if (queryParam.obfs === "gecko") {
-					opt.set(dom_prefix + 'obfs_MinPacketSize', queryParam.minPacketSize || "512");
-					opt.set(dom_prefix + 'obfs_MaxPacketSize', queryParam.maxPacketSize || "1200");
-				}
-				opt.set(dom_prefix + 'hop', queryParam.mport || "");
 			}
 			
 			opt.set(dom_prefix + 'address', unbracketIP(m.hostname));
@@ -1750,7 +1719,7 @@ local current_node = map:get(section)
 					opt.set(dom_prefix + 'tls', true);
 					opt.set(dom_prefix + 'reality', false);
 					opt.set(dom_prefix + 'alpn', queryParam.alpn || 'default');
-					opt.set(dom_prefix + 'tls_serverName', queryParam.sni || '');
+					opt.set(dom_prefix + 'tls_serverName', queryParam.sni || queryParam.peer || '');
 					opt.set(dom_prefix + 'tls_allowInsecure', !((queryParam.allowinsecure ?? '0') === '0' && (queryParam.insecure ?? '0') === '0'));
 					if (queryParam.fp && queryParam.fp.trim() != "") {
 						opt.set(dom_prefix + 'utls', true);
@@ -1761,7 +1730,7 @@ local current_node = map:get(section)
 					opt.set(dom_prefix + 'tls', true);
 					opt.set(dom_prefix + 'reality', true);
 					opt.set(dom_prefix + 'alpn', queryParam.alpn || 'default');
-					opt.set(dom_prefix + 'tls_serverName', queryParam.sni || '');
+					opt.set(dom_prefix + 'tls_serverName', queryParam.sni || queryParam.peer || '');
 					if (queryParam.fp && queryParam.fp.trim() != "") {
 						opt.set(dom_prefix + 'utls', true);
 						opt.set(dom_prefix + 'fingerprint', queryParam.fp);

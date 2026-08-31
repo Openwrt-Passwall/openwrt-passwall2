@@ -1,1 +1,65 @@
+<%
+local map = self.map
+-%>
 <!-- map footer -->
+<script type="text/javascript">
+	document.addEventListener("DOMContentLoaded", function () {
+		setTimeout(updateElements, 200);
+		function updateElements() {
+			// Remove extra line breaks between the value control and its description.
+			document.querySelectorAll("div.cbi-value-description").forEach(function(descDiv) {
+				var prev = descDiv.previousSibling;
+				while (prev && prev.nodeType === Node.TEXT_NODE && prev.textContent.trim() === "") {
+					prev = prev.previousSibling;
+				}
+				if (prev && prev.nodeType === Node.ELEMENT_NODE && prev.tagName === "BR") {
+					prev.remove();
+				}
+			});
+		}
+	});
+</script>
+
+<% if luci.http.formvalue("cbi.apply") == "1" and map.is_js_luci then -%>
+<script type="text/javascript">
+	document.addEventListener("luci-loaded", function() {
+		//L.env.apply_display = 2; //Write whatever you want, it's all just a fake progress bar anyway.
+		//L.env.apply_holdoff = 1;
+
+		let tt;
+		let flag = 2;
+		if (flag == 1) {
+			L.ui.changes.confirm(false, Date.now() + L.env.apply_rollback * 1000);
+		} else {
+			let ts = Date.now();
+			const deadline = Date.now() + L.env.apply_rollback * 1000;
+			const tick = () => {
+				const now = Date.now();
+
+				L.ui.changes.displayStatus('notice spinning',
+					E('p', _('Applying configuration changes… %ds')
+						.format(Math.max(Math.floor((deadline - Date.now()) / 1000), 0))));
+
+				if (now >= deadline)
+					return;
+
+				tt = window.setTimeout(tick, 1000 - (now - ts));
+				ts = now;
+			};
+			tick();
+		}
+
+		window.setTimeout(() => {
+			if (tt)
+				window.clearTimeout(tt);
+			L.ui.changes.displayStatus(false);
+			<% if not map.redirect then -%>
+				//window.location = window.location.href.split('#')[0];
+				window.location = "<%=map.api.url("log")%>";
+			<%- else %>
+				window.location.href = "<%=map.redirect%>";
+			<%- end %>
+		}, (L.env.apply_display + L.env.apply_holdoff) * 1000);
+	});
+</script>
+<%- end %>

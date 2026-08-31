@@ -534,7 +534,7 @@
 	//自定义框
 	function v_customEnter(cbid, labelSpan, hiddenInput, searchInput, panel, listContainer, customInput) {
 		let inputValue = customInput.value.trim();
-    	if (!inputValue) {
+		if (!inputValue) {
 			return;
 		}
 		const existingItems = listContainer.querySelectorAll('li[data-key="' + inputValue + '"]');

@@ -1,18 +1,19 @@
 <%
-local api = require "luci.passwall2.api"
-local appname = api.appname
-local uci = api.uci
+local map = self.map
+local api = map.api
+local appname = map.config
 
 local default_node_type = ""
 local shunt_rule_list = {}
-local node = api.uci_get_type("global", "node")
+local node = map:get("@global[0]", "node")
 if node then
-	local node_type = api.uci_get_type_id(node, "type")
-	local node_protocol = api.uci_get_type_id(node, "protocol")
-	if node_type == "Xray" and node_protocol == "_shunt" then
+	local node_type = map:get(node, "type")
+	local node_protocol = map:get(node, "protocol")
+	if (node_type == "Xray" or node_type == "sing-box") and node_protocol == "_shunt" then
 		default_node_type = node_protocol
-		uci:foreach(appname, "shunt_rules", function(e)
-			if e[".name"] and e.remarks then
+		local node_shunt_group = map:get(node, "shunt_group")
+		map:foreach("shunt_rules", function(e)
+			if e[".name"] and e.remarks and e.group == node_shunt_group then
 				shunt_rule_list[#shunt_rule_list + 1] = e
 			end
 		end)
@@ -28,20 +29,21 @@ table th, .table .th {
 
 table td, .table .td {
 	text-align: center;
-    /* white-space: nowrap; */
-    word-break: keep-all;
+	/* white-space: nowrap; */
+	word-break: keep-all;
 }
 
 #set_node_div {
 	display: none;
 	width: 30rem;
 	position: fixed;
-	top:50%;
-	padding-top: 30px;
+	top:45%;
 	z-index: 99;
 	text-align: center;
 	background: white;
-    box-shadow: darkgrey 10px 10px 30px 5px;
+	box-shadow: darkgrey 10px 10px 30px 5px;
+	text-align: center;
+	padding: 0.5em;
 }
 
 ._now_use_bg {
@@ -51,8 +53,8 @@ table td, .table .td {
 .ping a,
 .ping_value a,
 .tcping_value a {
-    text-decoration: none;
-    cursor: pointer;
+	text-decoration: none;
+	cursor: pointer;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -183,8 +185,205 @@ table td, .table .td {
 }
 </style>
 
-<% if api.is_js_luci() then -%>
+<style>
+	.pw-toolbar {
+		width: 100%;
+		text-align: center;
+	}
+
+	.pw-toolbar-field {
+		width: 100%;
+		text-align: center;
+		display: inline-block;
+		padding: 5px 0 5px;
+	}
+
+	#modal-mask {
+		display: none;
+		position: fixed;
+		left: 0;
+		top: 0;
+		width: 100vw;
+		height: 100vh;
+		background: rgba(0,0,0,0.4);
+		z-index: 999;
+	}
+
+	body.modal-open {
+		overflow: hidden;
+		pointer-events: none;
+	}
+
+	body.modal-open #add_link_div,
+	body.modal-open #reassign_group_div {
+		pointer-events: auto;
+	}
+
+	#add_link_div, #reassign_group_div {
+		display: none;
+		position: fixed;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
+		background: white;
+		padding: 20px;
+		border: 2px solid #ccc;
+		box-shadow: 0 0 10px rgba(0,0,0,0.5);
+		z-index: 1000;
+		width: 90%;
+		max-width: 500px;
+	}
+
+	#add_link_modal_container, #reassign_group_modal_container {
+		width: 100%;
+		text-align: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding-bottom: 20px;
+	}
+
+	#nodes_link {
+		width: 100%;
+		height: 180px;
+		resize: vertical;
+		font-family: monospace;
+		padding: 5px;
+		border: 1px solid #ccc;
+		border-radius: 5px;
+	}
+
+	#add_link_div h3,
+	#reassign_group_div h3 {
+		background: inherit;
+	}
+
+	#nodes_link_text {
+		color: red;
+		font-size: 14px;
+		margin-top: 5px;
+		text-align: center;
+		width: 100%;
+	}
+
+	#add_link_button_container, #reassign_group_button_container {
+		display: flex;
+		justify-content: space-between;
+		width: 100%;
+		max-width: 300px;
+		margin-top: 10px;
+	}
+
+	.value-custom {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		width: 100%;
+		margin: 10px 0;
+		padding: 0px 5px 0px 5px;
+	}
+
+	.value-field-custom {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.value-title-custom {
+		font-size: 13px;
+		line-height: 28px;
+		white-space: nowrap;
+		text-align: right;
+	}
+
+	.custom-dropdown {
+		position: relative;
+		border: 1px solid #d9d9d9;
+		border-radius: 2px;
+		width: 180px;
+		height: 28px;
+		font-size: 13px;
+		background: #fff;
+		cursor: pointer;
+		box-sizing: border-box;
+		display: block;
+	}
+
+	.selected-display {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0 8px;
+		width: 100%;
+		height: 100%;
+		box-sizing: border-box;
+		font-size: 12px;
+		color: #666;
+	}
+
+	.selected-display:hover {
+		background-color: #f7f7f7;
+	}
+
+	.dropdown-list {
+		position: absolute;
+		top: calc(100% + 2px);
+		left: -1px;
+		width: calc(100% + 2px);
+		border: 1px solid #d9d9d9;
+		border-radius: 2px;
+		border-top: none;
+		box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+		background: #fff;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		max-height: 200px;
+		overflow-y: auto;
+		overflow-x: hidden;
+		z-index: 100;
+		box-sizing: border-box;
+		color: #666;
+	}
+
+	.dropdown-item {
+		padding: 4px 8px;
+		line-height: 20px;
+		cursor: pointer;
+	}
+
+	.dropdown-item.selected {
+		background-color: #1e90ff;
+		color: #fff;
+	}
+
+	.create-item-input::placeholder {
+		text-align: center;
+	}
+
+	.dropdown-item.custom-input input {
+		width: 100%;
+		box-sizing: border-box;
+		padding: 3px;
+		font-size: 13px;
+		line-height: 20px;
+		border: 1px solid #ccc;
+		text-align: left;
+	}
+
+	.arrow-down-small {
+		width: 0;
+		height: 0;
+		border-left: 4px solid transparent;
+		border-right: 4px solid transparent;
+		border-top: 5px solid #555;
+		display: inline-block;
+		vertical-align: middle;
+	}
+</style>
+
 <script type="text/javascript">
+<% if api.is_js_luci() then -%>
 	var cbi_t = [];
 	function cbi_t_add(section, tab) {
 		var t = document.getElementById('tab.' + section + '.' + tab);
@@ -217,9 +416,7 @@ table td, .table .td {
 		}
 		return false
 	}
-</script>
 <%- else %>
-<script type="text/javascript">
 	(function() {
 		if (typeof(cbi_t_switch) === "function") {
 			var old_switch = cbi_t_switch;
@@ -229,16 +426,16 @@ table td, .table .td {
 			};
 		}
 	})();
-</script>
 <%- end %>
+</script>
 
 <script type="text/javascript">
 	//<![CDATA[
-	let auto_detection_time = "<%=api.uci_get_type("global_other", "auto_detection_time", "0")%>"
-	let show_node_info = "<%=api.uci_get_type("global_other", "show_node_info", "0")%>"
-	var ajaxList = [];
+	let auto_detection_time = "<%=map:get("@global_other[0]", "auto_detection_time") or "0"%>"
+	let show_node_info = "<%=map:get("@global_other[0]", "show_node_info") or "0"%>"
 
 	var ajax = {
+		list: [],
 		post: function(url, data, fn_success, timeout, fn_timeout) {
 			var xhr = new XMLHttpRequest();
 			var code = ajax.encode(data);
@@ -267,7 +464,7 @@ table td, .table .td {
 					fn_success(xhr, json);
 				}
 			};
-			ajaxList.push(xhr);
+			this.list.push(xhr);
 			xhr.send(code);
 		},
 		encode: function(obj) {
@@ -287,65 +484,56 @@ table td, .table .td {
 			}
 
 			return obj;
+		},
+		abortAll: function() {
+			this.list.forEach(xhr => xhr.abort());
+			this.list = [];
 		}
 	}
-	
-	function ajaxAbortAll() {
-		ajaxList.forEach(xhr => xhr.abort());
-		ajaxList = [];
-	}
 
-	function to_add_node() {
-		ajaxAbortAll();
-		const dom = document.getElementsByClassName("cbi-tab")[0];
-		const current_group = dom ? (dom.getAttribute("group_name") || "default") : "default";
-		window.location.href='<%=api.url("add_node")%>?redirect=1&group=' + current_group;
-	}
-	
-	function to_edit_node(cbi_id) {
-		ajaxAbortAll();
-		location.href='<%=api.url("node_config")%>/' + cbi_id;
-	}
-
-	function copy_node(cbi_id) {
-		ajaxAbortAll();
-		window.location.href = '<%=api.url("copy_node")%>' + "?section=" + cbi_id;
-	}
-	
-	function del_node(cbi_id) {
-		ajaxAbortAll();
-		window.location.href = '<%=api.url("delete_select_nodes")%>' + "?redirect=1&ids=" + cbi_id;
-	}
-	
-	var section = "";
-	function open_set_node_div(cbi_id) {
-		section = cbi_id;
-		document.getElementById("set_node_div").style.display="block";
-		var node_name = document.getElementById("cbid.<%=appname%>." + cbi_id + ".remarks").value;
-		document.getElementById("set_node_name").innerHTML = node_name;
-	}
-	
-	function close_set_node_div() {
-		document.getElementById("set_node_div").style.display="none";
-		document.getElementById("set_node_name").innerHTML = "";
-	}
-
-	function row_top(btn, group) {
-		const row = btn.closest("tr");
-		if (!row) return;
-		const parent = row.parentNode;
-		let firstDataRow = parent.querySelector("tr:not(.cbi-section-table-titles)");
-		if (firstDataRow && firstDataRow !== row) {
-			parent.insertBefore(row, firstDataRow);
-			let save_order_btn = document.getElementById("save_order_btn_" + group);
-			if (save_order_btn) {
-				const new_order = get_node_order(group);
-				if (!arraysEqual(new_order, origin_group_node_order[group])) {
-					save_order_btn.style.display = null;
-				} else {
-					save_order_btn.style.display = "none";
+	function node_action(action, cbi_id, a) {
+		ajax.abortAll();
+		switch (action) {
+			case "add":
+				const master = document.getElementById("node_list");
+				const dom = master.getElementsByClassName("cbi-tab")[0];
+				const current_group = dom ? (dom.getAttribute("group_name") || "default") : "default";
+				window.location.href='<%=api.url("add_node")%>?redirect=1&group=' + current_group;
+				break;
+			case "copy":
+				window.location.href = '<%=api.url("copy_node")%>' + "?section=" + cbi_id;
+				break;
+			case "edit":
+				window.location.href='<%=api.url("node_config")%>/' + cbi_id;
+				break;
+			case "del":
+				window.location.href = '<%=api.url("delete_select_nodes")%>' + "?redirect=1&ids=" + cbi_id;
+				break;
+			case "row_top":
+				let btn = a.btn;
+				let group = a.group;
+				const row = btn.closest("tr");
+				if (!row) return;
+				const parent = row.parentNode;
+				let firstDataRow = parent.querySelector("tr:not(.cbi-section-table-titles)");
+				if (firstDataRow && firstDataRow !== row) {
+					parent.insertBefore(row, firstDataRow);
+					set_order(group);
 				}
-			}
+				break;
+			case "del_all":
+				if (confirm('<%:Are you sure to clear all nodes?%>') == true){
+					XHR.get('<%=api.url("clear_all_nodes")%>', null,
+					function(x, data) {
+						if(x && x.status == 200) {
+							window.location.href = '<%=api.url("node_list")%>';
+						} else {
+							alert("<%:Error%>");
+						}
+					});
+				}
+				break;
+			default:
 		}
 	}
 
@@ -420,6 +608,7 @@ table td, .table .td {
 				if (confirm('<%:Are you sure to delete select nodes?%>') == true) {
 					dom.style.display = 'block';
 					dom.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;"><%:Processing, please wait…%></div>';
+					ajax.abortAll();
 					XHR.get('<%=api.url("delete_select_nodes")%>', {
 						ids: ids.join()
 					},
@@ -433,7 +622,7 @@ table td, .table .td {
 								box.remove();
 							}
 							*/
-							ajaxAbortAll();
+							ajax.abortAll();
 							window.location.href = '<%=api.url("node_list")%>';
 						} else {
 							alert("<%:Error%>");
@@ -446,14 +635,7 @@ table td, .table .td {
 			alert("<%:You no select nodes !%>");
 		}
 	}
-	
-	function set_node(type, config) {
-		if (confirm('<%:Are you sure set this server?%>')==true){
-			ajaxAbortAll();
-			window.location.href = '<%=api.url("set_node")%>?type=' + type + '&config=' + config + '&section=' + section;
-		}
-	}
-	
+
 	function get_address_full(id) {
 		var address = (document.getElementById("cbid.<%=appname%>." + id + ".address") || {}).value || "";
 		var port = (document.getElementById("cbid.<%=appname%>." + id + ".port") || {}).value || "";
@@ -480,47 +662,24 @@ table td, .table .td {
 		return ids;
 	}
 
-	function save_current_page_order(group) {
-		var table = document.getElementById("cbi-<%=appname%>-nodes-" + group + "-table");
+	function set_order(group) {
+		let table = document.getElementById("cbi-<%=appname%>-nodes-" + group + "-table");
 		if (!table) {
 			alert("<%:No table!%>");
 			return;
 		}
-		var rows = table.querySelectorAll("tr.cbi-section-table-row");
+		let rows = table.querySelectorAll("tr.cbi-section-table-row");
 		if (!rows || rows.length === 0) {
 			alert("<%:No nodes!%>");
 			return;
 		}
-		var btn = document.getElementById("save_order_btn_" + group);
-		if (btn) {
-			btn.style.display = "none";
-			btn.disabled = true;
-		}
-		var ids = [];
+		let ids = [];
 		rows.forEach(function(row) {
-			var id = row.id.replace("cbi-<%=appname%>-", "");
+			let id = row.id.replace("cbi-<%=appname%>-", "");
 			ids.push(id);
 		});
-		XHR.get('<%=api.url("save_node_order")%>', {
-				group: group,
-				ids: ids.join(",")
-			},
-			function(x, result) {
-				if (btn) {
-					btn.style.display = null;
-					btn.disabled = false;
-				}
-				if (x && x.status === 200) {
-					origin_group_node_order[group] = get_node_order(group);
-					alert("<%:Saved current page order successfully.%>");
-					if (btn) {
-						btn.style.display = "none";
-					}
-				} else {
-					alert("<%:Save failed!%>");
-				}
-			}
-		);
+		const input_order = document.getElementsByName(`group.order.${group}`)[0];
+		input_order.value = ids.join(" ");
 	}
 
 	function get_now_use_node() {
@@ -741,16 +900,6 @@ table td, .table .td {
 		}
 	}
 
-	function arraysEqual(a, b) {
-		if (a === b) return true;
-		if (a == null || b == null) return false;
-		if (a.length !== b.length) return false;
-		for (let i = 0; i < a.length; i++) {
-			if (a[i] !== b[i]) return false;
-		}
-		return true;
-	}
-
 	// List drag and rearrange
 	function initSortableForTable(table) {
 		if (!table) return null;
@@ -767,16 +916,7 @@ table td, .table .td {
 			forceFallback: false,
 			swapThreshold: 0.65,
 			onEnd: function (evt) {
-				//save_current_page_order(group); // Auto save
-				let save_order_btn = document.getElementById("save_order_btn_" + group);
-				if (save_order_btn) {
-					const new_order = get_node_order(group);
-					if (!arraysEqual(new_order, origin_group_node_order[group])) {
-						save_order_btn.style.display = null;
-					} else {
-						save_order_btn.style.display = "none";
-					}
-				}
+				set_order(group);
 			}
 		};
 		try {
@@ -821,6 +961,291 @@ table td, .table .td {
 	}
 </script>
 
+<script type="text/javascript">
+	//<![CDATA[
+	//Pop-up logic
+
+	// Custom group dropdown list events
+	function dropdown_list_fun(div_id) {
+		const dropdown = document.getElementById(div_id);
+		if (!dropdown) return;
+
+		const display = dropdown.querySelector(".selected-display");
+		const displayText = display.querySelector(".text");
+		const list = dropdown.querySelector(".dropdown-list");
+		const hidden = dropdown.querySelector('input[type="hidden"]');
+		const input = dropdown.querySelector(".create-item-input");
+
+		display.addEventListener("click", function() {
+			list.style.display = list.style.display === "none" ? "block" : "none";
+			input.value = "";
+			//input.focus();
+		});
+
+		function selectItem(li) {
+			list.querySelectorAll(".dropdown-item").forEach(function(el){
+				el.classList.remove("selected");
+			});
+			li.classList.add("selected");
+			hidden.value = li.dataset.value;
+			displayText.textContent = li.dataset.value || "<%:default%>";
+			list.style.display = "none";
+		}
+
+		list.addEventListener("click", function(e){
+			const li = e.target.closest(".dropdown-item");
+			if (!li || li.classList.contains("custom-input")) return;
+			selectItem(li);
+		});
+
+		input.addEventListener("keydown", function(e){
+			const isEnter = e.key === "Enter" || e.keyCode === 13;
+			if (!isEnter) return;
+			e.stopPropagation();
+			e.preventDefault();
+
+			const val = input.value.trim();
+			if (!val) return;
+
+			if (val.toLowerCase() === "default") {
+				const emptyLi = Array.from(list.querySelectorAll(".dropdown-item"))
+					.find(function(el){ return !el.dataset.value; });
+				if (emptyLi) selectItem(emptyLi);
+				input.value = "";
+				return;
+			}
+
+			let li = Array.from(list.querySelectorAll(".dropdown-item")).find(function(el){
+				return el.dataset.value && el.dataset.value.toLowerCase() === val.toLowerCase();
+			});
+			if (!li) {
+				li = document.createElement("li");
+				li.className = "dropdown-item";
+				li.dataset.value = val;
+				li.textContent = val;
+				list.insertBefore(li, input.parentNode); 
+			}
+
+			input.value = "";
+			selectItem(li);
+		});
+		// Read group names from tab
+		function InsertGroup(list, input) {
+			const tabs = document.querySelectorAll(".cbi-tabmenu li");
+			if (!tabs.length) {
+				setTimeout(() => InsertGroup(list, input), 50);
+				return;
+			}
+
+			tabs.forEach(function(li){
+				const group = li.id.split('.').pop();
+				if(group === "default") return;
+				if(Array.from(list.querySelectorAll(".dropdown-item")).some(el => el.dataset.value === group)) return;
+				const newLi = document.createElement("li");
+				newLi.className = "dropdown-item";
+				newLi.dataset.value = group;
+				newLi.textContent = group;
+				list.insertBefore(newLi, input.parentNode);
+			});
+		}
+		InsertGroup(list, input);
+
+		// Automatically collapses when clicking on the outside.
+		document.addEventListener("click", function(e) {
+			if (!dropdown.contains(e.target)) {
+				list.style.display = "none";
+			}
+		});
+	}
+
+	function getBg(el) {
+		if (!el) return null;
+		const style = getComputedStyle(el);
+		const bgImage = style.backgroundImage;
+		const bgColor = style.backgroundColor;
+		return (bgImage !== 'none' || !/rgba\([^,]+,[^,]+,[^,]+,\s*0\)/.test(bgColor) && bgColor !== 'transparent')
+			? style.background
+			: null;
+	}
+
+	const add_link_div = {
+		open() {
+			document.body.classList.add('modal-open');
+			document.getElementById('modal-mask').style.display = 'block';
+			const addLinkDiv = document.getElementById("add_link_div");
+			addLinkDiv.style.background = getBg(document.querySelector('.cbi-section')) || getBg(document.body) || '';
+			addLinkDiv.style.display = "block";
+			if (!addLinkDiv._dropdown_inited) {
+				addLinkDiv._dropdown_inited = true;
+				dropdown_list_fun("addlink_group_custom");
+			}
+			document.getElementById("nodes_link").focus();
+		},
+		close() {
+			document.getElementById('modal-mask').style.display = 'none';
+			document.getElementById("add_link_div").style.display = "none";
+			document.body.classList.remove('modal-open');
+		},
+		add_node() {
+			let nodes_link = document.getElementById("nodes_link").value;
+			const group = (document.querySelector('#addlink_group_custom input[type="hidden"]')?.value || "default");
+			nodes_link = nodes_link.replace(/\t/g, "").replace(/\r\n|\r/g, "\n").replace(/<[^>]*>/g, '').trim();
+			if (nodes_link != "") {
+				nodes_link = decodeIfBase64(nodes_link);
+				let s = nodes_link.split('://');
+				if (s.length > 1) {
+					this.close();
+					this.ajax_add_node(nodes_link, group);
+				} else {
+					alert("<%:Please enter the correct link.%>");
+				}
+			} else {
+				document.getElementById("nodes_link").focus();
+			}
+		},
+		ajax_add_node(link, group) {
+			const dom = document.getElementById('modal-mask');
+			dom.style.display = 'block';
+			dom.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;"><%:Processing, please wait…%></div>';
+			
+			const chunkSize = 1000;  // Fragmented sending to overcome uhttpd's limitations, with each fragment containing 1000 characters.
+			const totalChunks = Math.ceil(link.length / chunkSize);
+			let currentChunk = 0;
+
+			function sendNextChunk() {
+				if (currentChunk < totalChunks) {
+					const chunk = link.substring(currentChunk * chunkSize, (currentChunk + 1) * chunkSize);
+					const xhr = new XMLHttpRequest();
+					xhr.open('POST', '<%=api.url("link_add_node")%>', true);
+					xhr.onload = function () {
+						if (xhr.status === 200) {
+							currentChunk++;
+							sendNextChunk();
+						} else {
+							dom.innerHTML = '';
+							dom.style.display = 'none';
+							alert("<%:Error%>");
+							return;
+						}
+					};
+					xhr.onerror = function () {
+						dom.innerHTML = '';
+						dom.style.display = 'none';
+						alert("<%:Network Error%>");
+						return;
+					};
+					const formData = new FormData();
+					formData.append("chunk", chunk);
+					formData.append("chunk_index", currentChunk);
+					formData.append("total_chunks", totalChunks);
+					formData.append("group", group);
+					ajax.abortAll();
+					xhr.send(formData);
+				} else {
+					window.location.href = '<%=api.url("node_list")%>';
+				}
+			}
+			sendNextChunk();
+		}
+	}
+
+	const reassign_group_div = {
+		open() {
+			const ids = [];
+			const visibleContainer = document.querySelector('#cbi-passwall2-nodes > .cbi-tabcontainer[style*="display:block"], #cbi-passwall2-nodes > .cbi-tabcontainer[style*="display: block"]');
+			if (!visibleContainer) return;
+			const doms = visibleContainer.getElementsByClassName("nodes_select");
+			if (doms && doms.length > 0) {
+				for (let i = 0 ; i < doms.length; i++) {
+					if (doms[i].checked) {
+						ids.push(doms[i].getAttribute("cbid"))
+					}
+				}
+				if (ids.length > 0) {
+					document.body.classList.add('modal-open');
+					document.getElementById('modal-mask').style.display = 'block';
+					const reassignGroupDiv = document.getElementById("reassign_group_div");
+					reassignGroupDiv.style.background = getBg(document.querySelector('.cbi-section')) || getBg(document.body) || '';
+					reassignGroupDiv.style.display = "block";
+					if (!reassignGroupDiv._dropdown_inited) {
+						reassignGroupDiv._dropdown_inited = true;
+						dropdown_list_fun("reassign_group_custom");
+					}
+				} else {
+					alert("<%:You no select nodes !%>");
+				}
+			}
+		},
+		close() {
+			document.getElementById('modal-mask').style.display = 'none';
+			document.getElementById("reassign_group_div").style.display = "none";
+			document.body.classList.remove('modal-open');
+		},
+		action() {
+			const ids = [];
+			const group = (document.querySelector('#reassign_group_custom input[type="hidden"]')?.value || "default");
+			const visibleContainer = document.querySelector('#cbi-passwall2-nodes > .cbi-tabcontainer[style*="display:block"], #cbi-passwall2-nodes > .cbi-tabcontainer[style*="display: block"]');
+			if (!visibleContainer) return;
+			const doms = visibleContainer.getElementsByClassName("nodes_select");
+			if (doms && doms.length > 0) {
+				for (let i = 0 ; i < doms.length; i++) {
+					if (doms[i].checked) {
+						ids.push(doms[i].getAttribute("cbid"))
+					}
+				}
+				if (ids.length > 0) {
+					ajax.abortAll();
+					XHR.get('<%=api.url("reassign_group")%>', {
+						group: group,
+						ids: ids.join(",")
+					},
+					function(x, data) {
+						if (x && x.status == 200) {
+							window.location.href = '<%=api.url("node_list")%>';
+						} else {
+							alert("<%:Error%>");
+						}
+					});
+				}
+			}
+		}
+	}
+	
+	const set_node_div = {
+		section: '',
+		open(cbi_id) {
+			this.section = cbi_id;
+			document.getElementById("set_node_div").style.display="block";
+			const node_name = document.getElementById("cbid.<%=appname%>." + cbi_id + ".remarks").value;
+			document.getElementById("set_node_name").textContent = node_name;
+		},
+		close() {
+			document.getElementById("set_node_div").style.display="none";
+			document.getElementById("set_node_name").textContent = "";
+		},
+		set(type, config) {
+			if (confirm('<%:Are you sure set this node?%>') == true){
+				ajax.abortAll();
+				window.location.href = '<%=api.url("set_node")%>?type=' + type + '&config=' + config + '&section=' + this.section;
+			}
+		}
+	}
+	//]]>
+</script>
+
+<div class="pw-toolbar">
+	<div class="pw-toolbar-field">
+		<input class="btn cbi-button cbi-button-add" type="button" onclick="node_action('add')" value="<%:Add%>" />
+		<input class="btn cbi-button cbi-button-add" type="button" onclick="add_link_div.open()" value="<%:Add the node via the link%>" />
+		<input class="btn cbi-button cbi-button-remove" type="button" onclick="node_action('del_all')" value="<%:Clear all nodes%>" />
+		<input class="btn cbi-button cbi-button-remove" type="button" onclick="delete_select_nodes()" value="<%:Delete select nodes%>" />
+		<input class="btn cbi-button cbi-button-edit" type="button" id="select_all_btn" onclick="checked_all_node(this)" value="<%:Select all%>" />
+		<input class="btn cbi-button cbi-button-edit" type="button" onclick="reassign_group_div.open()" value="<%:Reassign Group%>" />
+		<input class="btn cbi-button cbi-button-apply" type="submit" name="cbi.apply" value="<%:Save & Apply%>" />
+		<!--<input class="btn cbi-button cbi-button-save" type="submit" name="cbi.save" value="<%:Save%>" />-->
+		<!--<input class="btn cbi-button cbi-button-reset" type="button" value="<%:Reset%>" onclick="location.href='<%=REQUEST_URI%>'" />-->
+	</div>
+</div>
 
 <script type="text/template" id="nodes-table-template">
 	<fieldset class="cbi-section cbi-tblsection" id="cbi-<%=appname%>-nodes-{{group}}-fieldset">
@@ -837,9 +1262,9 @@ table td, .table .td {
 			</tr>
 			{{node-tr}}
 		</table>
+		<input type="hidden" name="group.order.{{group}}">
 		<div class="cbi-section-create cbi-tblsection-create">
-			<input class="cbi-button cbi-button-add" type="button" value="<%:Add%>" onclick="to_add_node()">
-			<input class="cbi-button cbi-button-apply" style="display: none" type="button" id="save_order_btn_{{group}}" value="<%:Save Order%>" onclick="save_current_page_order('{{group}}')">
+			<input class="cbi-button cbi-button-add" type="button" value="<%:Add%>" onclick="node_action('add')">
 		</div>
 	</fieldset>
 </script>
@@ -858,11 +1283,11 @@ table td, .table .td {
 		<td class="td cbi-value-field pw-urltest">{{url_test}}</td>
 		<td class="td cbi-section-table-cell nowrap cbi-section-actions pw-actions">
 			<div class="node-wrapper">
-				<input class="btn cbi-button cbi-button-edit" type="button" value="<%:To Top%>" onclick="row_top(this, '{{group}}')" title="<%:To Top%>"/>
-				<input class="btn cbi-button cbi-button-apply" type="button" value="<%:Use%>" id="apply_{{id}}" onclick="open_set_node_div('{{id}}')"/>
-				<input class="btn cbi-button cbi-button-add" type="button" value="<%:Copy%>" onclick="copy_node('{{id}}')"/>
-				<input class="btn cbi-button cbi-button-edit" type="button" value="<%:Edit%>" onclick="to_edit_node('{{id}}')" alt="<%:Edit%>" title="<%:Edit%>">
-				<input class="btn cbi-button cbi-button-remove" type="button" value="<%:Delete%>" onclick="del_node('{{id}}')" alt="<%:Delete%>" title="<%:Delete%>">
+				<input class="btn cbi-button cbi-button-edit" type="button" value="<%:To Top%>" onclick="node_action('row_top', null, {btn:this, group:'{{group}}'})" title="<%:To Top%>"/>
+				<input class="btn cbi-button cbi-button-apply" type="button" value="<%:Use%>" id="apply_{{id}}" onclick="set_node_div.open('{{id}}')"/>
+				<input class="btn cbi-button cbi-button-add" type="button" value="<%:Copy%>" onclick="node_action('copy', '{{id}}')"/>
+				<input class="btn cbi-button cbi-button-edit" type="button" value="<%:Edit%>" onclick="node_action('edit', '{{id}}')" alt="<%:Edit%>" title="<%:Edit%>">
+				<input class="btn cbi-button cbi-button-remove" type="button" value="<%:Delete%>" onclick="node_action('del', '{{id}}')" alt="<%:Delete%>" title="<%:Delete%>">
 				<span class="drag-handle center" title="<%:Drag to reorder%>">⠿</span>
 			</div>
 		</td>
@@ -873,6 +1298,8 @@ table td, .table .td {
 </fieldset>
 
 <script type="text/javascript">
+	//init logic
+
 	function get_remarks_name(o) {
 		let str = "";
 		let remarks = o["remarks"] || "";
@@ -949,9 +1376,8 @@ table td, .table .td {
 				group_nodes[_node.group].push(_node)
 			}
 
-			var tab_ul_html = '<ul class="cbi-tabmenu">'
 			var tab_ul_li_html = ''
-			var tab_content_html = '<fieldset class="cbi-section-node cbi-section-node-tabbed" id="cbi-<%=appname%>-nodes">'
+			var tab_content_html = ''
 			var nodes_table_template = document.getElementById("nodes-table-template");
 			var node_template = document.getElementById("node-tr-template");
 			var default_group = null
@@ -1025,11 +1451,21 @@ table td, .table .td {
 					'</div>'
 			}
 
-			tab_ul_html += tab_ul_li_html + '</ul>'
-			tab_content_html += '</fieldset>'
-			var tab_html = tab_ul_html + tab_content_html
+			function addTabDOM(li, content) {
+				let tab_ul_html = '<ul class="cbi-tabmenu">';
+				let tab_content_html = '<fieldset class="cbi-section-shunt_rule cbi-section-shunt_rule-tabbed" id="cbi-<%=appname%>-nodes">';
+				if (li) {
+					tab_ul_html += li;
+				}
+				if (content) {
+					tab_content_html += content;
+				}
+				tab_ul_html += '</ul>';
+				tab_content_html += '</fieldset>';
+				return tab_ul_html + tab_content_html;
+			}
 
-			document.getElementById("node_list").innerHTML = tab_html
+			document.getElementById("node_list").innerHTML = addTabDOM(tab_ul_li_html, tab_content_html);
 
 			for (let group in group_nodes) {
 				cbi_t_add("<%=appname%>.nodes", group)
@@ -1038,7 +1474,7 @@ table td, .table .td {
 			if (default_group) {
 				cbi_t_switch("<%=appname%>.nodes", default_group)
 			}
-			
+
 			origin_group_node_order = {};
 			for (let group in group_nodes) {
 				origin_group_node_order[group] = get_node_order(group);
@@ -1071,20 +1507,8 @@ table td, .table .td {
 
 	//Node list option saving logic
 	document.addEventListener("DOMContentLoaded", function () {
-		function waitForElement(selector, callback) {
-			const el = document.querySelector(selector);
-			if (el) return callback(el);
-			const observer = new MutationObserver(() => {
-				const el = document.querySelector(selector);
-				if (el) {
-					observer.disconnect();
-					callback(el);
-				}
-			});
-			observer.observe(document.body, { childList: true, subtree: true });
-		}
-
 		function onChange(option, value) {
+			ajax.abortAll();
 			XHR.get('<%=api.url("save_node_list_opt")%>', {
 				option: option,
 				value: value
@@ -1118,31 +1542,96 @@ table td, .table .td {
 		links.forEach(link => {
 			link.addEventListener('click', (e) => {
 				if (link.getAttribute('target') !== '_blank') {
-					ajaxAbortAll();
+					ajax.abortAll();
 				}
 			});
+		});
+		window.addEventListener('beforeunload', (event) => {
+			ajax.abortAll();
 		});
 	});
 	//]]>
 </script>
 
-<div style="display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;">
-	<div id="set_node_div" style="text-align: center;">
-		<div class="cbi-value" style="display: flex; justify-content: center; align-items: center; margin: 8px 0;">
-			<font color=#666><%:You choose node is:%></font><a style="color: red" id="set_node_name"></a>
+<div id="modal-mask"></div>
+
+<div id="add_link_div">
+	<div id="add_link_modal_container">
+		<h3><%:Add the node via the link%></h3>
+		<div class="value-custom">
+			<textarea id="nodes_link" rows="10"></textarea>
+			<p id="nodes_link_text"><%:Enter share links, one per line. Subscription links are not supported!%></p>
 		</div>
-		<div class="cbi-value" style="display: flex; justify-content: center; gap: 8px; margin: 8px 0;">
+		<div class="value-custom">
+			<div class="value-field-custom">
+				<label class="value-title-custom" for="addlink_group_custom"><%:Group Name%></label>
+				<div id="addlink_group_custom" class="custom-dropdown">
+					<div class="selected-display">
+						<span class="text"><%:default%></span>
+						<span class="arrow-down-small"></span>
+					</div>
+					<ul class="dropdown-list" style="display:none;">
+						<li class="dropdown-item selected" data-value=""><%:default%></li>
+						<li class="dropdown-item custom-input">
+							<input type="text" placeholder="-- <%:custom%> --" class="create-item-input" inputmode="text" enterkeyhint="done">
+						</li>
+					</ul>
+					<input type="hidden" name="addlink_group" value="">
+				</div>
+			</div>
+		</div>
+		<div id="add_link_button_container">
+			<input class="btn cbi-button cbi-button-add" type="button" onclick="add_link_div.add_node()" value="<%:Add%>" />
+			<input class="btn cbi-button cbi-button-remove" type="button" onclick="add_link_div.close()" value="<%:Close%>" />
+		</div>
+	</div>
+</div>
+
+<div id="reassign_group_div">
+	<div id="reassign_group_modal_container">
+		<h3><%:Reassign Node Group%></h3>
+		<div class="value-custom">
+			<div class="value-field-custom">
+				<label class="value-title-custom" for="reassign_group_custom"><%:Group Name%></label>
+				<div id="reassign_group_custom" class="custom-dropdown">
+					<div class="selected-display">
+						<span class="text"><%:default%></span>
+						<span class="arrow-down-small"></span>
+					</div>
+					<ul class="dropdown-list" style="display:none;">
+						<li class="dropdown-item selected" data-value=""><%:default%></li>
+						<li class="dropdown-item custom-input">
+							<input type="text" placeholder="-- <%:custom%> --" class="create-item-input" inputmode="text" enterkeyhint="done">
+						</li>
+					</ul>
+					<input type="hidden" name="to_group" value="">
+				</div>
+			</div>
+		</div>
+		<div id="reassign_group_button_container">
+			<input class="btn cbi-button cbi-button-edit" type="button" onclick="reassign_group_div.action()" value="<%:Save%>" />
+			<input class="btn cbi-button cbi-button-remove" type="button" onclick="reassign_group_div.close()" value="<%:Close%>" />
+		</div>
+	</div>
+</div>
+
+<div style="display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; -webkit-justify-content: center; justify-content: center;">
+	<div id="set_node_div">
+		<div class="cbi-value" style="display: flex; justify-content: center; align-items: center; margin: 1em 0; height: 2em;">
+			<font color=#666><%:You choose node is:%></font><a style="color: red" id="set_node_name"></a>
+			<div style="position:absolute; right:0.5em; top: 0.5em;"><input class="btn cbi-button" type="button" onclick="set_node_div.close()" value="X" /></div>
+		</div>
+		<div class="cbi-value" style="justify-content: center; gap: 8px; margin: 1em 0;">
 			<%- if default_node_type == "_shunt" then
 				for i, v in ipairs(shunt_rule_list) do
 			-%>
-				<input class="btn cbi-button cbi-button-edit" type="button" onclick="set_node('<%=node%>', '<%=v[".name"]%>')" value="<%=v.remarks%>" />
+				<input class="btn cbi-button" type="button" onclick="set_node_div.set('<%=node%>', '<%=v[".name"]%>')" value="<%=v.remarks%>" />
 			<%-
 				end
 			-%>
 			<% else %>
-				<input class="btn cbi-button cbi-button-edit" type="button" onclick="set_node('@global[0]', 'node')" value="<%:Node%>" />
+				<input class="btn cbi-button" type="button" onclick="set_node_div.set('@global[0]', 'node')" value="<%:Node%>" />
 			<% end %>
-			<input class="btn cbi-button cbi-button-remove" type="button" onclick="close_set_node_div()" value="<%:Close%>" />
 		</div>
 	</div>
 </div>

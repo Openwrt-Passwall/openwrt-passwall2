@@ -1,0 +1,41 @@
+#!/bin/sh
+
+if [ -e "/etc/config/ucitrack" ]; then
+	uci -q batch <<-EOF
+ 		delete ucitrack.@passwall2[-1]
+		add ucitrack passwall2
+		set ucitrack.@passwall2[-1].init=passwall2
+		commit ucitrack
+EOF
+fi
+
+uci -q batch <<-EOF
+	delete firewall.passwall2
+	set firewall.passwall2=include
+	set firewall.passwall2.type='script'
+	set firewall.passwall2.path='/var/etc/passwall2.include'
+
+	set dhcp.@dnsmasq[0].localuse=1
+	commit dhcp
+
+	set uhttpd.main.max_requests=50
+	commit uhttpd
+EOF
+
+if [ -x "/sbin/fw3" ]; then
+	uci -q set firewall.passwall2.reload='1'
+else
+	uci -q delete firewall.passwall2.reload
+	uci -q delete firewall.passwall2.fw4_compatible
+fi
+uci commit firewall
+
+[ ! -s "/etc/config/passwall2" ] && cp -f /usr/share/passwall2/0_default_config /etc/config/passwall2
+
+chmod +x /usr/share/passwall2/*.sh
+
+rm -f /tmp/luci-indexcache /tmp/luci-indexcache.*
+rm -rf /tmp/luci-modulecache/
+killall -HUP rpcd 2>/dev/null
+
+exit 0

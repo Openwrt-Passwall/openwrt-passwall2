@@ -118,12 +118,6 @@ msgstr "0 — отключить функцию"
 msgid "Current node: %s"
 msgstr "Текущий узел: %s"
 
-msgid "Direct domain DNS routing"
-msgstr "Прямая маршрутизация DNS домена"
-
-msgid "Please note that the program will not start if the format is incorrect!"
-msgstr "Обратите внимание, что программа не запустится, если формат указан неверно!"
-
 msgid "IP:Port mode acceptable, multi value split with english comma."
 msgstr "Допустим формат IP:Port. Несколько значений указывайте через запятую."
 
@@ -334,8 +328,8 @@ msgstr "Вы действительно хотите удалить выбран
 msgid "You no select nodes !"
 msgstr "Вы не выбрали ни одного узла!"
 
-msgid "Are you sure set to"
-msgstr "Вы действительно хотите назначить"
+msgid "Are you sure set this node?"
+msgstr "Вы уверены, что задали этот узел?"
 
 msgid "the server?"
 msgstr "активным сервером?"
@@ -971,8 +965,14 @@ msgstr "Примечание: увеличивает нагрузку на си�
 msgid "Shunt Rule"
 msgstr "Правила разделения трафика"
 
+msgid "Shunt Rule Group"
+msgstr "Группа правил шунтирования"
+
 msgid "Please note attention to the priority, the higher the order, the higher the priority."
 msgstr "Обратите внимание: правила выше в списке имеют более высокий приоритет."
+
+msgid "This ID already exists."
+msgstr "Этот идентификатор уже существует."
 
 msgid "Update..."
 msgstr "Обновление..."
@@ -1307,6 +1307,12 @@ msgstr "Приватный ключ"
 msgid "Pre shared key"
 msgstr "Дополнительный симметричный ключ"
 
+msgid "Allowed IPs"
+msgstr "Разрешенные IP-адреса"
+
+msgid "Generate key"
+msgstr "Сгенерировать ключ"
+
 msgid "Local Address"
 msgstr "Локальный адрес"
 
@@ -1379,24 +1385,6 @@ msgstr "<br />none: по умолчанию, без маскировки, дан
 msgid "Use it together with the DNS disguised type. You can fill in any domain."
 msgstr "Используется вместе с типом маскировки DNS. Можно указать любой домен."
 
-msgid "Auth"
-msgstr "Аутентификация"
-
-msgid "Socks for authentication"
-msgstr "Аутентификация SOCKS"
-
-msgid "Socks protocol authentication, support anonymous and password."
-msgstr "Метод аутентификации SOCKS: анонимный или по логину/паролю."
-
-msgid "anonymous"
-msgstr "анонимно"
-
-msgid "User Password"
-msgstr "Логин и пароль"
-
-msgid "Username and Password must be used together!"
-msgstr "Логин и пароль должны быть указаны вместе!"
-
 msgid "Prefer firewall tools"
 msgstr "Предпочтительный инструмент фаервола"
 
@@ -1405,18 +1393,6 @@ msgstr "IPv6 TProxy"
 
 msgid "Experimental feature. Make sure that your node supports IPv6."
 msgstr "Экспериментальная функция. Убедитесь, что ваш сервер поддерживает IPv6."
-
-msgid "Status info"
-msgstr "Информация о статусе"
-
-msgid "Big icon"
-msgstr "Крупный значок"
-
-msgid "Show node check"
-msgstr "Показывать проверку серверов"
-
-msgid "Show Show IP111"
-msgstr "Показывать IP111"
 
 msgid "Destination protocol"
 msgstr "Целевой протокол"
@@ -1450,6 +1426,12 @@ msgstr "Только для localhost"
 
 msgid "When selected, it can only be accessed localhost."
 msgstr "Если включено, доступ возможен только с самого роутера."
+
+msgid "Firewall Allow"
+msgstr "Брандмауэр разрешить"
+
+msgid "Source zone"
+msgstr "Зона источника"
 
 msgid "Accept LAN Access"
 msgstr "Разрешить доступ из LAN"
@@ -1490,8 +1472,14 @@ msgstr "Серверная часть"
 msgid "Server Config"
 msgstr "Конфигурация сервера"
 
+msgid "Servers Manager"
+msgstr "Диспетчер серверов"
+
 msgid "Users Manager"
 msgstr "Управление пользователями"
+
+msgid "User Config"
+msgstr "Пользовательская конфигурация"
 
 msgid "Logs"
 msgstr "Журнал"
@@ -1504,6 +1492,12 @@ msgstr "Запись журнала"
 
 msgid "Log Level"
 msgstr "Уровень записи журнала"
+
+msgid "Log File"
+msgstr "Файл журнала"
+
+msgid "View Log"
+msgstr "Просмотреть журнал"
 
 msgid "Not enabled log"
 msgstr "Запись журнала отключена"
@@ -1751,6 +1745,12 @@ msgstr "Разрешение DNS-запросов для домена"
 msgid "If the node address is a domain name, this DNS will be used for resolution."
 msgstr "Если адрес узла является доменным именем, для разрешения будет использоваться этот DNS-сервер."
 
+msgid "Enable Happy Eyeballs"
+msgstr "Включить счастливые глаза"
+
+msgid "Attempts IPv4 and IPv6 simultaneously; automatically uses the faster connection."
+msgstr "Одновременно пытается использовать IPv4 и IPv6; автоматически выбирает более быстрое соединение."
+
 msgid "Supports only Xray or Sing-box node types."
 msgstr "Поддерживаются только узлы типа Xray или Sing-box."
 
@@ -1908,8 +1908,14 @@ msgstr "Использовать свою конфигурацию"
 msgid "Custom Config"
 msgstr "Пользовательская конфигурация"
 
+msgid "Must be Base64 text!"
+msgstr "Это должен быть текст в формате Base64!"
+
 msgid "Must be JSON text!"
 msgstr "Должен быть JSON-текст!"
+
+msgid "Must be UUID format!"
+msgstr "Обязательно в формате UUID!"
 
 msgid "Geo View"
 msgstr "Просмотр Geo"
@@ -2148,8 +2154,8 @@ msgstr "не прокси все %s"
 msgid "Use the %s node [%s]"
 msgstr "Использовать %s сервер [%s]"
 
-msgid "Using a node that is different from the global configuration, DNS has been forcibly redirected to a dedicated DNS server."
-msgstr "Используется сервер, отличный от глобальной настройки: DNS принудительно перенаправлен на выделенный DNS-сервер."
+msgid "DNS will redirected to the dedicated DNS server [%s]."
+msgstr "DNS будет перенаправлен на выделенный DNS-сервер [%s]."
 
 msgid "Add direct DNS to %s: %s"
 msgstr "Добавление прямого DNS в %s: %s"
@@ -2370,6 +2376,9 @@ msgstr "Успешно разобран [%s], количество узлов: %
 msgid "Get subscription content for [%s] is empty. This may be due to an invalid subscription address or a network problem. Please diagnose the issue!"
 msgstr "Содержимое подписки [%s] пусто. Возможно, адрес подписки неверен или есть проблема с сетью. Пожалуйста, проведите диагностику!"
 
+msgid "No Proxy"
+msgstr "Без прокси"
+
 msgid "Proxy"
 msgstr "Прокси"
 
@@ -2409,5 +2418,23 @@ msgstr "Размер упаковки Gecko (мин)"
 msgid "Gecko Packet Size (max)"
 msgstr "Размер упаковки Gecko (макс)"
 
+msgid "Enable UPnP/NAT-PMP port mapping on your gateway to improve hole punching success."
+msgstr "Включите сопоставление портов UPnP/NAT-PMP на вашем шлюзе, чтобы повысить вероятность успешного выполнения операций "пробивания дыр"."
+
 msgid "valid time (hh:mm)"
 msgstr "Время действия (чч:мм)"
+
+msgid "Disable TLS Reuse"
+msgstr "Отключить повторное использование TLS"
+
+msgid "Not Set"
+msgstr "Не задано"
+
+msgid "Cipher Suites"
+msgstr "Наборы шифров"
+
+msgid "Configures the list of supported cipher suites."
+msgstr "Задает список поддерживаемых наборов шифров."
+
+msgid "This username already exists."
+msgstr "Это имя пользователя уже существует."

@@ -1,0 +1,429 @@
+<%
+local map = self.map
+local api = map.api
+local appname = map.config
+-%>
+<script src="<%=resource%>/view/<%=appname%>/Sortable.min.js"></script>
+<style>
+table th, .table .th {
+	text-align: center;
+}
+
+table td, .table .td {
+	text-align: center;
+	/* white-space: nowrap; */
+	word-break: keep-all;
+}
+
+.td.cbi-section-actions {
+	text-align: right !important;
+}
+
+.shunt_rule-wrapper {
+	align-items: center;
+	display: inline-flex !important;
+	gap: 4px;
+}
+
+.cbi-tabmenu > li {
+	margin-right: 2px !important;
+}
+
+.cbi-tabmenu > li:last-child {
+	margin-right: 0 !important;
+}
+
+.shunt_rule-wrapper .drag-handle {
+	cursor: grab !important;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 20px;
+	font-weight: 100;
+	padding: 0 !important;
+	line-height: inherit;
+	user-select: none;
+	align-self: stretch;
+	background-color: transparent;
+}
+
+.shunt_rule-wrapper .drag-handle:hover {
+	background: transparent;
+}
+
+/* enable flex for small screens*/
+@media screen and (max-width: 1152px) {
+	.cbi-section-table-row {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		justify-content: space-between;
+	}
+
+	.cbi-section-table-titles {
+		display: none !important;
+	}
+
+	.td-actions {
+		padding-top: 0 !important;
+		border-top-width: 0 !important;
+		flex: 1 1 350px;
+	}
+}
+
+/* shrink actionbar even further for mobile devices */
+@media screen and (max-width: 500px) {
+	.shunt_rule-wrapper {
+		gap: 0;
+	}
+
+	.cbi-button {
+		margin-left: 0 !important;
+		margin-right: 1px !important;
+	}
+
+	.td-actions {
+		padding-left: 5px!important;
+		padding-right: 5px !important;
+	}
+}
+
+.sortable-chosen {
+	background-color: rgba(220, 235, 245, 0.4) !important;
+	opacity: 0.7;
+}
+
+.sortable-ghost {
+	background: #cce5ff !important;
+	height: 3px !important;
+}
+
+.dragging-row {
+	background-color: rgba(131, 191, 255, 0.7) !important;
+	box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+</style>
+
+<% if api.is_js_luci() then -%>
+<script type="text/javascript">
+	var cbi_t = [];
+	function cbi_t_add(section, tab) {
+		var t = document.getElementById('tab.' + section + '.' + tab);
+		var c = document.getElementById('container.' + section + '.' + tab);
+
+		if( t && c ) {
+			cbi_t[section] = (cbi_t[section] || [ ]);
+			cbi_t[section][tab] = { 'tab': t, 'container': c, 'cid': c.id };
+		}
+	}
+
+	function cbi_t_switch(section, tab) {
+		if( cbi_t[section] && cbi_t[section][tab] ) {
+			// Before switching tabs, first deselect all currently active tabs.
+			var o = cbi_t[section][tab];
+			var h = document.getElementById('tab.' + section);
+			for( var tid in cbi_t[section] ) {
+				var o2 = cbi_t[section][tid];
+				if( o.tab.id != o2.tab.id ) {
+					o2.tab.className = o2.tab.className.replace(/(^| )cbi-tab( |$)/, " cbi-tab-disabled ");
+					o2.container.style.display = 'none';
+				}
+				else {
+					if(h) h.value = tab;
+					o2.tab.className = o2.tab.className.replace(/(^| )cbi-tab-disabled( |$)/, " cbi-tab ");
+					o2.container.style.display = 'block';
+				}
+			}
+		}
+		return false
+	}
+</script>
+<%- end %>
+
+<script type="text/javascript">
+	//<![CDATA[
+	function toPage(action, cbi_id) {
+		if (action == "add") {
+			const master = document.getElementById("shunt_rule_list");
+			const dom = master.getElementsByClassName("cbi-tab")[0];
+			const current_group = dom ? (dom.getAttribute("group_name") || "default") : "default";
+			const add_name_val = document.getElementById("add_name_" + current_group).value;
+			if (add_name_val.length > 1) {
+				XHR.get('<%=api.url("add_shunt_rule")%>', {
+						add_name: add_name_val,
+						group: current_group
+					},
+					function(x, result) {
+						if (x && x.status === 200) {
+							if (result.code == 1) {
+								window.location.href = result.data.redirect_url;
+							} else {
+								alert(result.data.message);
+							}
+						} else {
+							alert("<%:Save failed!%>");
+						}
+					}
+				);
+			}
+		}
+		if (action == "edit") {
+			window.location.href='<%=api.url("shunt_rules")%>/' + cbi_id;
+		}
+		if (action == "del") {
+			window.location.href = '<%=api.url("delete_select_shunt_rules")%>' + "?redirect=1&ids=" + cbi_id;
+		}
+	}
+
+	function row_top(btn, group) {
+		const row = btn.closest("tr");
+		if (!row) return;
+		const parent = row.parentNode;
+		let firstDataRow = parent.querySelector("tr:not(.cbi-section-table-titles)");
+		if (firstDataRow && firstDataRow !== row) {
+			parent.insertBefore(row, firstDataRow);
+			set_order(group);
+		}
+	}
+
+	function get_shunt_rule_order(group) {
+		let table = document.getElementById("cbi-<%=appname%>-shunt_rules-" + group + "-table");
+		if (!table) {
+			return;
+		}
+		let rows = table.querySelectorAll("tr.cbi-section-table-row");
+		if (!rows || rows.length === 0) {
+			return;
+		}
+		var ids = [];
+		rows.forEach(function(row) {
+			var id = row.id.replace("cbi-<%=appname%>-", "");
+			ids.push(id);
+		});
+		return ids;
+	}
+
+	function set_order(group) {
+		let table = document.getElementById("cbi-<%=appname%>-shunt_rules-" + group + "-table");
+		if (!table) {
+			alert("<%:No table!%>");
+			return;
+		}
+		let rows = table.querySelectorAll("tr.cbi-section-table-row");
+		if (!rows || rows.length === 0) {
+			alert("<%:No shunt_rules!%>");
+			return;
+		}
+		let ids = [];
+		rows.forEach(function(row) {
+			let id = row.id.replace("cbi-<%=appname%>-", "");
+			ids.push(id);
+		});
+		const input_order = document.getElementsByName(`group.order.${group}`)[0];
+		input_order.value = ids.join(" ");
+	}
+
+	// List drag and rearrange
+	function initSortableForTable(table) {
+		if (!table) return null;
+		let group = table.id.replace("cbi-<%=appname%>-shunt_rules-", "").replace("-table", "")
+		var root = table.querySelector('tbody') || table;
+		if (root._sortable_initialized) return root._sortable_instance;
+		root._sortable_initialized = true;
+		var opts = {
+			handle: ".drag-handle",
+			draggable: "tr.cbi-section-table-row",
+			animation: 150,
+			ghostClass: "dragging-row",
+			fallbackOnBody: true,
+			forceFallback: false,
+			swapThreshold: 0.65,
+			onEnd: function (evt) {
+				set_order(group);
+			}
+		};
+		try {
+			var instance = Sortable.create(root, opts);
+			root._sortable_instance = instance;
+			return instance;
+		} catch (err) {
+			root._sortable_initialized = false;
+			console.error("Sortable init failed:", err);
+			return null;
+		}
+	}
+
+	function initAllSortable(group_shunt_rules) {
+		if (typeof Sortable === 'undefined') {
+			var retries = 0;
+			var maxRetries = 25;
+			var t = setInterval(function () {
+				retries++;
+				if (typeof Sortable !== 'undefined') {
+					clearInterval(t);
+					for (var group in group_shunt_rules) {
+						var table = document.getElementById("cbi-<%=appname%>-shunt_rules-" + group + "-table");
+						initSortableForTable(table);
+					}
+				} else if (retries >= maxRetries) {
+					clearInterval(t);
+				}
+			}, 200);
+		} else {
+			for (var group in group_shunt_rules) {
+				var table = document.getElementById("cbi-<%=appname%>-shunt_rules-" + group + "-table");
+				initSortableForTable(table);
+			}
+		}
+	}
+
+	function escape_html(s) {
+		return s.replace(/[&<>"']/g, c => ({
+			"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+		}[c]));
+	}
+</script>
+
+
+<script type="text/template" id="shunt_rules-table-template">
+	<fieldset class="cbi-section cbi-tblsection" id="cbi-<%=appname%>-shunt_rules-{{group}}-fieldset">
+		<table class="table cbi-section-table" id="cbi-<%=appname%>-shunt_rules-{{group}}-table" style="">
+			<tr class="tr cbi-section-table-titles anonymous">
+				<th class="th cbi-section-table-cell" style="width:30%">ID</th>
+				<th class="th cbi-section-table-cell" style="width:30%"><%:Remarks%></th>
+				<th class="th cbi-section-table-cell cbi-section-actions"></th>
+			</tr>
+			{{shunt_rule-tr}}
+		</table>
+		<input type="hidden" name="group.order.{{group}}">
+		<div class="cbi-section-create cbi-tblsection-create">
+			<input type="text" id="add_name_{{group}}">
+			<input class="cbi-button cbi-button-add" type="button" value="<%:Add%>" onclick="toPage('add')">
+		</div>
+	</fieldset>
+</script>
+
+<script type="text/template" id="shunt_rule-tr-template">
+	<tr class="tr cbi-section-table-row" id="cbi-<%=appname%>-{{id}}">
+		<td class="td cbi-value-field"><b>{{id}}</b></td>
+		<td class="td cbi-value-field">{{remarks}}</td>
+		<td class="td cbi-section-table-cell nowrap cbi-section-actions td-actions">
+			<div class="shunt_rule-wrapper">
+				<input class="btn cbi-button cbi-button-edit" type="button" value="<%:To Top%>" onclick="row_top(this, '{{group}}')" title="<%:To Top%>"/>
+				<input class="btn cbi-button cbi-button-edit" type="button" value="<%:Edit%>" onclick="toPage('edit', '{{id}}')" alt="<%:Edit%>" title="<%:Edit%>">
+				<input class="btn cbi-button cbi-button-remove" type="button" value="<%:Delete%>" onclick="toPage('del', '{{id}}')" alt="<%:Delete%>" title="<%:Delete%>">
+				<span class="drag-handle center" title="<%:Drag to reorder%>">⠿</span>
+			</div>
+		</td>
+	</tr>
+</script>
+
+<div class="cbi-section">
+	<h3>Sing-Box/Xray <%:Shunt Rule%></h3>
+	<div class="cbi-section-descr"><a style="color: red;text-decoration: none"><%:Please note attention to the priority, the higher the order, the higher the priority.%></a></div>
+	<div id="shunt_rule_list"></div>
+</div>
+
+<script type="text/javascript">
+	function loadNodeList() {
+		XHR.get('<%=api.url("get_shunt_rules")%>', null, function(x, result) {
+			var shunt_rule_list = result
+
+			var group_shunt_rules = {}
+			if (shunt_rule_list.length > 0) {
+				for (let i = 0; i < shunt_rule_list.length; i++) {
+					let _shunt_rule = shunt_rule_list[i]
+					if (!_shunt_rule.group || _shunt_rule.group === "") {
+						_shunt_rule.group = "default"
+					}
+					if (!group_shunt_rules[_shunt_rule.group]) {
+						group_shunt_rules[_shunt_rule.group] = []
+					}
+					group_shunt_rules[_shunt_rule.group].push(_shunt_rule)
+				}
+			} else {
+				group_shunt_rules["default"] = [];
+			}
+
+			var tab_ul_li_html = '';
+			var tab_content_html = '';
+			var shunt_rules_table_template = document.getElementById("shunt_rules-table-template");
+			var shunt_rule_template = document.getElementById("shunt_rule-tr-template");
+			var default_group = null
+			for (let group in group_shunt_rules) {
+				if (default_group == null)
+					default_group = group
+
+				var table_html = "";
+				if (true) {
+					var new_shunt_rules_table_dom = shunt_rules_table_template.cloneNode(true);
+					var _html = new_shunt_rules_table_dom.innerHTML;
+					_html = _html.split("{{group}}").join(group);
+					var shunt_rule_tr_html = "";
+					for (var i = 0; i < group_shunt_rules[group].length; i++) {
+						let o = group_shunt_rules[group][i]
+						var newDom = shunt_rule_template.cloneNode(true);
+						newDom.classList.add("cbi-rowstyle-" + (i % 2 + 1));
+						var innerHTML = newDom.innerHTML;
+						innerHTML = innerHTML.split("{{id}}").join(o[".name"]);
+						innerHTML = innerHTML.split("{{group}}").join(o["group"] || "");
+						innerHTML = innerHTML.split("{{remarks}}").join(o["remarks"] || "");
+
+						shunt_rule_tr_html += innerHTML
+					}
+					_html = _html.split("{{shunt_rule-tr}}").join(shunt_rule_tr_html);
+					table_html = _html;
+				}
+
+				var group_name = group
+				if (group === "default") {
+					group_name = "<%:default%>"
+				}
+
+				tab_ul_li_html +=
+					'<li group_name="' + group + '" id="tab.<%=appname%>.shunt_rules.' + group + '" class="cbi-tab">' +
+						'<a onclick="this.blur(); return cbi_t_switch(\'<%=appname%>.shunt_rules\', \'' + group + '\')" href="<%=REQUEST_URI%>?tab.<%=appname%>.shunt_rules=' + group + '">' + escape_html(group_name) + " | " + "<font style='color: red'>" + group_shunt_rules[group].length + '</font></a>' +
+					'</li>'
+				tab_content_html +=
+					'<div class="cbi-tabcontainer" id="container.<%=appname%>.shunt_rules.' + group + '" style="display: none;">' +
+					'' + table_html +
+					'</div>'
+			}
+			
+			function addTabDOM(li, content) {
+				let tab_ul_html = '<ul class="cbi-tabmenu">';
+				let tab_content_html = '<fieldset class="cbi-section-shunt_rule cbi-section-shunt_rule-tabbed" id="cbi-<%=appname%>-shunt_rules">';
+				if (li) {
+					tab_ul_html += li;
+				}
+				if (content) {
+					tab_content_html += content;
+				}
+				tab_ul_html += '</ul>';
+				tab_content_html += '</fieldset>';
+				return tab_ul_html + tab_content_html;
+			}
+
+			document.getElementById("shunt_rule_list").innerHTML = addTabDOM(tab_ul_li_html, tab_content_html);
+
+			for (let group in group_shunt_rules) {
+				cbi_t_add("<%=appname%>.shunt_rules", group)
+			}
+
+			if (default_group) {
+				cbi_t_switch("<%=appname%>.shunt_rules", default_group)
+			}
+			
+			origin_group_shunt_rule_order = {};
+			for (let group in group_shunt_rules) {
+				origin_group_shunt_rule_order[group] = get_shunt_rule_order(group);
+			}
+
+			initAllSortable(group_shunt_rules);
+		});
+	}
+
+	loadNodeList();
+
+	//]]>
+</script>

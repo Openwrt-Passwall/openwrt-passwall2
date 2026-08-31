@@ -15,8 +15,8 @@ env:
   TZ: Asia/Shanghai
   passwall2: ${{ github.repository }}
   packages: Openwrt-Passwall/openwrt-passwall-packages
-  package_names: "chinadns-ng geoview hysteria naiveproxy tcping shadowsocks-rust shadowsocksr-libev simple-obfs sing-box v2ray-geodata v2ray-plugin xray-core"
-  package_release: "chinadns-ng geoview hysteria naiveproxy tcping shadowsocks-rust shadowsocksr-libev simple-obfs sing-box v2ray-geoip v2ray-geosite v2ray-plugin xray-core"
+  package_names: "chinadns-ng geoview tcping shadowsocks-rust shadowsocksr-libev simple-obfs sing-box v2ray-geodata v2ray-plugin xray-core"
+  package_release: "chinadns-ng geoview tcping shadowsocks-rust shadowsocksr-libev simple-obfs sing-box v2ray-geoip v2ray-geosite v2ray-plugin xray-core"
 
 permissions:
   contents: write
@@ -188,6 +188,7 @@ jobs:
           echo "CONFIG_ALL_KMODS=n" >> .config
           echo "CONFIG_ALL=n" >> .config
           echo "CONFIG_AUTOREMOVE=n" >> .config
+          echo "CONFIG_LUCI_LANG_fa=y" >> .config
           echo "CONFIG_LUCI_LANG_ru=y" >> .config
           echo "CONFIG_LUCI_LANG_zh_Hans=y" >> .config
           echo "CONFIG_LUCI_LANG_zh_Hant=y" >> .config
@@ -430,8 +431,6 @@ jobs:
           echo "CONFIG_PACKAGE_luci-app-passwall2_Iptables_Transparent_Proxy=y" >> .config
           echo "CONFIG_PACKAGE_luci-app-passwall2_Nftables_Transparent_Proxy=y" >> .config
           echo "CONFIG_PACKAGE_luci-app-passwall2_INCLUDE_Haproxy=y" >> .config
-          echo "CONFIG_PACKAGE_luci-app-passwall2_INCLUDE_Hysteria=y" >> .config
-          echo "CONFIG_PACKAGE_luci-app-passwall2_INCLUDE_NaiveProxy=y" >> .config
           echo "CONFIG_PACKAGE_luci-app-passwall2_INCLUDE_Shadowsocks_Rust_Client=y" >> .config
           echo "CONFIG_PACKAGE_luci-app-passwall2_INCLUDE_Shadowsocks_Rust_Server=y" >> .config
           echo "CONFIG_PACKAGE_luci-app-passwall2_INCLUDE_ShadowsocksR_Libev_Client=y" >> .config

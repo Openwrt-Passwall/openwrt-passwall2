@@ -121,12 +121,6 @@ msgstr "0 به معنای عدم استفاده است"
 msgid "Current node: %s"
 msgstr "گره فعلی: %s"
 
-msgid "Direct domain DNS routing"
-msgstr "مسیریابی مستقیم DNS دامنه"
-
-msgid "Please note that the program will not start if the format is incorrect!"
-msgstr "لطفا توجه داشته باشید که اگر قالب نادرست باشد، برنامه شروع نخواهد شد!"
-
 msgid "IP:Port mode acceptable, multi value split with english comma."
 msgstr "حالت IP:Port قابل قبول است، مقادیر متعدد را با کاما انگلیسی جدا کنید."
 
@@ -337,8 +331,8 @@ msgstr "آیا از حذف گره‌های انتخاب شده اطمینان د
 msgid "You no select nodes !"
 msgstr "شما هیچ گره‌ای انتخاب نکرده‌اید!"
 
-msgid "Are you sure set to"
-msgstr "آیا مطمئن هستید که تنظیم شود به"
+msgid "Are you sure set this node?"
+msgstr "مطمئنی این گره رو تنظیم کردی؟"
 
 msgid "the server?"
 msgstr "سرور؟"
@@ -970,8 +964,14 @@ msgstr "توجه: مصرف منابع را افزایش می‌دهد."
 msgid "Shunt Rule"
 msgstr "قانون شنت"
 
+msgid "Shunt Rule Group"
+msgstr "گروه قوانین شنت"
+
 msgid "Please note attention to the priority, the higher the order, the higher the priority."
 msgstr "لطفاً به اولویت توجه کنید، هرچه ترتیب بالاتر باشد، اولویت بیشتر است."
+
+msgid "This ID already exists."
+msgstr "این شناسه از قبل وجود دارد."
 
 msgid "Update..."
 msgstr "به‌روزرسانی..."
@@ -1306,6 +1306,12 @@ msgstr "کلید خصوصی"
 msgid "Pre shared key"
 msgstr "کلید از پیش به اشتراک گذاشته شده"
 
+msgid "Allowed IPs"
+msgstr "آی‌پی‌های مجاز"
+
+msgid "Generate key"
+msgstr "کلید تولید کنید"
+
 msgid "Local Address"
 msgstr "آدرس محلی"
 
@@ -1378,24 +1384,6 @@ msgstr "<br />none: پیش‌فرض، بدون استتار، داده‌های 
 msgid "Use it together with the DNS disguised type. You can fill in any domain."
 msgstr "از آن همراه با نوع استتار DNS استفاده کنید. می‌توانید هر دامنه‌ای را وارد کنید."
 
-msgid "Auth"
-msgstr "احراز هویت"
-
-msgid "Socks for authentication"
-msgstr "Socks برای احراز هویت"
-
-msgid "Socks protocol authentication, support anonymous and password."
-msgstr "احراز هویت پروتکل Socks، پشتیبانی از ناشناس و رمز عبور."
-
-msgid "anonymous"
-msgstr "ناشناس"
-
-msgid "User Password"
-msgstr "رمز عبور کاربر"
-
-msgid "Username and Password must be used together!"
-msgstr "نام کاربری و رمز عبور باید با هم استفاده شوند!"
-
 msgid "Prefer firewall tools"
 msgstr "ترجیح ابزارهای فایروال"
 
@@ -1404,18 +1392,6 @@ msgstr "IPv6 TProxy"
 
 msgid "Experimental feature. Make sure that your node supports IPv6."
 msgstr "ویژگی آزمایشی. مطمئن شوید که گره شما از IPv6 پشتیبانی می‌کند."
-
-msgid "Status info"
-msgstr "اطلاعات وضعیت"
-
-msgid "Big icon"
-msgstr "آیکون بزرگ"
-
-msgid "Show node check"
-msgstr "نمایش بررسی گره"
-
-msgid "Show Show IP111"
-msgstr "نمایش نمایش IP111"
 
 msgid "Destination protocol"
 msgstr "پروتکل مقصد"
@@ -1449,6 +1425,12 @@ msgstr "اتصال محلی (Bind Local)"
 
 msgid "When selected, it can only be accessed localhost."
 msgstr "در صورت انتخاب، فقط از طریق localhost قابل دسترسی است."
+
+msgid "Firewall Allow"
+msgstr "فایروال مجاز است"
+
+msgid "Source zone"
+msgstr "منطقه منبع"
 
 msgid "Accept LAN Access"
 msgstr "پذیرش دسترسی شبکه داخلی (LAN)"
@@ -1489,8 +1471,14 @@ msgstr "سمت سرور"
 msgid "Server Config"
 msgstr "پیکربندی سرور"
 
+msgid "Servers Manager"
+msgstr "مدیر سرورها"
+
 msgid "Users Manager"
 msgstr "مدیریت کاربران"
+
+msgid "User Config"
+msgstr "پیکربندی کاربر"
 
 msgid "Logs"
 msgstr "گزارش‌ها (Logs)"
@@ -1503,6 +1491,12 @@ msgstr "فعال‌سازی گزارش گره"
 
 msgid "Log Level"
 msgstr "سطح گزارش"
+
+msgid "Log File"
+msgstr "فایل لاگ"
+
+msgid "View Log"
+msgstr "مشاهده گزارش"
 
 msgid "Not enabled log"
 msgstr "گزارش فعال نیست"
@@ -1750,6 +1744,12 @@ msgstr "حل مشکل DNS دامنه"
 msgid "If the node address is a domain name, this DNS will be used for resolution."
 msgstr "اگر آدرس گره یک نام دامنه باشد، از این DNS برای حل مسئله استفاده خواهد شد."
 
+msgid "Enable Happy Eyeballs"
+msgstr "فعال کردن چشم‌های خوشحال"
+
+msgid "Attempts IPv4 and IPv6 simultaneously; automatically uses the faster connection."
+msgstr "IPv4 و IPv6 را همزمان امتحان می‌کند؛ به‌طور خودکار از اتصال سریع‌تر استفاده می‌کند."
+
 msgid "Supports only Xray or Sing-box node types."
 msgstr "فقط گره‌های نوع Xray یا Sing-box پشتیبانی می‌شوند."
 
@@ -1907,8 +1907,14 @@ msgstr "استفاده از پیکربندی سفارشی"
 msgid "Custom Config"
 msgstr "پیکربندی سفارشی"
 
+msgid "Must be Base64 text!"
+msgstr "متن باید Base64 باشد!"
+
 msgid "Must be JSON text!"
 msgstr "باید متن JSON باشد!"
+
+msgid "Must be UUID format!"
+msgstr "باید فرمت UUID باشه!"
 
 msgid "Geo View"
 msgstr "نمای Geo"
@@ -2147,8 +2153,8 @@ msgstr "پروکسی نکردن همه %s"
 msgid "Use the %s node [%s]"
 msgstr "استفاده از گره %s [%s]"
 
-msgid "Using a node that is different from the global configuration, DNS has been forcibly redirected to a dedicated DNS server."
-msgstr "استفاده از گره‌ای متفاوت از پیکربندی سراسری، DNS به اجبار به سرور DNS اختصاصی هدایت شده است."
+msgid "DNS will redirected to the dedicated DNS server [%s]."
+msgstr "DNS به سرور DNS اختصاصی [%s] هدایت خواهد شد."
 
 msgid "Add direct DNS to %s: %s"
 msgstr "افزودن DNS مستقیم به %s: %s"
@@ -2372,6 +2378,9 @@ msgstr "گره [%s] با موفقیت حل شد، تعداد: %s"
 msgid "Get subscription content for [%s] is empty. This may be due to an invalid subscription address or a network problem. Please diagnose the issue!"
 msgstr "دریافت محتوای اشتراک برای [%s] خالی است. این ممکن است به دلیل آدرس اشتراک نامعتبر یا مشکل شبکه باشد. لطفاً مشکل را بررسی کنید!"
 
+msgid "No Proxy"
+msgstr "بدون پروکسی"
+
 msgid "Proxy"
 msgstr "پروکسی"
 
@@ -2411,5 +2420,23 @@ msgstr "اندازه بسته Gecko (دقیقه)"
 msgid "Gecko Packet Size (max)"
 msgstr "اندازه بسته Gecko (حداکثر)"
 
+msgid "Enable UPnP/NAT-PMP port mapping on your gateway to improve hole punching success."
+msgstr "برای بهبود موفقیت در پانچ کردن حفره، نگاشت پورت UPnP/NAT-PMP را روی گیت‌وی خود فعال کنید."
+
 msgid "valid time (hh:mm)"
 msgstr "زمان معتبر (ساعت:میلی‌متر)"
+
+msgid "Disable TLS Reuse"
+msgstr "غیرفعال کردن استفاده مجدد از TLS"
+
+msgid "Not Set"
+msgstr "تنظیم نشده"
+
+msgid "Cipher Suites"
+msgstr "سوئیت‌های رمزدار"
+
+msgid "Configures the list of supported cipher suites."
+msgstr "فهرست مجموعه‌های رمز پشتیبانی‌شده را پیکربندی می‌کند."
+
+msgid "This username already exists."
+msgstr "این نام کاربری از قبل وجود دارد."

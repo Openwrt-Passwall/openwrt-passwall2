@@ -2,9 +2,9 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![OpenWrt](https://img.shields.io/badge/OpenWrt-21.02%2B-blue)](https://openwrt.org/)
-[![LuCI](https://img.shields.io/badge/LuCI-19.07%2B-green)](https://github.com/openwrt/luci)
+[![LuCI](https://img.shields.io/badge/LuCI-17.01%2B-green)](https://github.com/openwrt/luci)
 
-PassWall2 is a powerful LuCI web interface application for OpenWrt that provides advanced proxy and VPN functionality. It's a comprehensive solution for network traffic management, proxy services, and access control on OpenWrt-based routers.
+PassWall2 is a powerful LuCI web interface application for OpenWrt that provides advanced proxy functionality. It's a comprehensive solution for network traffic management, proxy services, and access control on OpenWrt-based routers.
 
 ## 🛠️ Installation
 
@@ -110,10 +110,10 @@ apk add luci-app-passwall2
 
 ### OpenWrt Version
 - OpenWrt 21.02 or later
-- LuCI 19.07 or later
+- LuCI 17.01 or later
 
 ### Hardware Requirements
-- **Minimum 128MB RAM** (256MB recommended for stability with Xray/VLESS)
+- **Minimum 256MB RAM**
 - Sufficient storage for packages (varies by protocol selection)
 
 ### Core Dependencies
@@ -122,27 +122,26 @@ The following packages should be resolved automatically by the package manager (
 - `coreutils`, `coreutils-base64`, `coreutils-nohup`
 - `curl`, `ip-full`, `libuci-lua`, `lua`, `luci-compat`, `luci-lib-jsonc`
 - `resolveip`, `tcping`, `unzip`
-- `xray-core` (core proxy component)
 - `geoview`, `v2ray-geoip`, `v2ray-geosite` (geo-routing data)
 
 > **Note:** Actual dependencies may vary based on selected features and your OpenWrt build. Ensure you have the necessary feeds configured.
 
 ### Optional Protocol Packages
 Selected during installation based on your needs:
-- Shadowsocks Rust, ShadowsocksR
-- V2Ray/Xray (VMess, VLESS, Trojan)
-- Sing-Box, Hysteria, Hysteria2
-- NaiveProxy, HAProxy
+- Xray
+- Sing-Box
+- Shadowsocks-Rust
+- ShadowsocksR
+- HAProxy
 
 ## 🚀 Features
 
 ### Multi-Protocol Support
-- **Shadowsocks Rust**
-- **V2Ray/Xray** with full protocol support (VMess, VLESS, Trojan)
-- **Sing-Box** with modern proxy features
-- **Hysteria** and **Hysteria2** for high-performance UDP transport
-- **NaiveProxy** for advanced obfuscation
+- **Xray** (HTTP, Socks, Shadowsocks, VMess, VLESS, Trojan, Hysteria2, WireGuard)
+- **Sing-Box** (HTTP, Socks, SSH, Shadowsocks, VMess, VLESS, Trojan, TUIC, Hysteria, Hysteria2, WireGuard, AnyTLS)
+- **Shadowsocks-Rust**
 - **ShadowsocksR** legacy support
+- **HAProxy** The Reliable, High Performance TCP/HTTP Load Balancer
 
 ### Traffic Management
 - **Load Balancing**: Distribute traffic across multiple nodes

@@ -1,5 +1,5 @@
 <%
-local api = require "luci.passwall2.api"
+local api = self.api
 -%>
 
 <style>
@@ -74,7 +74,7 @@ local api = require "luci.passwall2.api"
 		if (!value) {
 			alert("<%:Please enter query content!%>");
 			return;
-        }
+		}
 		lookup_btn.disabled = true;
 		extract_btn.disabled = true;
 		btn.value = '<%:Querying%>';

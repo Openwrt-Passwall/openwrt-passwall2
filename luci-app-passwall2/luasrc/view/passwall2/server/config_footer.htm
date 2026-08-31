@@ -1,10 +1,16 @@
 <%
-local api = self.api
+local map = self.map
+local api = map.api
+local config = map.config
+local section = self.section
 -%>
 <script type="text/javascript">
 	//<![CDATA[
+	let node_id = "<%=section%>";
+	let node_config_url = '<%=api.url("server_config")%>/' + node_id;
+
 	document.addEventListener("DOMContentLoaded", function () {
-		waitForElement('select[name*="<%=self.config%>"][name*="type"]', function(el) {
+		waitForElement('select[name*="<%=config%>"][name*="type"]', function(el) {
 			let o_val = el.value;
 			el.addEventListener("change", () => {
 				el.blur();
@@ -12,12 +18,12 @@ local api = self.api
 					let save = true;
 					if (save) {
 						//document.getElementsByClassName('cbi-button-save')[0].click();
-						update_node({
-							enable: getOption("enable").value,
-							remarks: getOption("remarks").value,
-							type: getOption("type").value,
+						server_update_config(node_id, {
+							enable: getOption("<%=config%>", node_id, "enable").value,
+							remarks: getOption("<%=config%>", node_id, "remarks").value,
+							type: getOption("<%=config%>", node_id, "type").value,
 							protocol: ''
-						});
+						}, node_config_url);
 					}
 				}
 			});
