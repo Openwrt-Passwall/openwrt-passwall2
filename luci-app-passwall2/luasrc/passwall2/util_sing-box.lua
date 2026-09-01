@@ -1797,11 +1797,6 @@ function gen_config(var)
 	end
 
 	if COMMON.default_outbound_tag then
-		table.insert(route.rules, {
-			action = "route",
-			port_range = { "0:65535" },
-			outbound = COMMON.default_outbound_tag
-		})
 		route.final = COMMON.default_outbound_tag
 	end
 
