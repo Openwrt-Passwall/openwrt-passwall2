@@ -33,7 +33,7 @@ log(1, api.i18n.translatef("Console Port: %s", console_port))
 fs.mkdir(haproxy_path)
 local haproxy_file = haproxy_path .. "/" .. haproxy_conf
 
-local f_out = io.open(haproxy_file, "a")
+local f_out = io.open(haproxy_file, "w")
 
 local haproxy_config = [[
 global
