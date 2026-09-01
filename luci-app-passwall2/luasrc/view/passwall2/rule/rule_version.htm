@@ -8,7 +8,8 @@ local has_old_geosite = fs.access("/tmp/bak_v2ray/geosite.dat")
 
 <style>
 	div.cbi-value[id$="-geoip_update"],
-	div.cbi-value[id$="-geosite_update"] {
+	div.cbi-value[id$="-geosite_update"],
+	div.cbi-value[id$="-adblock_update"] {
 		display: none !important;
 	}
 </style>
@@ -27,6 +28,10 @@ local has_old_geosite = fs.access("/tmp/bak_v2ray/geosite.dat")
 				<input class="cbi-input-checkbox" type="checkbox" name="geosite" value="1" />
 				geosite
 			</label>
+			<label>
+				<input class="cbi-input-checkbox" type="checkbox" name="adblock" value="1" />
+				广告过滤规则
+			</label>
 			<br><br>
 			<input class="btn cbi-button cbi-button-apply" type="button" id="update_rules_btn" onclick="update_rules(this)" value="<%:Manually update%>" />
 			<% if has_old_geoip then %>
@@ -43,7 +48,7 @@ local has_old_geosite = fs.access("/tmp/bak_v2ray/geosite.dat")
 	//<![CDATA[
 	document.addEventListener('DOMContentLoaded', function () {
 		const flags = [
-			"geoip_update", "geosite_update"
+			"geoip_update", "geosite_update", "adblock_update"
 		];
 		const bindFlags = () => {
 			let allBound = true;
@@ -87,9 +92,9 @@ local has_old_geosite = fs.access("/tmp/bak_v2ray/geosite.dat")
 		var checkBoxList = [];
 		var len = domList.length;
 		while(len--) {
-			var dom = domList[len];　　
-			if(dom.type == 'checkbox' && dom.checked) {　　
-				checkBoxList.push(dom.name);　　
+			var dom = domList[len];
+			if(dom.type == 'checkbox' && dom.checked) {
+				checkBoxList.push(dom.name);
 			}
 		}
 		XHR.get('<%=api.url("update_rules")%>', {
@@ -106,7 +111,7 @@ local has_old_geosite = fs.access("/tmp/bak_v2ray/geosite.dat")
 			}
 		);
 	}
-	
+
 	function rollback_rules(btn, type) {
 		let ori_val = btn.value;
 		btn.disabled = true;
@@ -117,7 +122,7 @@ local has_old_geosite = fs.access("/tmp/bak_v2ray/geosite.dat")
 			function(x, data) {
 				if(x && x.status == 200 && data.code == 1) {
 					alert("<%:Success%>");
-					btn.style.display = "none";
+					btn.style.display = 'none';
 				} else {
 					alert("<%:Error%>");
 					btn.disabled = false;

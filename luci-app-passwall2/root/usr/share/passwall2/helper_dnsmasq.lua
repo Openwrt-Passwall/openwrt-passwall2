@@ -167,6 +167,8 @@ function add_rule(var)
 	local LOCAL_DNS = var["LOCAL_DNS"]
 	local TUN_DNS = var["TUN_DNS"]
 	local NFTFLAG = var["NFTFLAG"]
+	local ADBLOCK = var["ADBLOCK"] or ""
+	local ADBLOCK_CONF = "/usr/share/passwall2/adblock.conf"
 	local CACHE_PATH = api.CACHE_PATH
 	local CACHE_FLAG = "dnsmasq_" .. FLAG
 	local CACHE_DNS_PATH = CACHE_PATH .. "/" .. CACHE_FLAG
@@ -246,7 +248,11 @@ function add_rule(var)
 
 	local cache_text = ""
 	local nodes_address_md5 = sys.exec("echo -n $(uci show %s | grep '\\.address') | md5sum" % c_config)
-	local new_text = TMP_DNSMASQ_PATH .. DNSMASQ_CONF_FILE .. DEFAULT_DNS .. LOCAL_DNS .. TUN_DNS .. nodes_address_md5 .. NFTFLAG
+	local adblock_md5 = ""
+	if ADBLOCK == "1" and fs.access(ADBLOCK_CONF) then
+		adblock_md5 = sys.exec("md5sum " .. ADBLOCK_CONF .. " | awk '{print $1}'")
+	end
+	local new_text = TMP_DNSMASQ_PATH .. DNSMASQ_CONF_FILE .. DEFAULT_DNS .. LOCAL_DNS .. TUN_DNS .. nodes_address_md5 .. NFTFLAG .. ADBLOCK .. adblock_md5
 	if fs.access(CACHE_TEXT_FILE) then
 		for line in io.lines(CACHE_TEXT_FILE) do
 			cache_text = line
@@ -308,6 +314,14 @@ function add_rule(var)
 			end
 			server_out:close()
 			ipset_out:close()
+		end
+
+		if ADBLOCK == "1" and fs.access(ADBLOCK_CONF) then
+			local ad_out = io.open(CACHE_DNS_PATH .. "/002-address.conf", "w")
+			if ad_out then
+				ad_out:write(io.open(ADBLOCK_CONF, "r"):read("*a"))
+				ad_out:close()
+			end
 		end
 
 		local f_out = io.open(CACHE_TEXT_FILE, "a")
