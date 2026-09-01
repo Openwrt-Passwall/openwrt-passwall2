@@ -1,4 +1,4 @@
-msgid "Auto"
+﻿msgid "Auto"
 msgstr "Авто"
 
 msgid "RUNNING"
@@ -2438,3 +2438,30 @@ msgstr "Задает список поддерживаемых наборов ш
 
 msgid "This username already exists."
 msgstr "Это имя пользователя уже существует."
+
+msgid "Adblock"
+msgstr "Блокировка рекламы"
+
+msgid "Select a rule source to enable ad blocking at the DNS stage, effective for both domestic and foreign traffic; select 'Close' to disable. Supports AdGuardHome and DNSMASQ formats, you can fill in other rule source URLs."
+msgstr "Выбор источника правил включает блокировку рекламы на этапе DNS как для внутреннего, так и для внешнего трафика; выберите «Отключить», чтобы отключить. Поддерживаются списки в форматах AdGuardHome и DNSMASQ, можно указать свой URL источника правил."
+
+msgid "No adblock rule URL configured, skip."
+msgstr "URL источника правил блокировки рекламы не настроен, пропуск."
+
+msgid "Adblock rules update success."
+msgstr "Правила блокировки рекламы обновлены успешно."
+
+msgid "Adblock rules update failed."
+msgstr "Не удалось обновить правила блокировки рекламы."
+
+msgid "Adblock rule source may be invalid, please modify it."
+msgstr "Источник правил блокировки рекламы может быть недействителен, пожалуйста, измените его."
+
+msgid "Multiple different adblock rule URLs configured, using the first one."
+msgstr "Настроено несколько разных URL-адресов правил блокировки рекламы, будет использован первый."
+
+msgid "Adblock rules version is the same and does not need to be updated."
+msgstr "Версия правил блокировки рекламы не изменилась, обновление не требуется."
+
+msgid "adblock"
+msgstr "правила блокировки рекламы"
