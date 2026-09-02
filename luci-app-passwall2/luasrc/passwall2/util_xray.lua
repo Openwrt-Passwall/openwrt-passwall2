@@ -1824,7 +1824,6 @@ function gen_config(var)
 					if value.domain and value.outboundTag then
 						local dns_server = nil
 						local dns_outboundTag = value.outboundTag
-						local original_outboundTag = value.outboundTag
 						if value.dns_server then
 							dns_server = api.clone(value.dns_server)
 						elseif value.outboundTag == "direct" then
@@ -1839,7 +1838,7 @@ function gen_config(var)
 								end
 							end
 						end
-						if original_outboundTag == "blackhole" then
+						if value.outboundTag == "blackhole" then
 							table.insert(dns_out_rules, {
 								action = "return",
 								rCode = 0,
