@@ -159,6 +159,35 @@ Selected during installation based on your needs:
 - **Per-Device Rules**: Configure proxy settings per device
 - **Domain/IP Filtering**: Whitelist/blacklist support
 - **Time-based Rules**: Schedule proxy usage
+- **DNS Ad Blocking**: Block ads/trackers network-wide at the DNS stage — see [DNS Ad Blocking](#-dns-ad-blocking)
+
+## 🛡️ DNS Ad Blocking
+
+PassWall2 can block advertisements and trackers at the **DNS resolution stage** on the router. The protection applies **network-wide** to every connected device and covers **both domestic and foreign traffic** — it is not tied to any proxy node or protocol.
+
+### How it works
+
+1. **DNS-layer interception.** When a client queries an ad/tracker domain, dnsmasq answers with a NULL address (`address=/domain/#`, which resolves to `0.0.0.0` for A and `::` for AAAA) **before** any routing or proxy decision is made. The domain therefore never resolves and the ad resource cannot load. Because the block happens at DNS time, it works regardless of whether the traffic would later go direct or through a proxy node.
+2. **Global rule source.** The source is a single global setting (stored under `@global_rules[0].enable_adblock`, not per-node). The chosen list is downloaded, normalized, and written to `/usr/share/passwall2/adblock.conf`.
+3. **Injection into dnsmasq.** On service start, the rule file is copied into each dnsmasq instance as `002-address.conf` (loaded via the instance's `conf-dir`), so the blocking rules take effect immediately for all DNS queries handled by PassWall2.
+
+> **Why a restart is needed after changing/updating rules:** sing-box / xray only read the geo and rule files when the process starts, so selecting a new adblock source or pulling updated rules triggers a service restart to regenerate the DNS configuration. (This differs from tools such as `dae`, where a `reload` is sufficient.)
+
+### Built-in rule sources
+
+| Source | Format | URL |
+| --- | --- | --- |
+| **NEO DEV HOST** | dnsmasq (`address=`) | `https://raw.githubusercontent.com/neodevpro/neodevhost/master/dnsmasq.conf` |
+| **anti-AD** | dnsmasq (`address=`) | `https://anti-ad.net/anti-ad-for-dnsmasq.conf` |
+| **AdGuard DNS Filter** | AdBlock filter | `https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt` |
+| **Custom URL** | Auto-detected | Paste any other rule-source URL (both AdGuardHome and dnsmasq formats are supported) |
+
+The format is auto-detected: if at least half of the lines are `address=` entries it is treated as dnsmasq format (kept as-is, with an AAAA `::` block added for IPv4-only rules); otherwise it is parsed as an AdBlock filter list and converted to `address=/domain/#` rules. A source quality gate rejects lists with fewer than 10 rules or with less than 50% valid domains, so a wrong or broken source fails safe.
+
+### Configuration
+
+- **Enable:** `Services` → `PassWall2` → `Basic Settings` → **Shunt Rules** tab → **Adblock** dropdown. Pick a built-in source, paste your own URL, or select **Close** to disable.
+- **Automatic updates:** `Services` → `PassWall2` → **Rule Update** page → tick **Adblock rules**, then set the update schedule (daily / weekly / loop interval). Updates run through the same cron/loop engine as the geoip/geosite updates.
 
 ## ⚙️ Configuration
 
