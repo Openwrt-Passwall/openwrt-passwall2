@@ -73,16 +73,6 @@ o.default = 2
 o:depends("update_week_mode", "8")
 o.rmempty = true
 
--- Adblock is a global setting, it is not tied to any node.
-o = s:option(Value, "enable_adblock", translate("Adblock"))
-o:value("", translate("Close"))
-o:value("https://raw.githubusercontent.com/neodevpro/neodevhost/master/dnsmasq.conf", "NEO DEV HOST")
-o:value("https://anti-ad.net/anti-ad-for-dnsmasq.conf", "anti-AD")
-o:value("https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt", "AdGuard DNS Filter")
-o.default = ""
-o.rmempty = false
-o.description = translate("Select a rule source to enable ad blocking at the DNS stage, effective for both domestic and foreign traffic; select 'Close' to disable. Supports AdGuardHome and DNSMASQ formats, you can fill in other rule source URLs.")
-
 --- The update option is always hidden by JavaScript.
 local flags = {
 	"geoip_update", "geosite_update", "adblock_update"
