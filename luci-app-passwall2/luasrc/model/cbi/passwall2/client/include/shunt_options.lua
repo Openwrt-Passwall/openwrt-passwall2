@@ -118,14 +118,14 @@ end
 -- Uses add_option for correct tab placement, then overrides cfgvalue/write/remove to
 -- read/write the global @global_rules[0] so the backend (app.sh detect_adblock /
 -- helper_dnsmasq.lua) is unchanged.
-o = add_option(Value, "enable_adblock", translate("广告过滤"))
+o = add_option(Value, "enable_adblock", translate("Adblock"))
 o:value("", translate("Close"))
 o:value("https://raw.githubusercontent.com/neodevpro/neodevhost/master/dnsmasq.conf", "NEO DEV HOST")
 o:value("https://anti-ad.net/anti-ad-for-dnsmasq.conf", "anti-AD")
 o:value("https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt", "AdGuard DNS Filter")
 o.default = ""
 o.rmempty = false
-o.description = translate("选择一个规则源以在 DNS 阶段启用广告拦截，对国内外流量均生效；选 Close 关闭。支持 AdGuardHome 与 DNSMASQ 格式，也可填写其他规则源 URL。此设置为全局，不随单个分流节点变化。")
+o.description = translate("Select a rule source to enable ad blocking at the DNS stage, effective for both domestic and foreign traffic; select 'Close' to disable. Supports AdGuardHome and DNSMASQ formats, you can fill in other rule source URLs.")
 o.cfgvalue = function(self, section) return m:get("@global_rules[0]", "enable_adblock") end
 o.write = function(self, section, value) m:set("@global_rules[0]", "enable_adblock", value) end
 o.remove = function(self, section) m:del("@global_rules[0]", "enable_adblock") end

@@ -2426,3 +2426,12 @@ msgstr "配置支持的密码套件列表。"
 
 msgid "This username already exists."
 msgstr "该用户名已存在。"
+
+msgid "Adblock"
+msgstr "广告过滤"
+
+msgid "adblock"
+msgstr "广告过滤规则"
+
+msgid "Select a rule source to enable ad blocking at the DNS stage, effective for both domestic and foreign traffic; select 'Close' to disable. Supports AdGuardHome and DNSMASQ formats, you can fill in other rule source URLs."
+msgstr "选择一个规则源以在 DNS 阶段启用广告拦截，对国内外流量均生效；选「关闭」则禁用。支持 AdGuardHome 与 DNSMASQ 格式，也可填写其他规则源 URL。"
