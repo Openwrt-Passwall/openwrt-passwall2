@@ -2430,6 +2430,21 @@ msgstr "该用户名已存在。"
 msgid "Adblock"
 msgstr "广告过滤"
 
+msgid "Failed to update the adblock rules, please try again later or change the URL."
+msgstr "广告过滤规则更新失败，请稍后重试或更换 URL。"
+
+msgid "No adblock rule URL configured, skip."
+msgstr "未配置广告过滤规则 URL，跳过。"
+
+msgid "The adblock rule source may be invalid, please modify it and try again."
+msgstr "广告过滤规则源可能无效，请修改后重试。"
+
+msgid "The adblock rules are already up to date, no update needed."
+msgstr "广告过滤规则已是最新，无需更新。"
+
+msgid "The adblock rules have been updated successfully."
+msgstr "广告过滤规则更新成功。"
+
 msgid "adblock"
 msgstr "广告过滤规则"
 
