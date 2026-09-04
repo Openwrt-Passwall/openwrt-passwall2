@@ -2450,20 +2450,17 @@ msgstr "انتخاب منبع قوانین، مسدودسازی تبلیغات �
 msgid "No adblock rule URL configured, skip."
 msgstr "URL منبع قوانین تبلیغات پیکربندی نشده، رد شدن."
 
-msgid "Adblock rules update success."
+msgid "Failed to update the adblock rules, please try again later or change the URL."
+msgstr "به‌روزرسانی قوانین مسدودسازی تبلیغات ناموفق بود، لطفاً بعداً دوباره امتحان کنید یا URL را تغییر دهید."
+
+msgid "The adblock rule source may be invalid, please modify it and try again."
+msgstr "ممکن است منبع قوانین مسدودسازی تبلیغات نامعتبر باشد، لطفاً آن را اصلاح کرده و دوباره امتحان کنید."
+
+msgid "The adblock rules are already up to date, no update needed."
+msgstr "قوانین مسدودسازی تبلیغات در حال حاضر به‌روز هستند و نیازی به به‌روزرسانی نیست."
+
+msgid "The adblock rules have been updated successfully."
 msgstr "قوانین مسدودسازی تبلیغات با موفقیت به‌روزرسانی شد."
-
-msgid "Adblock rules update failed."
-msgstr "به‌روزرسانی قوانین مسدودسازی تبلیغات ناموفق بود."
-
-msgid "Adblock rule source may be invalid, please modify it."
-msgstr "ممکن است منبع قوانین مسدودسازی تبلیغات نامعتبر باشد، لطفاً آن را اصلاح کنید."
-
-msgid "Multiple different adblock rule URLs configured, using the first one."
-msgstr "چندین URL مختلف برای قوانین مسدودسازی تبلیغات پیکربندی شده است، از اولین مورد استفاده می‌شود."
-
-msgid "Adblock rules version is the same and does not need to be updated."
-msgstr "نسخه قوانین مسدودسازی تبلیغات یکسان است و نیازی به به‌روزرسانی نیست."
 
 msgid "adblock"
 msgstr "قوانین مسدودسازی تبلیغات"

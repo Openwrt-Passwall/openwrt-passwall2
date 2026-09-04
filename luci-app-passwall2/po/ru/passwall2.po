@@ -2448,20 +2448,17 @@ msgstr "Выбор источника правил включает блокир
 msgid "No adblock rule URL configured, skip."
 msgstr "URL источника правил блокировки рекламы не настроен, пропуск."
 
-msgid "Adblock rules update success."
-msgstr "Правила блокировки рекламы обновлены успешно."
+msgid "Failed to update the adblock rules, please try again later or change the URL."
+msgstr "Не удалось обновить правила блокировки рекламы, пожалуйста, повторите попытку позже или измените URL."
 
-msgid "Adblock rules update failed."
-msgstr "Не удалось обновить правила блокировки рекламы."
+msgid "The adblock rule source may be invalid, please modify it and try again."
+msgstr "Источник правил блокировки рекламы может быть недействителен, пожалуйста, измените его и повторите попытку."
 
-msgid "Adblock rule source may be invalid, please modify it."
-msgstr "Источник правил блокировки рекламы может быть недействителен, пожалуйста, измените его."
+msgid "The adblock rules are already up to date, no update needed."
+msgstr "Правила блокировки рекламы уже актуальны, обновление не требуется."
 
-msgid "Multiple different adblock rule URLs configured, using the first one."
-msgstr "Настроено несколько разных URL-адресов правил блокировки рекламы, будет использован первый."
-
-msgid "Adblock rules version is the same and does not need to be updated."
-msgstr "Версия правил блокировки рекламы не изменилась, обновление не требуется."
+msgid "The adblock rules have been updated successfully."
+msgstr "Правила блокировки рекламы успешно обновлены."
 
 msgid "adblock"
 msgstr "правила блокировки рекламы"
