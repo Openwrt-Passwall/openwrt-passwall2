@@ -3,7 +3,7 @@
 
 . /usr/share/passwall2/utils.sh
 LOCK_FILE=${LOCK_PATH}/${CONFIG}_lease2hosts.lock
-LEASE_FILE="/tmp/dhcp.leases"
+LEASE_FILE=$(config_t_get dnsmasq leasefile "/tmp/dhcp.leases")
 HOSTS_FILE="$TMP_PATH2/dhcp-hosts"
 TMP_FILE="/tmp/dhcp-hosts.tmp"
 
@@ -15,7 +15,7 @@ fi
 
 reload_dnsmasq_pids() {
 	local pidfile pid
-	find $TMP_PATH/acl -type f -name 'dnsmasq.pid' 2>/dev/null | while read pidfile; do
+	find $TMP_PATH/acl -type f -name '*_dnsmasq.pid' 2>/dev/null | while read pidfile; do
 		if [ -s "$pidfile" ]; then
 			read pid < "$pidfile"
 			if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
