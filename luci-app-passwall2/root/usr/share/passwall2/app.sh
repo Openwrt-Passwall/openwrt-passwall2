@@ -730,6 +730,23 @@ start_haproxy() {
 	ln_run 0 "$(first_type haproxy)" haproxy "/dev/null" -f "${haproxy_path}/${haproxy_conf}"
 }
 
+detect_adblock() {
+	# Adblock is a global setting, it is not tied to any node.
+	# Echo 1 only when a rule source is selected and the rule file is present.
+	local __url
+	__url=$(uci -q get "passwall2.@global_rules[0].enable_adblock")
+	case "${__url}" in
+		""|0|1)
+			# Disabled: drop any stale rule file so dnsmasq can never load it again.
+			rm -f "/usr/share/passwall2/adblock.conf"
+			echo "0"
+			;;
+		*)
+			[ -f "/usr/share/passwall2/adblock.conf" ] && echo "1" || echo "0"
+			;;
+	esac
+}
+
 run_copy_dnsmasq() {
 	local flag listen_port local_dns tun_dns default_dns
 	eval_set_val $@
@@ -752,6 +769,7 @@ run_copy_dnsmasq() {
 	json_add_string "TUN_DNS" "${tun_dns}"
 	json_add_string "NFTFLAG" "${nftflag:-0}"
 	json_add_string "NO_LOGIC_LOG" "${NO_LOGIC_LOG:-0}"
+	json_add_string "ADBLOCK" "$(detect_adblock)"
 	lua $APP_PATH/helper_dnsmasq.lua add_rule "$(json_dump)"
 
 	ln_run 0 "$(first_type dnsmasq)" "dnsmasq_${flag}" "/dev/null" -C ${dnsmasq_conf} -x ${dnsmasq_pid}
@@ -879,6 +897,7 @@ acl_node() {
 				json_add_string "TUN_DNS" "${DNSMASQ_TUN_DNS}"
 				json_add_string "NFTFLAG" "${nftflag:-0}"
 				json_add_string "NO_LOGIC_LOG" "${NO_LOGIC_LOG:-0}"
+				json_add_string "ADBLOCK" "$(detect_adblock)"
 				lua $APP_PATH/helper_dnsmasq.lua add_rule "$(json_dump)"
 				uci -q add_list dhcp.@dnsmasq[0].addnmount=${GLOBAL_DNSMASQ_CONF_PATH}
 				uci -q commit dhcp

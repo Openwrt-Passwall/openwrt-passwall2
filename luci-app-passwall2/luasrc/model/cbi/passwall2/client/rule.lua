@@ -75,7 +75,7 @@ o.rmempty = true
 
 --- The update option is always hidden by JavaScript.
 local flags = {
-	"geoip_update", "geosite_update"
+	"geoip_update", "geosite_update", "adblock_update"
 }
 for _, f in ipairs(flags) do
 	o = s:option(Flag, f)

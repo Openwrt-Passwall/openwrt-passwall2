@@ -1,4 +1,4 @@
-﻿msgid "Auto"
+﻿﻿msgid "Auto"
 msgstr "自動"
 
 msgid "RUNNING"
@@ -2432,3 +2432,27 @@ msgstr "配置支援的密碼套件列表。"
 
 msgid "This username already exists."
 msgstr "該用戶名已存在。"
+
+msgid "Adblock"
+msgstr "廣告過濾"
+
+msgid "Select a rule source to enable ad blocking at the DNS stage, effective for both domestic and foreign traffic; select 'Close' to disable. Supports AdGuardHome and DNSMASQ formats, you can fill in other rule source URLs."
+msgstr "選擇規則源即在 DNS 解析階段攔截廣告域名，對國內/國外流量均生效；選「關閉」則不啟用。支持 AdGuardHome 與 DNSMASQ 格式規則列表，可自由填寫其它規則源 URL。"
+
+msgid "No adblock rule URL configured, skip."
+msgstr "未配置廣告過濾規則 URL，跳過。"
+
+msgid "Failed to update the adblock rules, please try again later or change the URL."
+msgstr "廣告過濾規則更新失敗，請稍後重試或更換 URL。"
+
+msgid "The adblock rule source may be invalid, please modify it and try again."
+msgstr "廣告過濾規則來源可能無效，請修改後重試。"
+
+msgid "The adblock rules are already up to date, no update needed."
+msgstr "廣告過濾規則已是最新，無需更新。"
+
+msgid "The adblock rules have been updated successfully."
+msgstr "廣告過濾規則更新成功。"
+
+msgid "adblock"
+msgstr "廣告過濾規則"

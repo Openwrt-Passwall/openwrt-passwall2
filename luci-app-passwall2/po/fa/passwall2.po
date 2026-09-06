@@ -1,4 +1,4 @@
-msgid "Auto"
+﻿msgid "Auto"
 msgstr "خودکار"
 
 msgid "RUNNING"
@@ -2440,3 +2440,27 @@ msgstr "فهرست مجموعه‌های رمز پشتیبانی‌شده را �
 
 msgid "This username already exists."
 msgstr "این نام کاربری از قبل وجود دارد."
+
+msgid "Adblock"
+msgstr "مسدودسازی تبلیغات"
+
+msgid "Select a rule source to enable ad blocking at the DNS stage, effective for both domestic and foreign traffic; select 'Close' to disable. Supports AdGuardHome and DNSMASQ formats, you can fill in other rule source URLs."
+msgstr "انتخاب منبع قوانین، مسدودسازی تبلیغات در مرحله DNS را برای ترافیک داخلی و خارجی فعال می‌کند؛ برای غیرفعال‌سازی «بستن» را انتخاب کنید. از فرمت‌های AdGuardHome و DNSMASQ پشتیبانی می‌شود و می‌توانید URL منبع قوانین را سفارشی کنید."
+
+msgid "No adblock rule URL configured, skip."
+msgstr "URL منبع قوانین تبلیغات پیکربندی نشده، رد شدن."
+
+msgid "Failed to update the adblock rules, please try again later or change the URL."
+msgstr "به‌روزرسانی قوانین مسدودسازی تبلیغات ناموفق بود، لطفاً بعداً دوباره امتحان کنید یا URL را تغییر دهید."
+
+msgid "The adblock rule source may be invalid, please modify it and try again."
+msgstr "ممکن است منبع قوانین مسدودسازی تبلیغات نامعتبر باشد، لطفاً آن را اصلاح کرده و دوباره امتحان کنید."
+
+msgid "The adblock rules are already up to date, no update needed."
+msgstr "قوانین مسدودسازی تبلیغات در حال حاضر به‌روز هستند و نیازی به به‌روزرسانی نیست."
+
+msgid "The adblock rules have been updated successfully."
+msgstr "قوانین مسدودسازی تبلیغات با موفقیت به‌روزرسانی شد."
+
+msgid "adblock"
+msgstr "قوانین مسدودسازی تبلیغات"
