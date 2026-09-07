@@ -2426,3 +2426,7 @@ msgstr "配置支持的密码套件列表。"
 
 msgid "This username already exists."
 msgstr "该用户名已存在。"
+
+msgid "Update Options"
+msgstr "更新选项"
+
