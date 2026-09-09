@@ -2460,5 +2460,8 @@ msgstr "Правила блокировки рекламы уже актуаль
 msgid "The adblock rules have been updated successfully."
 msgstr "Правила блокировки рекламы успешно обновлены."
 
+msgid "The adblock rules were truncated to %s entries."
+msgstr "Правила блокировки рекламы были усечены до %s записей."
+
 msgid "adblock"
 msgstr "правила блокировки рекламы"

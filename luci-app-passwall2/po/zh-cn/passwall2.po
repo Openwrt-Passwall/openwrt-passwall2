@@ -2448,6 +2448,9 @@ msgstr "广告过滤规则已是最新，无需更新。"
 msgid "The adblock rules have been updated successfully."
 msgstr "广告过滤规则更新成功。"
 
+msgid "The adblock rules were truncated to %s entries."
+msgstr "广告过滤规则已被截断为 %s 条。"
+
 msgid "adblock"
 msgstr "广告过滤规则"
 

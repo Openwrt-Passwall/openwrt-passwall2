@@ -173,6 +173,12 @@ local ADBLOCK_CONF = "/usr/share/passwall2/adblock.conf"
 -- Remembers which URL produced the current ADBLOCK_CONF, so that changing the
 -- source invalidates the stale rules instead of keeping them in effect.
 local ADBLOCK_URL_FILE = "/usr/share/passwall2/adblock.url"
+-- Cap on the generated rule lines. Public lists reach roughly 220k lines
+-- (a 100k domain list plus the IPv6 counterpart of every IPv4 rule) and
+-- dnsmasq keeps every entry in memory, so bound it to stay safe on low memory
+-- devices. The parser stops as soon as the cap is hit instead of building the
+-- whole table first, which would defeat the purpose.
+local MAX_ADBLOCK_RULES = 300000
 
 local function get_adblock_url()
 	-- Adblock is a global setting, it is not tied to any node.
@@ -249,17 +255,24 @@ local function fetch_adblock()
 	-- Convert to a clean address= rule list and validate source quality
 	local lines_out = {}
 	local total_out, valid_out = 0, 0
+	local truncated = false
 	local function is_valid_domain(domain)
 		domain = domain:gsub("%.$", "")
 		local last = domain:match("%.([^.]+)$")
 		return last ~= nil and last:match("^[%a]") ~= nil and not domain:find("%s")
 	end
 	local function add_line(line, domain)
+		if truncated then
+			return
+		end
 		total_out = total_out + 1
 		if is_valid_domain(domain) then
 			valid_out = valid_out + 1
 		end
 		lines_out[#lines_out + 1] = line
+		if #lines_out >= MAX_ADBLOCK_RULES then
+			truncated = true
+		end
 	end
 	-- Heuristic threshold: treat the source as dnsmasq format when at least half of
 	-- its lines are address= entries. A boundary source (roughly half address= and
@@ -269,14 +282,18 @@ local function fetch_adblock()
 	if total_lines > 0 and dnsmasq_lines * 2 >= total_lines then
 		-- Already dnsmasq format; keep only address= lines to avoid mixing in hosts/rule lines
 		for line in raw:gmatch("[^\r\n]+") do
+			if truncated then break end
 			if line:find("^address=") == 1 then
 				local domain, ip = line:match("^address=/(.-)/(.*)$")
 				if domain then
 					domain = domain:lower()
 					add_line(line, domain)
 					-- IPv4-only rules also need an AAAA block for pure IPv6 networks
-					if ip and ip:match("^%d+%.%d+%.%d+%.%d+$") then
+					if not truncated and ip and ip:match("^%d+%.%d+%.%d+%.%d+$") then
 						lines_out[#lines_out + 1] = string.format("address=/%s/::", domain)
+						if #lines_out >= MAX_ADBLOCK_RULES then
+							truncated = true
+						end
 					end
 				end
 			end
@@ -286,10 +303,12 @@ local function fetch_adblock()
 		-- Skip comment lines, AdBlock exception rules and pure IP matches
 		local seen = {}
 		for line in raw:gmatch("[^\r\n]+") do
+			if truncated then break end
 			-- Known limit: only whole-line comments are skipped, so a trailing comment
 			-- can still yield junk tokens; the quality gate below rejects such sources.
 			if not line:match("^[!\\[@#]") and line:find("^@@") ~= 1 then
 				for domain in line:gmatch("([%w%-%_]+%.[%w%.%-%_]+)") do
+					if truncated then break end
 					domain = domain:lower()
 					if not domain:match("^%d+%.%d+%.%d+%.%d+$") and not seen[domain] then
 						seen[domain] = true
@@ -307,6 +326,9 @@ local function fetch_adblock()
 		os.remove(new_conf)
 		log(1, api.i18n.translate("The adblock rule source may be invalid, please modify it and try again."))
 		return
+	end
+	if truncated then
+		log(1, api.i18n.translatef("The adblock rules were truncated to %s entries.", MAX_ADBLOCK_RULES))
 	end
 	local out = io.open(new_conf, "w")
 	if not out then
