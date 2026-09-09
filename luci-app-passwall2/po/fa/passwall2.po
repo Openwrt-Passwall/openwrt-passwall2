@@ -1,4 +1,4 @@
-﻿msgid "Auto"
+msgid "Auto"
 msgstr "خودکار"
 
 msgid "RUNNING"

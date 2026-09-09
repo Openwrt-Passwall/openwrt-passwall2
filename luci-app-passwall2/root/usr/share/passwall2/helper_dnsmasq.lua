@@ -317,10 +317,16 @@ function add_rule(var)
 		end
 
 		if ADBLOCK == "1" and fs.access(ADBLOCK_CONF) then
-			local ad_out = io.open(CACHE_DNS_PATH .. "/002-address.conf", "w")
-			if ad_out then
-				ad_out:write(io.open(ADBLOCK_CONF, "r"):read("*a"))
-				ad_out:close()
+			-- Open the source first: a nil handle here would abort dnsmasq
+			-- config generation entirely (and therefore break DNS).
+			local ad_src = io.open(ADBLOCK_CONF, "r")
+			if ad_src then
+				local ad_out = io.open(CACHE_DNS_PATH .. "/002-address.conf", "w")
+				if ad_out then
+					ad_out:write(ad_src:read("*a"))
+					ad_out:close()
+				end
+				ad_src:close()
 			end
 		end
 

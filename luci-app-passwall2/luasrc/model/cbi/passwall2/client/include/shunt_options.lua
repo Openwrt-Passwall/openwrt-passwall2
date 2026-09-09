@@ -147,7 +147,10 @@ o.rmempty = false
 o.description = translate("Select a rule source to enable ad blocking at the DNS stage, effective for both domestic and foreign traffic; select 'Close' to disable. Supports AdGuardHome and DNSMASQ formats, you can fill in other rule source URLs.")
 o.cfgvalue = function(self, section) return m:get("@global_rules[0]", "enable_adblock") end
 o.write = function(self, section, value) m:set("@global_rules[0]", "enable_adblock", value) end
-o.remove = function(self, section) m:del("@global_rules[0]", "enable_adblock") end
+-- This option is only hosted on this tab, but it writes a GLOBAL setting.
+-- Deleting it when the hosting node is removed would silently reset that
+-- global config, so removal is a no-op; writing "" already means "disabled".
+o.remove = function(self, section) end
 
 shunt_group = add_option(ListValue, "shunt_group", translate("Shunt Rule Group"))
 shunt_group:value("", translate("default"))

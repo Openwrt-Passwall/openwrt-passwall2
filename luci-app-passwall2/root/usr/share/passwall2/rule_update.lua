@@ -15,7 +15,7 @@ local reboot = 0
 local geoip_update = "0"
 local geosite_update = "0"
 local adblock_update = "0"
-local adblock_update_saved = uci_get("@global_rules[0]", "adblock_update") or "0"
+local adblock_update_saved = uci_get("@global_rules[0]", "adblock_update") or "1"
 
 local geoip_url = uci_get("@global_rules[0]", "geoip_url") or "https://github.com/Loyalsoldier/geoip/releases/latest/download/geoip.dat"
 local geosite_url = uci_get("@global_rules[0]", "geosite_url") or "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat"
@@ -170,6 +170,9 @@ local function remove_tmp_geofile(name)
 end
 
 local ADBLOCK_CONF = "/usr/share/passwall2/adblock.conf"
+-- Remembers which URL produced the current ADBLOCK_CONF, so that changing the
+-- source invalidates the stale rules instead of keeping them in effect.
+local ADBLOCK_URL_FILE = "/usr/share/passwall2/adblock.url"
 
 local function get_adblock_url()
 	-- Adblock is a global setting, it is not tied to any node.
@@ -204,12 +207,43 @@ local function fetch_adblock()
 	end
 	local raw = f:read("*a")
 	f:close()
+	-- Recognise the rule syntaxes we can actually consume. Anything else is
+	-- treated as junk, so an unintended payload (HTML error page, JSON API
+	-- response, ...) is rejected instead of being mined for domain lookalikes.
+	local function is_rule_line(line)
+		if line:find("^address=") == 1 then
+			return true -- dnsmasq: address=/domain/ip
+		end
+		if line:find("^||") == 1 or line:find("^@@") == 1 or line:find("^|") == 1 then
+			return true -- AdBlock: ||domain^ / @@||domain^
+		end
+		if line:match("^%d+%.%d+%.%d+%.%d+%s+%S") or line:match("^::%s+%S") then
+			return true -- hosts: 0.0.0.0 domain
+		end
+		if line:match("^[%w%.%-%_]+$") then
+			return true -- plain domain list
+		end
+		if line:find("^/") == 1 and #line > 2 and line:sub(-1) == "/" then
+			return true -- /regex/
+		end
+		return false
+	end
+
 	-- Judge format by the proportion of lines starting with "address="
 	local total_lines, dnsmasq_lines = 0, 0
+	local cand_lines, rule_lines = 0, 0
 	for line in raw:gmatch("[^\r\n]+") do
 		total_lines = total_lines + 1
 		if line:find("^address=") == 1 then
 			dnsmasq_lines = dnsmasq_lines + 1
+		end
+		-- Count how many non comment lines use a rule syntax we understand
+		local tline = line:match("^%s*(.-)%s*$")
+		if tline ~= "" and not tline:match("^[!\[@#]") then
+			cand_lines = cand_lines + 1
+			if is_rule_line(tline) then
+				rule_lines = rule_lines + 1
+			end
 		end
 	end
 	-- Convert to a clean address= rule list and validate source quality
@@ -266,8 +300,9 @@ local function fetch_adblock()
 			end
 		end
 	end
-	-- Source quality check: too few rules or too many junk tokens => invalid source
-	if total_out < 10 or valid_out * 2 < total_out then
+	-- Source quality check: too few rules, too many junk tokens, or a payload
+	-- whose lines do not look like rules at all (HTML/JSON error page)
+	if total_out < 10 or valid_out * 2 < total_out or rule_lines * 2 < cand_lines then
 		os.remove(tmp)
 		os.remove(new_conf)
 		log(1, api.i18n.translate("The adblock rule source may be invalid, please modify it and try again."))
@@ -286,6 +321,13 @@ local function fetch_adblock()
 	-- Compare with existing rules to avoid unnecessary restarts
 	if fs.access(ADBLOCK_CONF) and sys.call(string.format("cmp -s %s %s", new_conf, ADBLOCK_CONF)) == 0 then
 		os.remove(new_conf)
+		-- Content is identical, but the recorded URL may be missing (e.g. after a
+		-- firmware upgrade), so refresh it to keep the rules usable.
+		local url_out = io.open(ADBLOCK_URL_FILE, "w")
+		if url_out then
+			url_out:write(url)
+			url_out:close()
+		end
 		log(1, api.i18n.translate("The adblock rules are already up to date, no update needed."))
 		return
 	end
@@ -296,6 +338,13 @@ local function fetch_adblock()
 		return
 	end
 	reboot = 1
+	-- Record the source URL so detect_adblock() can tell whether the rule file
+	-- still matches the configured source.
+	local url_out = io.open(ADBLOCK_URL_FILE, "w")
+	if url_out then
+		url_out:write(url)
+		url_out:close()
+	end
 	log(1, api.i18n.translate("The adblock rules have been updated successfully."))
 end
 
@@ -314,7 +363,7 @@ if arg2 then
 else
 	geoip_update = uci_get("@global_rules[0]", "geoip_update") or "1"
 	geosite_update = uci_get("@global_rules[0]", "geosite_update") or "1"
-	adblock_update = uci_get("@global_rules[0]", "adblock_update") or "0"
+	adblock_update = uci_get("@global_rules[0]", "adblock_update") or "1"
 end
 if geoip_update == "0" and geosite_update == "0" and adblock_update == "0" then
 	os.exit(0)

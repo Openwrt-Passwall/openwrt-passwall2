@@ -732,17 +732,25 @@ start_haproxy() {
 
 detect_adblock() {
 	# Adblock is a global setting, it is not tied to any node.
-	# Echo 1 only when a rule source is selected and the rule file is present.
-	local __url
+	# Echo 1 only when a rule source is selected, the rule file is present and
+	# that file was really produced by the source currently configured. Without
+	# the URL comparison a source switch would keep serving the old rules.
+	local __url __saved
 	__url=$(uci -q get "passwall2.@global_rules[0].enable_adblock")
 	case "${__url}" in
 		""|0|1)
 			# Disabled: drop any stale rule file so dnsmasq can never load it again.
 			rm -f "/usr/share/passwall2/adblock.conf"
+			rm -f "/usr/share/passwall2/adblock.url"
 			echo "0"
 			;;
 		*)
-			[ -f "/usr/share/passwall2/adblock.conf" ] && echo "1" || echo "0"
+			__saved=$(cat "/usr/share/passwall2/adblock.url" 2>/dev/null)
+			if [ -n "${__saved}" ] && [ "${__saved}" = "${__url}" ] && [ -f "/usr/share/passwall2/adblock.conf" ]; then
+				echo "1"
+			else
+				echo "0"
+			fi
 			;;
 	esac
 }
