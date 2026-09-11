@@ -154,7 +154,7 @@ get_geoip() {
 	[ ! -s "${output_path}" ] && {
 		local geoip_path="$(config_n_get @global_rules[0] v2ray_location_asset)"
 		geoip_path="${geoip_path%*/}/geoip.dat"
-		local bin="$(first_type $(config_n_get @global_app[0] geoview_file) geoview)"
+		local bin="$(first_type $(config_n_get @global_app[0] geoview_file "/usr/bin/geoview") geoview)"
 		[ -n "$bin" ] && [ -s "$geoip_path" ] || { echo ""; return; }
 		case "$2" in
 			"ipv4") geoip_type_flag="-ipv6=false" ;;
