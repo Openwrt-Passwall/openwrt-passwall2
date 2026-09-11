@@ -11,8 +11,8 @@ LUA_UTIL_PATH=/usr/lib/lua/luci/passwall2
 UTIL_SINGBOX=$LUA_UTIL_PATH/util_sing-box.lua
 UTIL_SS=$LUA_UTIL_PATH/util_shadowsocks.lua
 UTIL_XRAY=$LUA_UTIL_PATH/util_xray.lua
-SINGBOX_BIN=$(first_type $(config_n_get @global_app[0] sing_box_file "/usr/bin/sing-box") sing-box)
-XRAY_BIN=$(first_type $(config_n_get @global_app[0] xray_file "/usr/bin/xray") xray)
+SINGBOX_BIN=$(first_type $(config_n_get @global_app[0] sing_box_file) sing-box)
+XRAY_BIN=$(first_type $(config_n_get @global_app[0] xray_file) xray)
 
 check_run_environment() {
 	local prefer_nft=$(config_n_get @global_forwarding[0] prefer_nft 1)
