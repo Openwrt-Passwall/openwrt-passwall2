@@ -730,6 +730,50 @@ start_haproxy() {
 	ln_run 0 "$(first_type haproxy)" haproxy "/dev/null" -f "${haproxy_path}/${haproxy_conf}"
 }
 
+detect_adblock() {
+	# Adblock is a global setting, it is not tied to any node.
+	# Echo 1 only when a rule source is selected, the rule file is present and
+	# that file was really produced by the source currently configured. Without
+	# the URL comparison a source switch would keep serving the old rules.
+	local __url __saved
+	__url=$(uci -q get "passwall2.@global_rules[0].enable_adblock")
+	case "${__url}" in
+		""|0|1)
+			# Disabled: drop any stale rule file so dnsmasq can never load it again.
+			rm -f "/usr/share/passwall2/adblock.conf"
+			rm -f "/usr/share/passwall2/adblock.url"
+			echo "0"
+			;;
+		*)
+			__saved=$(cat "/usr/share/passwall2/adblock.url" 2>/dev/null)
+			if [ -n "${__saved}" ] && [ "${__saved}" = "${__url}" ] && [ -f "/usr/share/passwall2/adblock.conf" ]; then
+				echo "1"
+			else
+				echo "0"
+			fi
+			;;
+	esac
+}
+
+auto_adblock_update() {
+	# Mirror the helloworld behaviour: when a rule source is configured but the
+	# cached file was produced by a different source (or is missing entirely),
+	# trigger a background download so a source switch / first enable takes
+	# effect without a manual click. rule_update.lua records the source URL and,
+	# on a successful content change, sets flush_set=1 which restarts the
+	# service and reloads the rules (see fetch_adblock() in rule_update.lua).
+	local __url
+	__url=$(uci -q get "passwall2.@global_rules[0].enable_adblock")
+	case "${__url}" in
+		""|0|1) return 0 ;;
+	esac
+	local __saved=$(cat "/usr/share/passwall2/adblock.url" 2>/dev/null)
+	if [ -z "${__saved}" ] || [ "${__saved}" != "${__url}" ] || [ ! -f "/usr/share/passwall2/adblock.conf" ]; then
+		log 1 "Adblock source changed or not yet downloaded, fetching in the background..."
+		lua $APP_PATH/rule_update.lua log adblock > /dev/null 2>&1 &
+	fi
+}
+
 run_copy_dnsmasq() {
 	local flag listen_port local_dns tun_dns default_dns
 	eval_set_val $@
@@ -752,6 +796,7 @@ run_copy_dnsmasq() {
 	json_add_string "TUN_DNS" "${tun_dns}"
 	json_add_string "NFTFLAG" "${nftflag:-0}"
 	json_add_string "NO_LOGIC_LOG" "${NO_LOGIC_LOG:-0}"
+	json_add_string "ADBLOCK" "$(detect_adblock)"
 	lua $APP_PATH/helper_dnsmasq.lua add_rule "$(json_dump)"
 
 	ln_run 0 "$(first_type dnsmasq)" "dnsmasq_${flag}" "/dev/null" -C ${dnsmasq_conf} -x ${dnsmasq_pid}
@@ -872,6 +917,7 @@ acl_node() {
 				json_add_string "TUN_DNS" "${DNSMASQ_TUN_DNS}"
 				json_add_string "NFTFLAG" "${nftflag:-0}"
 				json_add_string "NO_LOGIC_LOG" "${NO_LOGIC_LOG:-0}"
+				json_add_string "ADBLOCK" "$(detect_adblock)"
 				lua $APP_PATH/helper_dnsmasq.lua add_rule "$(json_dump)"
 				uci -q add_list dhcp.@dnsmasq[0].addnmount=${DEFAULT_DNSMASQ_CONF_PATH}
 				uci -q commit dhcp
@@ -933,6 +979,7 @@ start() {
 			sysctl -w net.bridge.bridge-nf-call-ip6tables=0 >/dev/null 2>&1
 		}
 	fi
+	[ "${ENABLED_DEFAULT_ACL}" == 1 ] || [ "${ENABLED_ACLS}" == 1 ] && auto_adblock_update
 	run_process_queue
 	start_crontab
 	log_i18n 0 "Running complete!"
