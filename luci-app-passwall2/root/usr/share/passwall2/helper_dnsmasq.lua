@@ -120,23 +120,25 @@ function copy_instance(var)
 	local TMP_DNSMASQ_PATH = var["TMP_DNSMASQ_PATH"]
 	local conf_lines = {}
 	local DEFAULT_DNSMASQ_CFGID = sys.exec("echo -n $(uci -q show dhcp.@dnsmasq[0] | awk 'NR==1 {split($0, conf, /[.=]/); print conf[2]}')")
-	for line in io.lines("/tmp/etc/dnsmasq.conf." .. DEFAULT_DNSMASQ_CFGID) do
-		local filter
-		if line:find("passwall2") then filter = true end
-		if line:find("ubus") then filter = true end
-		if line:find("dhcp") then filter = true end
-		if line:find("server=") == 1 then filter = true end
-		if line:find("port=") == 1 then filter = true end
-		if line:find("conf%-dir=") == 1 then
-			filter = true
-			if TMP_DNSMASQ_PATH then
-				local tmp_path = line:sub(1 + #"conf-dir=")
-				sys.call(string.format("cp -r %s/* %s/ 2>/dev/null", tmp_path, TMP_DNSMASQ_PATH))
+	if fs.access("/var/etc/dnsmasq.conf." .. DEFAULT_DNSMASQ_CFGID) then
+		for line in io.lines("/var/etc/dnsmasq.conf." .. DEFAULT_DNSMASQ_CFGID) do
+			local filter
+			if line:find("passwall2") then filter = true end
+			if line:find("ubus") then filter = true end
+			if line:find("dhcp") then filter = true end
+			if line:find("server=") == 1 then filter = true end
+			if line:find("port=") == 1 then filter = true end
+			if line:find("conf%-dir=") == 1 then
+				filter = true
+				if TMP_DNSMASQ_PATH then
+					local tmp_path = line:sub(1 + #"conf-dir=")
+					sys.call(string.format("cp -r %s/* %s/ 2>/dev/null", tmp_path, TMP_DNSMASQ_PATH))
+				end
 			end
-		end
-		if line:find("address=") == 1 or (line:find("server=") == 1 and line:find("/")) then filter = nil end
-		if not filter then
-			tinsert(conf_lines, line)
+			if line:find("address=") == 1 or (line:find("server=") == 1 and line:find("/")) then filter = nil end
+			if not filter then
+				tinsert(conf_lines, line)
+			end
 		end
 	end
 	tinsert(conf_lines, "port=" .. LISTEN_PORT)
