@@ -1053,8 +1053,8 @@ get_config() {
 	DEFAULT_DNSMASQ_CONF_DIR=/tmp/dnsmasq.d
 	DNSMASQ_CONF_DIR=${DEFAULT_DNSMASQ_CONF_DIR}
 	DEFAULT_DNSMASQ_CFGID="$(uci -q show "dhcp.@dnsmasq[0]" | awk 'NR==1 {split($0, conf, /[.=]/); print conf[2]}')"
-	if [ -f "/tmp/etc/dnsmasq.conf.$DEFAULT_DNSMASQ_CFGID" ]; then
-		DNSMASQ_CONF_DIR="$(awk -F '=' '/^conf-dir=/ {print $2}' "/tmp/etc/dnsmasq.conf.$DEFAULT_DNSMASQ_CFGID")"
+	if [ -f "/var/etc/dnsmasq.conf.$DEFAULT_DNSMASQ_CFGID" ]; then
+		DNSMASQ_CONF_DIR="$(awk -F '=' '/^conf-dir=/ {print $2}' "/var/etc/dnsmasq.conf.$DEFAULT_DNSMASQ_CFGID")"
 		if [ -n "$DNSMASQ_CONF_DIR" ]; then
 			DNSMASQ_CONF_DIR=${DNSMASQ_CONF_DIR%*/}
 		else
