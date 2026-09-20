@@ -125,7 +125,7 @@ function copy_instance(var)
 	
 	local retry = 5
 	while not fs.access(conf_file) and retry > 0 do
-		sys.call("sleep 1")
+		api.nixio.nanosleep(1, 0)
 		retry = retry - 1
 	end
 
