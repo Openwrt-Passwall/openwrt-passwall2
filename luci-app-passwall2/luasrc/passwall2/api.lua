@@ -1799,6 +1799,79 @@ function get_socks_backup_nodes(id)
 	return table.concat(backup_nodes, " ")
 end
 
+function get_active_node_addresses(node_id)
+	local addresses, seen, visited = {}, {}, {}
+	local global = uci_get_c("@global[0]") or {}
+	local function add(address)
+		if not address or address == "" then return end
+		address = address:lower():gsub("^%[", ""):gsub("%]$", "")
+		if seen[address] then return end
+		seen[address] = true
+		addresses[#addresses + 1] = address
+	end
+	local function visit(id)
+		if not id or visited[id] then return end
+		visited[id] = true
+		local node = uci_get_c(id)
+		if not node then return end
+		if node[".type"] == "socks" then
+			if global.socks_enabled ~= "1" or node.enabled ~= "1" then return end
+			visit(node.node)
+			if node.enable_autoswitch == "1" then
+				for backup in get_socks_backup_nodes(id):gmatch("%S+") do visit(backup) end
+			end
+		elseif node.protocol == "_shunt" then
+			local function visit_rule(name, target)
+				if not target or target:sub(1, 1) == "_" then return end
+				visit(node[name .. "_proxy_tag"] or target)
+			end
+			visit_rule("default", node.default_node)
+			uci_foreach_c("shunt_rules", function(rule)
+				if rule.group == node.shunt_group then visit_rule(rule[".name"], node[rule[".name"]]) end
+			end)
+		elseif node.protocol == "_balancing" or node.protocol == "_urltest" then
+			local members = node.node_add_mode == "batch" and get_batch_nodes(node) or
+				(node.protocol == "_balancing" and node.balancing_node or node.urltest_node)
+			for _, member in ipairs(members or {}) do visit(member) end
+			if node.protocol == "_balancing" then visit(node.fallback_node) end
+		else
+			add(node.address)
+			add(node.download_address)
+			if node.chain_proxy == "1" then visit(node.preproxy_node) end
+			if node.chain_proxy == "2" then visit(node.to_node) end
+		end
+	end
+	visit(node_id)
+	if global.enabled == "1" then visit(global.node) end
+	if global.acl_enable == "1" then
+		uci_foreach_c("acl_rule", function(rule)
+			if rule.enabled ~= "1" or rule.mode == "0" then return end
+			if rule.mode == "2" then visit(global.node) end
+			if rule.tcp_no_redir_ports ~= "1:65535" or rule.udp_no_redir_ports ~= "1:65535" then visit(rule.node) end
+		end)
+	end
+	if global.socks_enabled == "1" then
+		uci_foreach_c("socks", function(socks) visit(socks[".name"]) end)
+	end
+	if uci_get_c("@global_haproxy[0]", "balancing_enable") == "1" then
+		uci_foreach_c("haproxy_config", function(backend)
+			if backend.enabled ~= "1" then return end
+			local node = uci_get_c(backend.lbss)
+			if node then
+				if uci_get_c("@global_haproxy[0]", "health_check_type") == "script_logic" then
+					visit(backend.lbss)
+				else
+					add(node.address)
+				end
+			elseif backend.lbss and backend.lbss ~= "" then
+				add(parseURL(backend.lbss:gsub("#(%d+)$", ":%1")).hostname)
+			end
+		end)
+	end
+	table.sort(addresses)
+	return addresses
+end
+
 function get_core(field, candidates)
 	local v = uci_get_c("@global_subscribe[0]", field)
 	if v and v ~= "" then

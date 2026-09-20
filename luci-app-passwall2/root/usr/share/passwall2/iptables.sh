@@ -559,6 +559,7 @@ load_acl() {
 }
 
 filter_haproxy() {
+	[ "$(config_n_get @global[0] anti_loop_scope all)" = "active" ] && return
 	[ "$(config_n_get @global_haproxy[0] balancing_enable 0)" != "1" ] && return
 	for item in $(uci show $CONFIG | grep ".lbss=" | cut -d "'" -f 2); do
 		local ip=$(get_host_ip ipv4 $(echo $item | awk -F ":" '{print $1}') 1)
@@ -568,12 +569,13 @@ filter_haproxy() {
 }
 
 filter_vpsip() {
-	local ipv4_addrs=$(uci show $CONFIG | grep -E "(.address=|.download_address=)" | cut -d "'" -f 2 | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "^127\.0\.0\.1$")
+	local node_addrs=$(get_vps_ip_addresses)
+	local ipv4_addrs=$(echo "$node_addrs" | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "^127\.0\.0\.1$")
 	[ -n "$ipv4_addrs" ] && {
 		echo "$ipv4_addrs" | sed -e "/^$/d" | sed -e "s/^/add $IPSET_VPS &/g" | awk '{print $0} END{print "COMMIT"}' | ipset -! -R
 		log 1 "$(i18n "Add all %s nodes to %s[%s] direct connection complete." "IPv4" "ipset" "${IPSET_VPS}")"
 	}
-	local ipv6_addrs=$(uci show $CONFIG | grep -E "(.address=|.download_address=)" | cut -d "'" -f 2 | grep -E "([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}")
+	local ipv6_addrs=$(echo "$node_addrs" | grep -E "([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}")
 	[ -n "$ipv6_addrs" ] && {
 		echo "$ipv6_addrs" | sed -e "/^$/d" | sed -e "s/^/add $IPSET_VPS6 &/g" | awk '{print $0} END{print "COMMIT"}' | ipset -! -R
 		log 1 "$(i18n "Add all %s nodes to %s[%s] direct connection complete." "IPv6" "ipset" "${IPSET_VPS6}")"

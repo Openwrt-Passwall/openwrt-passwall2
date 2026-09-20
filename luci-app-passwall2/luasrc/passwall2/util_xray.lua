@@ -1717,9 +1717,16 @@ function gen_config(var)
 
 		if direct_dns_udp_server or direct_dns_tcp_server then
 			local domain = {}
-			local nodes_domain_text = sys.exec('uci show passwall2 | grep ".address=" | cut -d "\'" -f 2 | grep "[a-zA-Z]$" | sort -u')
+			local active_only = api.uci_get_c("@global[0]", "anti_loop_scope") == "active"
+			local nodes_domain_text
+			if active_only then
+				nodes_domain_text = table.concat(api.get_active_node_addresses(node_id), "\n")
+			else
+				nodes_domain_text = sys.exec('uci show passwall2 | grep ".address=" | cut -d "\'" -f 2 | grep "[a-zA-Z]$" | sort -u')
+			end
 			string.gsub(nodes_domain_text, '[^' .. "\r\n" .. ']+', function(w)
 				w = (w or ""):lower()
+				if active_only and api.is_ip(w) then return end
 				table.insert(domain, "full:" .. w)
 			end)
 			if #domain > 0 then

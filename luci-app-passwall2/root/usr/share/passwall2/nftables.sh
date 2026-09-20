@@ -581,6 +581,7 @@ load_acl() {
 }
 
 filter_haproxy() {
+	[ "$(config_n_get @global[0] anti_loop_scope all)" = "active" ] && return
 	[ "$(config_n_get @global_haproxy[0] balancing_enable 0)" != "1" ] && return
 	for item in $(uci show $CONFIG | grep ".lbss=" | cut -d "'" -f 2); do
 		get_host_ip ipv4 $(echo $item | awk -F ":" '{print $1}') 1
@@ -599,12 +600,13 @@ filter_vps_addr() {
 }
 
 filter_vpsip() {
-	local ipv4_addrs=$(uci show $CONFIG | grep -E "(.address=|.download_address=)" | cut -d "'" -f 2 | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "^127\.0\.0\.1$")
+	local node_addrs=$(get_vps_ip_addresses)
+	local ipv4_addrs=$(echo "$node_addrs" | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "^127\.0\.0\.1$")
 	[ -n "$ipv4_addrs" ] && {
 		echo "$ipv4_addrs" | insert_nftset $NFTSET_VPS "-1"
 		log_i18n 1 "Add all %s nodes to %s[%s] direct connection complete." "IPv4" "nftset" "${NFTSET_VPS}"
 	}
-	local ipv6_addrs=$(uci show $CONFIG | grep -E "(.address=|.download_address=)" | cut -d "'" -f 2 | grep -E "([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}")
+	local ipv6_addrs=$(echo "$node_addrs" | grep -E "([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}")
 	[ -n "$ipv6_addrs" ] && {
 		echo "$ipv6_addrs" | insert_nftset $NFTSET_VPS6 "-1"
 		log_i18n 1 "Add all %s nodes to %s[%s] direct connection complete." "IPv6" "nftset" "${NFTSET_VPS6}"
@@ -763,8 +765,10 @@ add_firewall_rule() {
 	filter_vpsip > /dev/null 2>&1 &
 	filter_haproxy > /dev/null 2>&1 &
 	# Prevent some conditions
-	filter_vps_addr $(config_n_get $NODE address) > /dev/null 2>&1 &
-	filter_vps_addr $(config_n_get $NODE download_address) > /dev/null 2>&1 &
+	[ "$(config_n_get @global[0] anti_loop_scope all)" != "active" ] && {
+		filter_vps_addr $(config_n_get $NODE address) > /dev/null 2>&1 &
+		filter_vps_addr $(config_n_get $NODE download_address) > /dev/null 2>&1 &
+	}
 
 	accept_icmp=$(config_n_get @global_forwarding[0] accept_icmp 0)
 	accept_icmpv6=$(config_n_get @global_forwarding[0] accept_icmpv6 0)

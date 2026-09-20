@@ -171,6 +171,7 @@ function add_rule(var)
 	local CACHE_FLAG = "dnsmasq_" .. FLAG
 	local CACHE_DNS_PATH = CACHE_PATH .. "/" .. CACHE_FLAG
 	local CACHE_TEXT_FILE = CACHE_DNS_PATH .. ".txt"
+	local node_addresses = api.uci_get_c("@global[0]", "anti_loop_scope") == "active" and api.get_active_node_addresses() or nil
 
 	local list1 = {}
 
@@ -246,7 +247,8 @@ function add_rule(var)
 
 	local cache_text = ""
 	local nodes_address_md5 = sys.exec("echo -n $(uci show %s | grep '\\.address') | md5sum" % c_config)
-	local new_text = TMP_DNSMASQ_PATH .. DNSMASQ_CONF_FILE .. DEFAULT_DNS .. LOCAL_DNS .. TUN_DNS .. nodes_address_md5 .. NFTFLAG
+	local node_addresses_key = node_addresses and "active" .. table.concat(node_addresses, ",") or ""
+	local new_text = TMP_DNSMASQ_PATH .. DNSMASQ_CONF_FILE .. DEFAULT_DNS .. LOCAL_DNS .. TUN_DNS .. nodes_address_md5 .. NFTFLAG .. node_addresses_key
 	if fs.access(CACHE_TEXT_FILE) then
 		for line in io.lines(CACHE_TEXT_FILE) do
 			cache_text = line
@@ -270,18 +272,22 @@ function add_rule(var)
 		-- Always use domestic DNS to resolve node domain names
 		if true then
 			fwd_dns = LOCAL_DNS
-			api.uci_foreach_c("nodes", function(t)
-				local function process_address(address)
-					address = (address or ""):lower()
-					if address == "engage.cloudflareclient.com" then return end
-					if datatypes.hostname(address) then
-						set_domain_dns(address, fwd_dns)
-						set_domain_ipset(address, setflag_4 .. "psw2_vps," .. setflag_6 .. "psw2_vps6")
-					end
+			local function process_address(address)
+				address = (address or ""):lower()
+				if address == "engage.cloudflareclient.com" then return end
+				if datatypes.hostname(address) then
+					set_domain_dns(address, fwd_dns)
+					set_domain_ipset(address, setflag_4 .. "psw2_vps," .. setflag_6 .. "psw2_vps6")
 				end
-				process_address(t.address)
-				process_address(t.download_address)
-			end)
+			end
+			if node_addresses then
+				for _, address in ipairs(node_addresses) do process_address(address) end
+			else
+				api.uci_foreach_c("nodes", function(t)
+					process_address(t.address)
+					process_address(t.download_address)
+				end)
+			end
 		end
 
 		if list1 and next(list1) then
