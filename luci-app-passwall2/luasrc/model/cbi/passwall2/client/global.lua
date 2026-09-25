@@ -161,6 +161,11 @@ else
 	end
 end
 
+o = s:taboption("Main", ListValue, "anti_loop_scope", translate("Proxy server bypass"), translate("Active mode only bypasses nodes referenced by enabled proxy services, including balancing, URL-test and SOCKS auto-switch candidates. Unused subscription nodes follow the normal routing rules."))
+o:value("all", translate("All configured nodes"))
+o:value("active", translate("Active nodes only"))
+o.default = "all"
+
 node_socks_port = s:taboption("Main", Value, "node_socks_port", translate("Node") .. " Socks " .. translate("Listen Port"))
 node_socks_port.default = 1070
 node_socks_port.datatype = "port"

@@ -262,6 +262,29 @@ hosts_foreach() {
 	done
 }
 
+get_vps_addresses() {
+	if [ "$(config_n_get @global[0] anti_loop_scope all)" = "active" ]; then
+		lua -e 'local api = require "luci.passwall2.api"; print(table.concat(api.get_active_node_addresses(), "\n"))'
+	else
+		uci show $CONFIG | grep -E "(.address=|.download_address=)" | cut -d "'" -f 2
+	fi
+}
+
+get_vps_ip_addresses() {
+	if [ "$(config_n_get @global[0] anti_loop_scope all)" != "active" ]; then
+		get_vps_addresses
+		return
+	fi
+	get_vps_addresses | while read -r address; do
+		case "$address" in
+			"") ;;
+			*:*) echo "$address" ;;
+			*[!0-9.]*) resolveip -4 -t 2 "$address"; resolveip -6 -t 2 "$address" ;;
+			*) echo "$address" ;;
+		esac
+	done 2>/dev/null
+}
+
 check_port_exists() {
 	local port=$1
 	local protocol=$2
