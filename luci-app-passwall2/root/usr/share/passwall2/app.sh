@@ -518,7 +518,13 @@ run_socks() {
 	}
 	unset http_flag
 
-	[ -z "$no_run" ] && [ "${server_host}" != "127.0.0.1" ] && [ "$type" != "sing-box" ] && [ "$type" != "xray" ] && echo "${node}" >> $TMP_PATH/direct_node_list
+	[ -z "$no_run" ] && [ "${server_host}" != "127.0.0.1" ] && [ "$type" != "sing-box" ] && [ "$type" != "xray" ] && {
+		echo "${node}" >> $TMP_PATH/direct_node_list
+		if [ "$(config_n_get @global[0] anti_loop_scope all)" = "active" ]; then
+			local use_tables=$(get_cache_var "USE_TABLES")
+			[ -n "$use_tables" ] && (source $APP_PATH/${use_tables}.sh filter_direct_node_list)
+		fi
+	}
 }
 
 socks_node_switch() {
@@ -770,7 +776,7 @@ run_ipset_chinadns_ng() {
 	local listen_port proto server_dns ipset nftset config_file
 	eval_set_val $@
 	[ ! -s "$TMP_ACL_PATH/vpslist" ] && {
-		node_servers=$(uci show "${CONFIG}" | grep -E "(.address=|.download_address=)" | cut -d "'" -f 2)
+		node_servers=$(get_vps_addresses)
 		hosts_foreach "node_servers" host_from_url | grep '[a-zA-Z]$' | sort -u | grep -v "engage.cloudflareclient.com" > $TMP_ACL_PATH/vpslist
 	}
 	
