@@ -497,6 +497,8 @@ o.default = ""
 o.rows = 5
 o.wrap = "soft"
 o:depends({ ech = true })
+o.placeholder = "example.com+https://sky.rethinkdns.com/dns-query"
+o.description = translate("Base64 ECH config, or SNI+DoH URL such as example.com+https://sky.rethinkdns.com/dns-query.")
 o.validate = function(self, value)
 	return api.trim(value:gsub("[\r\n]", ""))
 end

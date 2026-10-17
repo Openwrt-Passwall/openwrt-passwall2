@@ -769,6 +769,9 @@ run_ipset_chinadns_ng() {
 	eval_set_val $@
 	[ ! -s "$TMP_ACL_PATH/vpslist" ] && {
 		node_servers=$(uci show "${CONFIG}" | grep -E "(.address=|.download_address=)" | cut -d "'" -f 2)
+		# ECH DoH hosts from ech_config (sni+https://host/...) and subscribe ech_query
+		ech_doh_servers=$(uci show "${CONFIG}" | grep -E "(.ech_config=|.ech_query=)" | cut -d "'" -f 2 | sed -n 's/^.*+//; /^https\?:\/\//p')
+		node_servers="${node_servers} ${ech_doh_servers}"
 		hosts_foreach "node_servers" host_from_url | grep '[a-zA-Z]$' | sort -u | grep -v "engage.cloudflareclient.com" > $TMP_ACL_PATH/vpslist
 	}
 	
