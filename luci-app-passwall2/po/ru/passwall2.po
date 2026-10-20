@@ -1685,6 +1685,18 @@ msgstr "Конфигурация ECH"
 msgid "ECH Key"
 msgstr "Ключ ECH"
 
+msgid "ECH DoH Query"
+msgstr "DoH-запрос ECH"
+
+msgid "When set, TLS nodes without an ECH parameter in the link use SNI+this DoH URL as ECH Config."
+msgstr "Если задано, TLS-узлы без параметра ECH в ссылке используют SNI+этот DoH URL как ECH Config."
+
+msgid "The DoH hostname is resolved via direct DNS like node addresses."
+msgstr "Имя хоста DoH разрешается через прямой DNS, как адреса узлов."
+
+msgid "Base64 ECH config, or SNI+DoH URL such as example.com+https://sky.rethinkdns.com/dns-query."
+msgstr "Конфиг ECH в Base64 или SNI+DoH URL, например example.com+https://sky.rethinkdns.com/dns-query."
+
 msgid "ECH Query Policy"
 msgstr "Политика запросов ECH"
 

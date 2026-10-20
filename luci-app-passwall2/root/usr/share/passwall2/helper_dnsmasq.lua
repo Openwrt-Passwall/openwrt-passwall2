@@ -259,7 +259,7 @@ function add_rule(var)
 	end
 
 	local cache_text = ""
-	local nodes_address_md5 = sys.exec("echo -n $(uci show %s | grep '\\.address') | md5sum" % c_config)
+	local nodes_address_md5 = sys.exec("echo -n $(uci show %s | grep -E '\\.address|\\.ech_config|\\.ech_query') | md5sum" % c_config)
 	local new_text = TMP_DNSMASQ_PATH .. DNSMASQ_CONF_FILE .. DEFAULT_DNS .. LOCAL_DNS .. TUN_DNS .. nodes_address_md5 .. NFTFLAG
 	if fs.access(CACHE_TEXT_FILE) then
 		for line in io.lines(CACHE_TEXT_FILE) do
@@ -284,17 +284,31 @@ function add_rule(var)
 		-- Always use domestic DNS to resolve node domain names
 		if true then
 			fwd_dns = LOCAL_DNS
-			api.uci_foreach_c("nodes", function(t)
-				local function process_address(address)
-					address = (address or ""):lower()
-					if address == "engage.cloudflareclient.com" then return end
-					if datatypes.hostname(address) then
-						set_domain_dns(address, fwd_dns)
-						set_domain_ipset(address, setflag_4 .. "psw2_vps," .. setflag_6 .. "psw2_vps6")
-					end
+			local function process_address(address)
+				address = (address or ""):lower()
+				if address == "engage.cloudflareclient.com" then return end
+				if datatypes.hostname(address) then
+					set_domain_dns(address, fwd_dns)
+					set_domain_ipset(address, setflag_4 .. "psw2_vps," .. setflag_6 .. "psw2_vps6")
 				end
+			end
+			-- ECH DoH host from "sni+https://host/path" or plain "https://host/path"
+			local function process_ech_config(ech_config)
+				if not ech_config or ech_config == "" then return end
+				local url = ech_config:match("%+(https?://%S+)") or (ech_config:find("://", 1, true) and ech_config) or nil
+				if not url then return end
+				local host = url:match("://%[([^%]]+)%]") or url:match("://([^/:%s]+)")
+				process_address(host)
+			end
+			api.uci_foreach_c("nodes", function(t)
 				process_address(t.address)
 				process_address(t.download_address)
+				if t.ech == "1" then
+					process_ech_config(t.ech_config)
+				end
+			end)
+			api.uci_foreach_c("subscribe_list", function(t)
+				process_ech_config(t.ech_query)
 			end)
 		end
 
