@@ -747,9 +747,11 @@ detect_adblock() {
 	__url=$(uci -q get "passwall2.@global_rules[0].enable_adblock")
 	case "${__url}" in
 		""|0|1)
-			# Disabled: drop any stale rule file so dnsmasq can never load it again.
-			rm -f "/usr/share/passwall2/adblock.conf"
-			rm -f "/usr/share/passwall2/adblock.url"
+			# Disabled: report 0 and leave adblock.conf/adblock.url alone. The
+			# ADBLOCK value is part of the cache fingerprint, so the conf-dir is
+			# rebuilt without 002-address.conf and the stale rules are never
+			# loaded. Keeping the file makes re-enabling instant instead of
+			# requiring another download.
 			echo "0"
 			;;
 		*)
@@ -777,7 +779,7 @@ auto_adblock_update() {
 	esac
 	local __saved=$(cat "/usr/share/passwall2/adblock.url" 2>/dev/null)
 	if [ -z "${__saved}" ] || [ "${__saved}" != "${__url}" ] || [ ! -f "/usr/share/passwall2/adblock.conf" ]; then
-		log 1 "Adblock source changed or not yet downloaded, fetching in the background..."
+		log_i18n 1 "Adblock rule source changed or not downloaded yet, fetching in the background..."
 		lua $APP_PATH/rule_update.lua log adblock > /dev/null 2>&1 &
 	fi
 }
@@ -989,7 +991,9 @@ start() {
 			sysctl -w net.bridge.bridge-nf-call-ip6tables=0 >/dev/null 2>&1
 		}
 	fi
-	[ "${ENABLED_DEFAULT_ACL}" == 1 ] || [ "${ENABLED_ACLS}" == 1 ] && auto_adblock_update
+	if [ "$ENABLED_DEFAULT_ACL" == 1 ] || [ "$ENABLED_ACLS" == 1 ]; then
+		auto_adblock_update
+	fi
 	run_process_queue
 	start_crontab "$1"
 	log_i18n 0 "Running complete!"
