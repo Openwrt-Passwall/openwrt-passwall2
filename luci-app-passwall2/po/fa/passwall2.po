@@ -2665,4 +2665,10 @@ msgstr "قوانین مسدودسازی تبلیغات به %s ورودی محد
 
 msgid "adblock"
 msgstr "قوانین مسدودسازی تبلیغات"
- 27104c2a (luci: add DNS-stage adblock with selectable rule sources)
+
+msgid "Adblock rule source changed or not downloaded yet, fetching in the background..."
+msgstr ""
+
+msgid "Cannot record the adblock rule source, please check the free space of /usr/share/passwall2."
+msgstr ""
+ 74ac7ad9 (luci: fix adblock review findings)

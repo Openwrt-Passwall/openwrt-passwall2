@@ -2666,4 +2666,10 @@ msgstr "Правила блокировки рекламы были усечен
 
 msgid "adblock"
 msgstr "правила блокировки рекламы"
- 27104c2a (luci: add DNS-stage adblock with selectable rule sources)
+
+msgid "Adblock rule source changed or not downloaded yet, fetching in the background..."
+msgstr "Источник правил блокировки рекламы изменён или ещё не загружен, загрузка выполняется в фоновом режиме..."
+
+msgid "Cannot record the adblock rule source, please check the free space of /usr/share/passwall2."
+msgstr "Не удалось сохранить источник правил блокировки рекламы, проверьте свободное место в /usr/share/passwall2."
+ 74ac7ad9 (luci: fix adblock review findings)
