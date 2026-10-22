@@ -82,6 +82,14 @@ for _, f in ipairs(flags) do
 	o.rmempty = false
 end
 
+--- Adblock auto update follows the geoip/geosite pattern: the Flag itself is
+--- hidden by JavaScript and driven by the custom checkbox in the Update Options
+--- block. Unlike geoip/geosite it defaults to enabled, because adblock rules go
+--- stale quickly and the user has already opted in by choosing a source.
+o = s:option(Flag, "adblock_update")
+o.rmempty = false
+o.default = "1"
+
 s:appendTemplate("/rule/rule_version")
 
 if true then
