@@ -2549,3 +2549,9 @@ msgstr "廣告過濾規則已被截斷為 %s 條。"
 
 msgid "adblock"
 msgstr "廣告過濾規則"
+
+msgid "Adblock rule source changed or not downloaded yet, fetching in the background..."
+msgstr "廣告過濾規則來源已變更或尚未下載，正在背景取得……"
+
+msgid "Cannot record the adblock rule source, please check the free space of /usr/share/passwall2."
+msgstr "無法記錄廣告過濾規則來源，請檢查 /usr/share/passwall2 的剩餘空間。"

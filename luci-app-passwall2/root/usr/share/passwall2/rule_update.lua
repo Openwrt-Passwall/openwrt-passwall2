@@ -43,7 +43,6 @@ local reboot = 0
 local geoip_update = "0"
 local geosite_update = "0"
 local adblock_update = "0"
-local adblock_update_saved = uci_get("@global_rules[0]", "adblock_update") or "1"
 
 local geoip_url = uci_get("@global_rules[0]", "geoip_url") or "https://github.com/Loyalsoldier/geoip/releases/latest/download/geoip.dat"
 local geosite_url = uci_get("@global_rules[0]", "geosite_url") or "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat"
@@ -211,6 +210,20 @@ local function get_adblock_url()
 	return url
 end
 
+-- The URL is what detect_adblock() compares against the configured source, so
+-- the rules only take effect once this file is written. Report a failure
+-- instead of silently keeping a downloaded-but-inactive rule file.
+local function save_adblock_url(url)
+	local f = io.open(ADBLOCK_URL_FILE, "w")
+	if not f then
+		log(1, api.i18n.translate("Cannot record the adblock rule source, please check the free space of /usr/share/passwall2."))
+		return false
+	end
+	f:write(url)
+	f:close()
+	return true
+end
+
 local function fetch_adblock()
 	local url = get_adblock_url()
 	if not url then
@@ -219,8 +232,10 @@ local function fetch_adblock()
 	end
 	local tmp = "/tmp/adblock.download"
 	local new_conf = "/tmp/adblock.conf.new"
-	local http_code, _ = curl(url, tmp)
-	if http_code ~= 200 or non_file_check(tmp, nil) then
+	-- Also hand the response headers to non_file_check() so a truncated download
+	-- is caught by the Content-Length comparison, same as fetch_geofile().
+	local http_code, header = curl(url, tmp)
+	if http_code ~= 200 or non_file_check(tmp, header) then
 		os.remove(tmp)
 		os.remove(new_conf)
 		log(1, api.i18n.translate("Failed to update the adblock rules, please try again later or change the URL."))
@@ -341,9 +356,12 @@ local function fetch_adblock()
 			end
 		end
 	end
-	-- Source quality check: too few rules, too many junk tokens, or a payload
-	-- whose lines do not look like rules at all (HTML/JSON error page)
-	if total_out < 10 or valid_out * 2 < total_out or rule_lines * 2 < cand_lines then
+	-- Source quality check: an empty result, too many junk tokens, or a payload
+	-- whose lines do not look like rules at all (HTML/JSON error page).
+	-- The lower bound is 2 rather than a "sane list size": a user may point this
+	-- at a small hand-written list, and the ratio checks below already reject
+	-- payloads that are not rule lists.
+	if total_out < 2 or valid_out * 2 < total_out or rule_lines * 2 < cand_lines then
 		os.remove(tmp)
 		os.remove(new_conf)
 		log(1, api.i18n.translate("The adblock rule source may be invalid, please modify it and try again."))
@@ -367,11 +385,7 @@ local function fetch_adblock()
 		os.remove(new_conf)
 		-- Content is identical, but the recorded URL may be missing (e.g. after a
 		-- firmware upgrade), so refresh it to keep the rules usable.
-		local url_out = io.open(ADBLOCK_URL_FILE, "w")
-		if url_out then
-			url_out:write(url)
-			url_out:close()
-		end
+		save_adblock_url(url)
 		log(1, api.i18n.translate("The adblock rules are already up to date, no update needed."))
 		return
 	end
@@ -381,14 +395,13 @@ local function fetch_adblock()
 		log(1, api.i18n.translate("Failed to update the adblock rules, please try again later or change the URL."))
 		return
 	end
-	reboot = 1
 	-- Record the source URL so detect_adblock() can tell whether the rule file
-	-- still matches the configured source.
-	local url_out = io.open(ADBLOCK_URL_FILE, "w")
-	if url_out then
-		url_out:write(url)
-		url_out:close()
+	-- still matches the configured source. Only flag a restart when the file
+	-- really is usable.
+	if not save_adblock_url(url) then
+		return
 	end
+	reboot = 1
 	log(1, api.i18n.translate("The adblock rules have been updated successfully."))
 end
 
@@ -435,18 +448,21 @@ if geosite_update == "1" then
 	remove_tmp_geofile("geosite")
 end
 
-if adblock_update == "1" then
+-- Nothing to fetch while no rule source is selected; without this guard the
+-- daily cron run would log "No adblock rule URL configured" every time.
+if adblock_update == "1" and get_adblock_url() then
 	log(1, api.i18n.translatef("%s Start updating...", "adblock"))
 	safe_call(fetch_adblock, api.i18n.translatef("%s update error!", "adblock"))
 end
 
--- Manual update must not change the auto-update switch
-if arg2 then
-	adblock_update = adblock_update_saved
+-- Only the scheduled run may record the auto update switches. A manual update
+-- passes the ticked boxes in arg2, and writing those back would disable the
+-- switches of the boxes that were left unticked.
+if not arg2 then
+	uci_set("@global_rules[0]", "geoip_update", geoip_update)
+	uci_set("@global_rules[0]", "geosite_update", geosite_update)
+	uci_set("@global_rules[0]", "adblock_update", adblock_update)
 end
-uci_set("@global_rules[0]", "geoip_update", geoip_update)
-uci_set("@global_rules[0]", "geosite_update", geosite_update)
-uci_set("@global_rules[0]", "adblock_update", adblock_update)
 
 if reboot == 1 then
 	log(1, api.i18n.translate("Restart the service and apply the new rules."))

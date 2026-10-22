@@ -2557,3 +2557,9 @@ msgstr "قوانین مسدودسازی تبلیغات به %s ورودی محد
 
 msgid "adblock"
 msgstr "قوانین مسدودسازی تبلیغات"
+
+msgid "Adblock rule source changed or not downloaded yet, fetching in the background..."
+msgstr ""
+
+msgid "Cannot record the adblock rule source, please check the free space of /usr/share/passwall2."
+msgstr ""
