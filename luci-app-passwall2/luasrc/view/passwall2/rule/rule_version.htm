@@ -8,7 +8,8 @@ local has_old_geosite = fs.access("/tmp/bak_v2ray/geosite.dat")
 
 <style>
 	div.cbi-value[id$="-geoip_update"],
-	div.cbi-value[id$="-geosite_update"] {
+	div.cbi-value[id$="-geosite_update"],
+	div.cbi-value[id$="-adblock_update"] {
 		display: none !important;
 	}
 </style>
@@ -27,6 +28,10 @@ local has_old_geosite = fs.access("/tmp/bak_v2ray/geosite.dat")
 				<input class="cbi-input-checkbox" type="checkbox" name="geosite" value="1" />
 				geosite
 			</label>
+			<label>
+				<input class="cbi-input-checkbox" type="checkbox" name="adblock" value="1" />
+				<%:adblock%>
+			</label>
 			<br><br>
 			<input class="btn cbi-button cbi-button-apply" type="button" id="update_rules_btn" onclick="update_rules(this)" value="<%:Manually update%>" />
 			<% if has_old_geoip then %>
@@ -43,7 +48,7 @@ local has_old_geosite = fs.access("/tmp/bak_v2ray/geosite.dat")
 	//<![CDATA[
 	document.addEventListener('DOMContentLoaded', function () {
 		const flags = [
-			"geoip_update", "geosite_update"
+			"geoip_update", "geosite_update", "adblock_update"
 		];
 		const bindFlags = () => {
 			let allBound = true;
