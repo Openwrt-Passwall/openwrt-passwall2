@@ -194,11 +194,10 @@ local ADBLOCK_CONF = "/usr/share/passwall2/adblock.conf"
 -- Remembers which URL produced the current ADBLOCK_CONF, so that changing the
 -- source invalidates the stale rules instead of keeping them in effect.
 local ADBLOCK_URL_FILE = "/usr/share/passwall2/adblock.url"
--- Cap on the generated rule lines. Public lists reach roughly 220k lines
--- (a 100k domain list plus the IPv6 counterpart of every IPv4 rule) and
--- dnsmasq keeps every entry in memory, so bound it to stay safe on low memory
--- devices. The parser stops as soon as the cap is hit instead of building the
--- whole table first, which would defeat the purpose.
+-- Cap on the generated rule lines. Public lists reach roughly 100k-190k lines
+-- and dnsmasq keeps every entry in memory, so bound it to stay safe on low
+-- memory devices. The parser stops as soon as the cap is hit instead of
+-- building the whole table first, which would defeat the purpose.
 local MAX_ADBLOCK_RULES = 300000
 
 local function get_adblock_url()
@@ -317,26 +316,30 @@ local function fetch_adblock()
 	-- dropped below, and the quality gate at the end still rejects any source whose
 	-- valid rule count is too low, so a wrong guess stays harmless.
 	if total_lines > 0 and dnsmasq_lines * 2 >= total_lines then
-		-- Already dnsmasq format; keep only address= lines to avoid mixing in hosts/rule lines
+		-- Already dnsmasq format. A single-domain rule carrying an IPv4 literal is
+		-- rewritten to the address-less form, which answers NXDOMAIN for the whole
+		-- domain and therefore blocks A and AAAA alike. Keeping the IPv4 literal
+		-- would only block A: since dnsmasq 2.86 a query for another RR type is
+		-- forwarded upstream, so on a dual-stack network the client receives the
+		-- real IPv6 address and the block is defeated. Multi-domain rules and any
+		-- target we do not recognise are kept verbatim.
 		for line in raw:gmatch("[^\r\n]+") do
 			if truncated then break end
 			if line:find("^address=") == 1 then
-				local domain, ip = line:match("^address=/(.-)/(.*)$")
+				local domain, target = line:match("^address=/(.-)/(.*)$")
 				if domain then
 					domain = domain:lower()
-					add_line(line, domain)
-					-- IPv4-only rules also need an AAAA block for pure IPv6 networks
-					if not truncated and ip and ip:match("^%d+%.%d+%.%d+%.%d+$") then
-						lines_out[#lines_out + 1] = string.format("address=/%s/::", domain)
-						if #lines_out >= MAX_ADBLOCK_RULES then
-							truncated = true
-						end
+					if target and target:match("^%d+%.%d+%.%d+%.%d+$") then
+						add_line(string.format("address=/%s/", domain), domain)
+					else
+						add_line(line, domain)
 					end
 				end
 			end
 		end
 	else
-		-- Extract domains and generate address=/domain/# (NULL: blocks both A and AAAA)
+		-- Extract domains and generate address=/domain/ (NXDOMAIN), which covers
+		-- both A and AAAA without needing a second line per domain.
 		-- Skip comment lines, AdBlock exception rules and pure IP matches
 		local seen = {}
 		for line in raw:gmatch("[^\r\n]+") do
@@ -349,8 +352,7 @@ local function fetch_adblock()
 					domain = domain:lower()
 					if not domain:match("^%d+%.%d+%.%d+%.%d+$") and not seen[domain] then
 						seen[domain] = true
-						-- # returns NULL for both A (0.0.0.0) and AAAA (::)
-						add_line(string.format("address=/%s/#", domain), domain)
+						add_line(string.format("address=/%s/", domain), domain)
 					end
 				end
 			end
