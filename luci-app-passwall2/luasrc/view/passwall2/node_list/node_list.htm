@@ -22,6 +22,7 @@ if node then
 end
 -%>
 <script src="<%=resource%>/view/<%=appname%>/Sortable.min.js"></script>
+<script src="<%=resource%>/view/<%=appname%>/node_list_sort.js"></script>
 
 <style>
 table th, .table .th {
@@ -383,6 +384,89 @@ table td, .table .td {
 	}
 </style>
 
+<style>
+	/* node list: click-to-sort headers and the per-group filter bar */
+	th[data-pw-sort] {
+		cursor: pointer;
+		user-select: none;
+		white-space: nowrap;
+	}
+
+	th[data-pw-sort]:hover {
+		text-decoration: underline;
+	}
+
+	.pw-sort-arrow {
+		display: inline-block;
+		min-width: 1em;
+		margin-left: 0.25em;
+		font-size: 90%;
+	}
+
+	.pw-sort-sub {
+		font-weight: normal;
+		font-size: 85%;
+		opacity: 0.85;
+		margin-left: 0.6em;
+		cursor: pointer;
+		text-decoration: underline dotted;
+		white-space: nowrap;
+	}
+
+	.pw-sort-sub.pw-sort-active {
+		opacity: 1;
+		font-weight: bold;
+	}
+
+	.pw-sort-note {
+		margin: 0.3em 0;
+		padding: 0.3em 0.6em;
+		border-radius: 3px;
+		background: rgba(251, 154, 5, 0.15);
+		font-size: 90%;
+	}
+
+	tr.pw-row-hidden {
+		display: none !important;
+	}
+
+	.pw-filter {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.3em 0.8em;
+		margin: 0.4em 0;
+		font-size: 90%;
+	}
+
+	.pw-filter label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3em;
+		white-space: nowrap;
+	}
+
+	.pw-filter select,
+	.pw-filter input[type="search"],
+	.pw-filter .cbi-button {
+		width: auto !important;
+		min-width: 6em;
+		max-width: 22em;
+		height: auto;
+		padding: 0.15em 0.3em;
+		margin: 0;
+	}
+
+	.pw-filter .pw-filter-count {
+		opacity: 0.8;
+	}
+
+	.pw-filter.pw-filter-on .pw-filter-count {
+		font-weight: bold;
+		opacity: 1;
+	}
+</style>
+
 <script type="text/javascript">
 <% if api.is_js_luci() then -%>
 	var cbi_t = [];
@@ -538,15 +622,29 @@ table td, .table .td {
 		}
 	}
 
+	function node_row_visible(el) {
+		if (window.pw2NodeSort && typeof pw2NodeSort.rowVisible === "function")
+			return pw2NodeSort.rowVisible(el);
+		var row = el && el.closest ? el.closest("tr") : null;
+		return !row || !row.classList.contains("pw-row-hidden");
+	}
+
 	function set_select_all_state(sectionChecked) {
 		var visibleContainer = document.querySelector('#cbi-<%=appname%>-nodes > .cbi-tabcontainer[style*="display:block"], #cbi-<%=appname%>-nodes > .cbi-tabcontainer[style*="display: block"]');
 		if (!visibleContainer) return;
 		var nodes = visibleContainer.getElementsByClassName("nodes_select");
 		var selectAllChk = visibleContainer.querySelector(".nodes_select_all");
 		var selectAllBtn = document.getElementById("select_all_btn");
+		var visibleCount = 0;
 		for (var i = 0; i < nodes.length; i++) {
+			if (!node_row_visible(nodes[i])) {
+				nodes[i].checked = false;
+				continue;
+			}
 			nodes[i].checked = sectionChecked;
+			visibleCount++;
 		}
+		sectionChecked = sectionChecked && visibleCount > 0;
 		if (selectAllChk) {
 			selectAllChk.checked = sectionChecked;
 			selectAllChk.title = sectionChecked ? "<%:DeSelect all%>" : "<%:Select all%>";
@@ -574,10 +672,13 @@ table td, .table .td {
 		var selectAllChk = visibleContainer.querySelector(".nodes_select_all");
 		var selectAllBtn = document.getElementById("select_all_btn");
 		var checkedCount = 0;
+		var visibleCount = 0;
 		for (var i = 0; i < nodes.length; i++) {
+			if (!node_row_visible(nodes[i])) continue;
+			visibleCount++;
 			if (nodes[i].checked) checkedCount++;
 		}
-		var allChecked = checkedCount === nodes.length;
+		var allChecked = visibleCount > 0 && checkedCount === visibleCount;
 		var title = allChecked ? "<%:DeSelect all%>" : "<%:Select all%>";
 		var onclickFunc = allChecked ? "dechecked_all_node(this)" : "checked_all_node(this)";
 
@@ -600,7 +701,7 @@ table td, .table .td {
 		var doms = visibleContainer.getElementsByClassName("nodes_select");
 		if (doms && doms.length > 0) {
 			for (var i = 0 ; i < doms.length; i++) {
-				if (doms[i].checked) {
+				if (doms[i].checked && node_row_visible(doms[i])) {
 					ids.push(doms[i].getAttribute("cbid"))
 				}
 			}
@@ -1158,7 +1259,7 @@ table td, .table .td {
 			const doms = visibleContainer.getElementsByClassName("nodes_select");
 			if (doms && doms.length > 0) {
 				for (let i = 0 ; i < doms.length; i++) {
-					if (doms[i].checked) {
+					if (doms[i].checked && node_row_visible(doms[i])) {
 						ids.push(doms[i].getAttribute("cbid"))
 					}
 				}
@@ -1190,7 +1291,7 @@ table td, .table .td {
 			const doms = visibleContainer.getElementsByClassName("nodes_select");
 			if (doms && doms.length > 0) {
 				for (let i = 0 ; i < doms.length; i++) {
-					if (doms[i].checked) {
+					if (doms[i].checked && node_row_visible(doms[i])) {
 						ids.push(doms[i].getAttribute("cbid"))
 					}
 				}
@@ -1298,8 +1399,33 @@ table td, .table .td {
 <fieldset class="cbi-section" id="node_list">
 </fieldset>
 
+<div id="pw2-nodesort-i18n" data-app="<%=appname%>" style="display:none">
+	<span data-k="hint"><%:Click to sort; click again to reverse. Press Save & Apply to keep the order.%></span>
+	<span data-k="typeHint"><%:Sort by type or protocol, then by name%></span>
+	<span data-k="addrHint"><%:Sort by server address and port%></span>
+	<span data-k="origHint"><%:Restore the saved order%></span>
+	<span data-k="changed"><%:The order changed on this page only. Press Save & Apply to store it on the router.%></span>
+	<span data-k="restored"><%:Saved order restored.%></span>
+	<span data-k="wait"><%:Automatic ping is still running (%d left). Sorting will run when it finishes.%></span>
+	<span data-k="waitFail"><%:Automatic ping did not finish within 2 minutes. Sorting was cancelled. Reload the page and try again.%></span>
+	<span data-k="filter"><%:Filter:%></span>
+	<span data-k="all"><%:All%></span>
+	<span data-k="empty"><%:(empty)%></span>
+	<span data-k="type"><%:Type%></span>
+	<span data-k="addr"><%:Address%></span>
+	<span data-k="fWord"><%:Word in remarks%></span>
+	<span data-k="search"><%:search...%></span>
+	<span data-k="searchHint"><%:Show only rows that contain this text%></span>
+	<span data-k="shown"><%:Shown %s of %t%></span>
+	<span data-k="reset"><%:Reset%></span>
+	<span data-k="resetHint"><%:Show all rows%></span>
+	<span data-k="filterHint"><%:The filter only hides rows on this page and changes nothing on the router. Select all skips hidden rows.%></span>
+</div>
+
 <script type="text/javascript">
 	//init logic
+	if (window.pw2NodeSort)
+		pw2NodeSort.init();
 
 	function get_remarks_name(o) {
 		let str = "";
@@ -1499,8 +1625,10 @@ table td, .table .td {
 			}
 
 			get_now_use_node();
-			
+
 			pingAllNodes();
+			if (window.pw2NodeSort)
+				pw2NodeSort.enhanceAll();
 		});
 	}
 

@@ -2531,3 +2531,54 @@ msgstr "Ошибка обновления"
 
 msgid "Unknown error"
 msgstr "Неизвестная ошибка"
+
+msgid "Click to sort; click again to reverse. Press Save & Apply to keep the order."
+msgstr "Нажмите для сортировки; повторное нажатие меняет направление. Чтобы сохранить порядок, нажмите «Сохранить и применить»."
+
+msgid "Sort by type or protocol, then by name"
+msgstr "Сортировать по типу или протоколу, затем по имени"
+
+msgid "Sort by server address and port"
+msgstr "Сортировать по адресу сервера и порту"
+
+msgid "Restore the saved order"
+msgstr "Вернуть сохранённый порядок"
+
+msgid "The order changed on this page only. Press Save & Apply to store it on the router."
+msgstr "Порядок изменён только на этой странице. Чтобы записать его на роутер, нажмите «Сохранить и применить»."
+
+msgid "Saved order restored."
+msgstr "Сохранённый порядок восстановлен."
+
+msgid "Automatic ping is still running (%d left). Sorting will run when it finishes."
+msgstr "Автопроверка ещё выполняется (осталось %d). Сортировка запустится сразу после её окончания."
+
+msgid "Automatic ping did not finish within 2 minutes. Sorting was cancelled. Reload the page and try again."
+msgstr "Автопроверка не завершилась за 2 минуты. Сортировка отменена. Обновите страницу и попробуйте снова."
+
+msgid "Filter:"
+msgstr "Фильтр:"
+
+msgid "(empty)"
+msgstr "(пусто)"
+
+msgid "Word in remarks"
+msgstr "Слово в описании"
+
+msgid "search..."
+msgstr "поиск..."
+
+msgid "Show only rows that contain this text"
+msgstr "Показать только строки, содержащие этот текст"
+
+msgid "Shown %s of %t"
+msgstr "Показано %s из %t"
+
+msgid "Reset"
+msgstr "Сбросить"
+
+msgid "Show all rows"
+msgstr "Показать все строки"
+
+msgid "The filter only hides rows on this page and changes nothing on the router. Select all skips hidden rows."
+msgstr "Фильтр только скрывает строки на этой странице и ничего не меняет на роутере. «Выделить все» пропускает скрытые строки."

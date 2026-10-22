@@ -2530,3 +2530,54 @@ msgstr "به‌روزرسانی ناموفق بود"
 
 msgid "Unknown error"
 msgstr "خطای ناشناخته"
+
+msgid "Click to sort; click again to reverse. Press Save & Apply to keep the order."
+msgstr "برای مرتب‌سازی کلیک کنید؛ کلیک دوباره جهت را عوض می‌کند. برای نگه داشتن ترتیب، ذخیره و اعمال را بزنید."
+
+msgid "Sort by type or protocol, then by name"
+msgstr "مرتب‌سازی بر اساس نوع یا پروتکل، سپس نام"
+
+msgid "Sort by server address and port"
+msgstr "مرتب‌سازی بر اساس آدرس سرور و درگاه"
+
+msgid "Restore the saved order"
+msgstr "بازگرداندن ترتیب ذخیره‌شده"
+
+msgid "The order changed on this page only. Press Save & Apply to store it on the router."
+msgstr "ترتیب فقط در این صفحه عوض شده است. برای نوشتن آن روی روتر، ذخیره و اعمال را بزنید."
+
+msgid "Saved order restored."
+msgstr "ترتیب ذخیره‌شده بازگردانده شد."
+
+msgid "Automatic ping is still running (%d left). Sorting will run when it finishes."
+msgstr "بررسی خودکار هنوز در حال اجراست (%d باقی مانده). مرتب‌سازی بلافاصله پس از پایان آن انجام می‌شود."
+
+msgid "Automatic ping did not finish within 2 minutes. Sorting was cancelled. Reload the page and try again."
+msgstr "بررسی خودکار ظرف 2 دقیقه تمام نشد. مرتب‌سازی لغو شد. صفحه را دوباره بارگذاری کنید و دوباره تلاش کنید."
+
+msgid "Filter:"
+msgstr "فیلتر:"
+
+msgid "(empty)"
+msgstr "(خالی)"
+
+msgid "Word in remarks"
+msgstr "کلمه در توضیحات"
+
+msgid "search..."
+msgstr "جستجو..."
+
+msgid "Show only rows that contain this text"
+msgstr "فقط ردیف‌هایی را نشان بده که این متن را دارند"
+
+msgid "Shown %s of %t"
+msgstr "نمایش %s از %t"
+
+msgid "Reset"
+msgstr "بازنشانی"
+
+msgid "Show all rows"
+msgstr "نمایش همه ردیف‌ها"
+
+msgid "The filter only hides rows on this page and changes nothing on the router. Select all skips hidden rows."
+msgstr "فیلتر فقط ردیف‌ها را در این صفحه پنهان می‌کند و چیزی را روی روتر تغییر نمی‌دهد. انتخاب همه، ردیف‌های پنهان را رد می‌کند."

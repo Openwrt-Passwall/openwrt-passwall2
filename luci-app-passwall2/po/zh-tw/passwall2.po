@@ -2522,3 +2522,54 @@ msgstr "更新失敗"
 
 msgid "Unknown error"
 msgstr "未知錯誤"
+
+msgid "Click to sort; click again to reverse. Press Save & Apply to keep the order."
+msgstr "點擊表頭排序，再次點擊切換方向。按儲存並套用可保留順序。"
+
+msgid "Sort by type or protocol, then by name"
+msgstr "先按類型或協定排序，再按名稱排序"
+
+msgid "Sort by server address and port"
+msgstr "按伺服器位址和埠排序"
+
+msgid "Restore the saved order"
+msgstr "還原已儲存的順序"
+
+msgid "The order changed on this page only. Press Save & Apply to store it on the router."
+msgstr "順序只在本頁改變。按儲存並套用才會寫入路由器。"
+
+msgid "Saved order restored."
+msgstr "已還原儲存的順序。"
+
+msgid "Automatic ping is still running (%d left). Sorting will run when it finishes."
+msgstr "自動探測仍在進行（剩餘 %d）。結束後會立即排序。"
+
+msgid "Automatic ping did not finish within 2 minutes. Sorting was cancelled. Reload the page and try again."
+msgstr "自動探測在 2 分鐘內未結束，已取消排序。請重新整理頁面後再試。"
+
+msgid "Filter:"
+msgstr "篩選："
+
+msgid "(empty)"
+msgstr "(空)"
+
+msgid "Word in remarks"
+msgstr "備注中的詞"
+
+msgid "search..."
+msgstr "搜尋..."
+
+msgid "Show only rows that contain this text"
+msgstr "只顯示包含此文字的列"
+
+msgid "Shown %s of %t"
+msgstr "顯示 %s / %t"
+
+msgid "Reset"
+msgstr "重設"
+
+msgid "Show all rows"
+msgstr "顯示全部列"
+
+msgid "The filter only hides rows on this page and changes nothing on the router. Select all skips hidden rows."
+msgstr "篩選只在本頁隱藏列，不會改動路由器上的設定。全選會跳過隱藏列。"
