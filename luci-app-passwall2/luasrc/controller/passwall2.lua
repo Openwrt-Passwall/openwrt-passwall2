@@ -230,7 +230,9 @@ function gen_client_config()
 	luci.sys.call(string.format("/usr/share/passwall2/app.sh run_socks flag=config_%s node=%s bind=127.0.0.1 socks_port=1080 config_file=%s no_run=1", id, id, config_file))
 	if nixio.fs.access(config_file) then
 		http.prepare_content("application/json")
-		http.write(luci.sys.exec("cat " .. config_file))
+		local content = luci.sys.exec("cat " .. config_file)
+		content = content:gsub("\\/", "/")
+		http.write(content)
 		luci.sys.call("rm -f " .. config_file)
 	else
 		http.redirect(api.url("node_list"))

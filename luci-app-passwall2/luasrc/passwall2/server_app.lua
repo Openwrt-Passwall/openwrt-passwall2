@@ -114,7 +114,7 @@ local function start()
 			if next(config) then
 				local f, err = io.open(config_file, "w")
 				if f and err == nil then
-					f:write(jsonc.stringify(config, 1))
+					f:write(jsonc.stringify(config, 1):gsub("\\/", "/"))
 					f:close()
 				end
 				log(string.format("%s %s - %s", remarks, api.i18n.translate("Generate configuration file and run"), config_file))

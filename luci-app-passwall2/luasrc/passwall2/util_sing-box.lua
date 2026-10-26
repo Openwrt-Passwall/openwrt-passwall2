@@ -2400,7 +2400,7 @@ function gen_config(var)
 				config.endpoints = endpoints
 			end
 		end
-		return jsonc.stringify(config, 1)
+		return jsonc.stringify(config, 1):gsub("\\/", "/")
 	end
 end
 
@@ -2478,7 +2478,7 @@ function gen_proto_config(var)
 		inbounds = inbounds,
 		outbounds = outbounds,
 	}
-	return jsonc.stringify(config, 1)
+	return jsonc.stringify(config, 1):gsub("\\/", "/")
 end
 
 _G.gen_config = gen_config

@@ -116,7 +116,7 @@ function gen_config(var)
 		end
 	end
 	
-	return jsonc.stringify(config, 1)
+	return jsonc.stringify(config, 1):gsub("\\/", "/")
 end
 
 _G.gen_config = gen_config
