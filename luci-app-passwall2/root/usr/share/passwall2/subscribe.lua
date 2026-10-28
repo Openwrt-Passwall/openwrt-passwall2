@@ -1761,6 +1761,10 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 					result.use_mldsa65Verify = (params.pqv and params.pqv ~= "") and "1" or nil
 					result.reality_mldsa65Verify = params.pqv or nil
 				end
+				if params.security == "tls" and (not result.ech) and sub_cfg and sub_cfg.ech_query and sub_cfg.ech_query ~= "" and result.tls_serverName and result.tls_serverName ~= "" then
+					result.ech = "1"
+					result.ech_config = result.tls_serverName .. "+" .. sub_cfg.ech_query
+				end
 				local insecure = params.allowinsecure or params.allowInsecure or params.insecure
 				result.tls_allowInsecure = (insecure == "1" or insecure == "0") and insecure or (sub_allowinsecure and "1" or "0")
 			end

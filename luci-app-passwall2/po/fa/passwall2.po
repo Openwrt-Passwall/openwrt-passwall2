@@ -1687,6 +1687,18 @@ msgstr "پیکربندی ECH"
 msgid "ECH Key"
 msgstr "کلید ECH"
 
+msgid "ECH DoH Query"
+msgstr "پرس‌وجوی DoH برای ECH"
+
+msgid "When set, TLS nodes without an ECH parameter in the link use SNI+this DoH URL as ECH Config."
+msgstr "در صورت تنظیم، گره‌های TLS بدون پارامتر ECH در لینک از SNI+این آدرس DoH به‌عنوان پیکربندی ECH استفاده می‌کنند."
+
+msgid "The DoH hostname is resolved via direct DNS like node addresses."
+msgstr "نام میزبان DoH مانند آدرس گره‌ها از طریق DNS مستقیم Resolve می‌شود."
+
+msgid "Base64 ECH config, or SNI+DoH URL such as example.com+https://sky.rethinkdns.com/dns-query."
+msgstr "پیکربندی ECH به‌صورت Base64، یا آدرس SNI+DoH مانند example.com+https://sky.rethinkdns.com/dns-query."
+
 msgid "ECH Query Policy"
 msgstr "سیاست پرس‌وجوی ECH"
 

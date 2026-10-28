@@ -1679,6 +1679,18 @@ msgstr "ECH 配置"
 msgid "ECH Key"
 msgstr "ECH 密鑰"
 
+msgid "ECH DoH Query"
+msgstr "ECH DoH 查詢"
+
+msgid "When set, TLS nodes without an ECH parameter in the link use SNI+this DoH URL as ECH Config."
+msgstr "設定後，連結中未包含 ECH 參數的 TLS 節點將使用 SNI+此 DoH 位址作為 ECH 配置。"
+
+msgid "The DoH hostname is resolved via direct DNS like node addresses."
+msgstr "DoH 主機名會像節點位址一樣透過直連 DNS 解析。"
+
+msgid "Base64 ECH config, or SNI+DoH URL such as example.com+https://sky.rethinkdns.com/dns-query."
+msgstr "Base64 格式的 ECH 配置，或 SNI+DoH 位址，例如 example.com+https://sky.rethinkdns.com/dns-query。"
+
 msgid "ECH Query Policy"
 msgstr "ECH 查詢策略"
 
