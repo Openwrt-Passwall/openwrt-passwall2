@@ -51,7 +51,21 @@ eval_unset_val() {
 }
 
 eval_cache_var() {
-	[ -s "$TMP_PATH/var" ] && eval $(cat "$TMP_PATH/var")
+	# Configuration IDs are also cache keys, but may not be shell variable names.
+	# Filter whole double-quoted records, including continuation lines.
+	[ -s "$TMP_PATH/var" ] && eval "$(awk '
+		!quoted { keep = /^[a-zA-Z_][a-zA-Z0-9_]*=/ }
+		{
+			if (keep) print
+			escaped = 0
+			for (i = 1; i <= length($0); i++) {
+				c = substr($0, i, 1)
+				if (escaped) escaped = 0
+				else if (c == "\\") escaped = 1
+				else if (c == "\"") quoted = !quoted
+			}
+		}
+	' "$TMP_PATH/var")"
 }
 
 get_cache_var() {
@@ -77,7 +91,11 @@ set_cache_var() {
 		[ -n "${val}" ] && {
 			[ ! -d $TMP_PATH ] && mkdir -p $TMP_PATH
 			echo "${key}=\"${val}\"" >> $TMP_PATH/var
-			eval ${key}=\"${val}\"
+			# Keep configuration IDs in the cache without treating them as variables.
+			case "${key}" in
+				[0-9]*|*[!a-zA-Z0-9_]*) ;;
+				*) eval ${key}=\"${val}\" ;;
+			esac
 		}
 	}
 }
