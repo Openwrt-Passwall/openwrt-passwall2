@@ -312,11 +312,21 @@ local com = self.com
 //]]>
 </script>
 
+<style>
+	#app_version .app-version-sub {
+		display: block;
+		font-size: .85em;
+		font-weight: normal;
+		opacity: .7;
+	}
+</style>
+
 <div class="cbi-value">
-	<label class="cbi-value-title">Passwall2 <%:Version%></label>
+	<label class="cbi-value-title">Passwall2 <%:Version%>
+		<span class="app-version-sub"><%=api.get_version()%></span>
+	</label>
 	<div class="cbi-value-field">
 		<div class="cbi-value-description">
-			<span>【 <%=api.get_version()%> 】</span>
 			<input class="btn cbi-button cbi-button-apply" type="button" id="<%=api.appname%>-check_btn" data-update-app="<%=api.appname%>"
 				onclick="onBtnClick(this, appname);" value="<%:Check update%>" />
 			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=api.appname%>-force_btn" data-update-app="<%=api.appname%>"
@@ -332,10 +342,10 @@ local com = self.com
 <div class="cbi-value">
 	<label class="cbi-value-title"><%=v.name%>
 		<%:Version%>
+		<span class="app-version-sub"><span class="com_version" key="<%=k%>"><%=translate("Null")%></span></span>
 	</label>
 	<div class="cbi-value-field">
 		<div class="cbi-value-description">
-			<span>【 <span class="com_version" key="<%=k%>"><%=translate("Null")%></span> 】</span>
 			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-check_btn" data-update-app="<%=k%>"
 				onclick="onBtnClick(this,'<%=k%>');" value="<%:Check update%>" />
 			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-force_btn" data-update-app="<%=k%>"
