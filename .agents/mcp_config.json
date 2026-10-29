@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "sqlite": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-sqlite",
+        "--db-path",
+        "./.ai/local_dev.db"
+      ],
+      "disabled": false
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless"
+      ],
+      "disabled": false
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "$GITHUB_PERSONAL_ACCESS_TOKEN"
+      },
+      "disabled": false
+    }
+  }
+}

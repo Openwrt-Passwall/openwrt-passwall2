@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Shell|run_command|exec_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.agents/hooks/pre_shell_guard.py",
+            "args": [],
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|write_to_file|replace_file_content|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.agents/hooks/post_edit_format.py",
+            "args": [],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.agents/hooks/stop_verify_gate.py",
+            "args": [],
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}
