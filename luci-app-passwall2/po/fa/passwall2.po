@@ -1804,6 +1804,18 @@ msgstr "با فعال کردن این گزینه، هنگام به‌روزرس�
 msgid "This may reveal limited hardware information. Enable only if you trust your provider."
 msgstr "این کار ممکن است بخشی از اطلاعات سخت‌افزاری دستگاه را آشکار کند. فقط در صورتی این گزینه را فعال کنید که به ارائه‌دهنده خود اعتماد دارید."
 
+msgid "Custom HWID"
+msgstr "HWID سفارشی"
+
+msgid "Leave empty to use the auto-generated HWID."
+msgstr "برای استفاده از HWID خودکار، این فیلد را خالی بگذارید."
+
+msgid "Custom HWID is too long (maximum 128 characters)."
+msgstr "طول HWID سفارشی بیش از حد مجاز است (حداکثر ۱۲۸ کاراکتر)."
+
+msgid "Custom HWID contains invalid characters. Only alphanumeric, hyphen, underscore, colon, and period are allowed."
+msgstr "HWID سفارشی شامل نویسه‌های نامعتبر است. فقط حروف، اعداد، خط تیره، زیرخط، دونقطه و نقطه مجاز هستند."
+
 msgid ""
 "Chained proxy works only with Xray or Sing-box nodes.<br>"
 "You can only use manual or imported nodes as chained nodes."

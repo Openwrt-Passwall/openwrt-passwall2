@@ -1796,6 +1796,18 @@ msgstr "啟用此選項後，更新訂閱時將傳送經過雜湊處理的 HWID�
 msgid "This may reveal limited hardware information. Enable only if you trust your provider."
 msgstr "這可能會洩露有限的硬體資訊。請僅在信任您的服務提供者時啟用。"
 
+msgid "Custom HWID"
+msgstr "自訂 HWID"
+
+msgid "Leave empty to use the auto-generated HWID."
+msgstr "留空則使用自動產生的 HWID。"
+
+msgid "Custom HWID is too long (maximum 128 characters)."
+msgstr "自訂 HWID 長度過長（最多 128 個字元）。"
+
+msgid "Custom HWID contains invalid characters. Only alphanumeric, hyphen, underscore, colon, and period are allowed."
+msgstr "自訂 HWID 包含無效字元。僅允許字母、數字、連字號、底線、冒號和點。"
+
 msgid ""
 "Chained proxy works only with Xray or Sing-box nodes.<br>"
 "You can only use manual or imported nodes as chained nodes."
