@@ -2150,7 +2150,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 	return result
 end
 
-local function curl(url, file, ua, mode, hwid)
+local function curl(url, file, ua, mode, hwid, custom_hwid)
 	if not url or url == "" then return 22, 404 end
 	local curl_args = {
 		"-fskL", "-w %{http_code}", "--retry 3", "--connect-timeout 3", "-H 'Accept: */*'", "-H 'Accept-Encoding: identity'"
@@ -2160,7 +2160,7 @@ local function curl(url, file, ua, mode, hwid)
 		curl_args[#curl_args + 1] = '--user-agent "' .. ua .. '"'
 	end
 	if hwid == "1" then
-		curl_args[#curl_args + 1] = get_headers()
+		curl_args[#curl_args + 1] = get_headers(custom_hwid)
 	end
 	local cookie_file = "/tmp/cookie_" .. api.gen_random_char(5)
 	curl_args[#curl_args + 1] = '-c "' .. cookie_file .. '" -b "' .. cookie_file .. '"'
@@ -2178,8 +2178,10 @@ local function curl(url, file, ua, mode, hwid)
 	return return_code, tonumber(result)
 end
 
-function get_headers()
-	local cache_file = api.CACHE_PATH .. "/sub_curl_headers"
+function get_headers(custom_hwid)
+	local custom_hwid_str = (custom_hwid and custom_hwid ~= "") and api.trim(custom_hwid) or nil
+	local cache_suffix = custom_hwid_str and ("_" .. custom_hwid_str:gsub("[^%w_%-]", "_")) or ""
+	local cache_file = api.CACHE_PATH .. "/sub_curl_headers" .. cache_suffix
 	if fs.access(cache_file) then
 		return luci.sys.exec("cat " .. cache_file)
 	end
@@ -2206,18 +2208,26 @@ function get_headers()
 		headers[#headers + 1] = "x-device-model: " .. model
 	end
 
-	local mac = readfile("/sys/class/net/eth0/address")
-	if mac and model then
-		local raw = mac .. "-" .. model
-		local p = io.popen("printf '%s' '" .. raw:gsub("'", "'\\''") .. "' | sha256sum")
-		if p then
-			local hash = p:read("*l")
-			p:close()
-			hash = hash and hash:match("^%w+")
-			if hash then
-				headers[#headers + 1] = "x-hwid: " .. hash
+	local hwid_val = custom_hwid_str
+	if not hwid_val then
+		local mac = readfile("/sys/class/net/eth0/address")
+		if mac and model then
+			local raw = mac .. "-" .. model
+			local p = io.popen("printf '%s' '" .. raw:gsub("'", "'\\''") .. "' | sha256sum")
+			if p then
+				local hash = p:read("*l")
+				p:close()
+				hash = hash and hash:match("^%w+")
+				if hash then
+					hwid_val = hash
+				end
 			end
 		end
+	end
+
+	if hwid_val and hwid_val ~= "" then
+		hwid_val = hwid_val:gsub("[\r\n]", "")
+		headers[#headers + 1] = "x-hwid: " .. hwid_val
 	end
 
 	local out = {}
@@ -2691,7 +2701,7 @@ local execute = function()
 				log(1, i18n.translatef("Start subscribing: %s", '【' .. remark .. '】' .. url .. ' [' .. result .. ']'))
 				tmp_file = "/tmp/" .. cfgid
 				local return_code
-				return_code, value.http_code = curl(url, tmp_file, ua, access_mode, value.hwid)
+				return_code, value.http_code = curl(url, tmp_file, ua, access_mode, value.hwid, value.custom_hwid)
 				if return_code ~= 0 then
 					fail_list[#fail_list + 1] = value
 					luci.sys.call("rm -f " .. tmp_file)
