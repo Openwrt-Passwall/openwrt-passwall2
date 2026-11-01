@@ -1208,28 +1208,28 @@ msgstr "不是有效IPv6格式，請重新輸入！"
 msgid "Not true format, please re-enter!"
 msgstr "不是正確的格式，請重新輸入！"
 
-msgid "Plaintext: If this string matches any part of the targeting domain, this rule takes effet. Example: rule 'sina.com' matches targeting domain 'sina.com', 'sina.com.cn' and 'www.sina.com', but not 'sina.cn'."
+msgid "Plaintext: If this string matches any part of the targeting domain, this rule takes effect. Example: rule 'sina.com' matches targeting domain 'sina.com', 'sina.com.cn' and 'www.sina.com', but not 'sina.cn'."
 msgstr "純字符串: 當此字符串匹配目標域名中任意部分，该規則生效。比如'sina.com'可以匹配'sina.com'、'sina.com.cn'和'www.sina.com'，但不匹配'sina.cn'。"
 
-msgid "Regular expression: Begining with 'regexp:', the rest is a regular expression. When the regexp matches targeting domain, this rule takes effect. Example: rule 'regexp:\\.goo.*\\.com$' matches 'www.google.com' and 'fonts.googleapis.com', but not 'google.com'."
+msgid "Regular expression: Beginning with 'regexp:', the rest is a regular expression. When the regexp matches targeting domain, this rule takes effect. Example: rule 'regexp:\\.goo.*\\.com$' matches 'www.google.com' and 'fonts.googleapis.com', but not 'google.com'."
 msgstr "正則表达式: 由'regexp:'開始，余下部分是一個正則表达式。當此正則表达式匹配目標域名時，该規則生效。例如'regexp:\\.goo.*\\.com$'匹配'www.google.com'、'fonts.googleapis.com'，但不匹配'google.com'。"
 
-msgid "Subdomain (recommended): Begining with 'domain:' and the rest is a domain. When the targeting domain is exactly the value, or is a subdomain of the value, this rule takes effect. Example: rule 'domain:v2ray.com' matches 'www.v2ray.com', 'v2ray.com', but not 'xv2ray.com'."
+msgid "Subdomain (recommended): Beginning with 'domain:' and the rest is a domain. When the targeting domain is exactly the value, or is a subdomain of the value, this rule takes effect. Example: rule 'domain:v2ray.com' matches 'www.v2ray.com', 'v2ray.com', but not 'xv2ray.com'."
 msgstr "子域名 (推荐): 由'domain:'開始，余下部分是一個域名。當此域名是目標域名或其子域名時，该規則生效。例如'domain:v2ray.com'匹配'www.v2ray.com'、'v2ray.com'，但不匹配'xv2ray.com'。"
 
-msgid "Full domain: Begining with 'full:' and the rest is a domain. When the targeting domain is exactly the value, the rule takes effect. Example: rule 'domain:v2ray.com' matches 'v2ray.com', but not 'www.v2ray.com'."
+msgid "Full domain: Beginning with 'full:' and the rest is a domain. When the targeting domain is exactly the value, the rule takes effect. Example: rule 'full:v2ray.com' matches 'v2ray.com', but not 'www.v2ray.com'."
 msgstr "完整匹配: 由'full:'開始，余下部分是一個域名。當此域名完整匹配目標域名時，该規則生效。例如'full:v2ray.com'匹配'v2ray.com'但不匹配'www.v2ray.com'。"
 
-msgid "Sing-Box rule-set: Begining with 'rule-set:remote:' or 'rule-set:local:'"
+msgid "Sing-Box rule-set: Beginning with 'rule-set:remote:' or 'rule-set:local:'"
 msgstr "Sing-Box 規則集： 由 'rule-set:remote:' 或 'rule-set:local:' 開始"
 
 msgid "Such as:"
 msgstr "例如："
 
-msgid "Pre-defined domain list: Begining with 'geosite:' and the rest is a name, such as geosite:google or geosite:cn."
+msgid "Pre-defined domain list: Beginning with 'geosite:' and the rest is a name, such as geosite:google or geosite:cn."
 msgstr "预定义域名列表：由'geosite:'開头，余下部分是一個名称，如geosite:google或者geosite:cn。"
 
-msgid "Annotation: Begining with #"
+msgid "Annotation: Beginning with #"
 msgstr "注释: 由 # 開头"
 
 msgid "Invert match result."
