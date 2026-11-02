@@ -304,10 +304,10 @@ if singbox_tags:find("with_utls") then
 	o:depends({ protocol = "vless", tls = true })
 	o:depends({ protocol = "trojan", tls = true })
 	o:depends({ protocol = "anytls", tls = true })
-	
+
 	o = s:option(Value, "reality_private_key", translate("Private Key"))
 	o:depends({ reality = true })
-	
+
 	o = s:option(Value, "reality_shortId", translate("Short Id"))
 	o:depends({ reality = true })
 

@@ -157,26 +157,26 @@ insert_nftset() {
 			RS = "[ \t\n\r]+"
 			ORS = ""
 		}
-        $0 != "" {
-            if (!first) {
-                printf "add element %s %s { \n", t, n
+		$0 != "" {
+			if (!first) {
+				printf "add element %s %s { \n", t, n
 				first = 1
-            } else {
-                print ",\n"
-            }
-            printf " %s", $0
-        }
-        END {
-            if (first) {
-                print "\n }\n"
-            }
-        }' | nft -f -
+			} else {
+				print ",\n"
+			}
+			printf " %s", $0
+		}
+		END {
+			if (first) {
+				print "\n }\n"
+			}
+		}' | nft -f -
 }
 
 gen_nftset() {
 	local nftset_name="${1}"; shift
 	local ip_type="${1}"; shift
-	#  0 - don't set defalut timeout
+	#  0 - don't set default timeout
 	local timeout_argument_set="${1}"; shift
 	#  0 - don't let element timeout(365 days) when set's timeout parameters be seted
 	# -1 - follow the set's timeout parameters
@@ -455,7 +455,7 @@ load_acl() {
 					continue
 				fi
 				msg="${msg1}${msg}"
-				
+
 				[ -n "$tcp_no_redir_ports" ] && {
 					if ! has_1_65535 "$tcp_no_redir_ports"; then
 						nft "add rule $NFTABLE_NAME $nft_prerouting_chain ${_ipt_source} ip protocol tcp $(factor $tcp_no_redir_ports "tcp dport") counter return comment \"$remarks\""
@@ -467,7 +467,7 @@ load_acl() {
 						log 2 "${msg}$(i18n "not proxy all %s" "TCP")"
 					fi
 				}
-				
+
 				[ -n "$udp_no_redir_ports" ] && {
 					if ! has_1_65535 "$udp_no_redir_ports"; then
 						nft "add rule $NFTABLE_NAME PSW2_MANGLE ip protocol udp ${_ipt_source} $(factor $udp_no_redir_ports "udp dport") counter return comment \"$remarks\""
@@ -958,7 +958,7 @@ gen_include() {
 
 	cat <<-EOF >> $FWI
 	${__nft}
-	
+
 	return 0
 	EOF
 	return 0

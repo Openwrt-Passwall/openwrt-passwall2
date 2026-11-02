@@ -99,7 +99,7 @@ local current_node = map:get(section)
 		};
 		return r;
 	}
-	
+
 	function genQrcode(btn, urlname, sid) {
 		var qrcode_div = document.getElementById("qrcode_div");
 		qrcode_div.style.display = null;
@@ -203,7 +203,7 @@ local current_node = map:get(section)
 			url = b64encsafe(v_method.value + ":" + v_password.value) + "@" +
 				_address + ":" +
 				v_port.value + "/?";
-			
+
 			var shadow_tls;
 			// Generate SS Shadow-TLS plugin parameters
 			const generateShadowTLSBase64 = function(paramStr) {
@@ -596,7 +596,7 @@ local current_node = map:get(section)
 			params += opt.query("pinSHA256", dom_prefix + "tls_pinSHA256");
 			params += opt.query("pcs", dom_prefix + "tls_pinSHA256");
 			params += opt.query("vcn", dom_prefix + "tls_CertByName");
-			
+
 			var v_password = opt.get(dom_prefix + "hysteria2_auth_password");
 			var dom_obfs_type = opt.get(dom_prefix + "hysteria2_obfs_type");
 			if (dom_obfs_type && dom_obfs_type.value != "") {
@@ -767,7 +767,7 @@ local current_node = map:get(section)
 		if (!server) return '';
 		return server.replace(/^\[/, '').replace(/\]$/, '');
 	}
-	
+
 	function tofromUrl(btn) {
 		let link = prompt('<%:Paste Share URL Here%>', '');
 		if (link === null || link === "") {
@@ -1133,7 +1133,7 @@ local current_node = map:get(section)
 							var kv = ws_path_params_array[i].split('=');
 							ws_path_params[decodeURIComponent(kv[0]).toLowerCase()] = decodeURIComponent(kv[1] || '');
 						}
-						
+
 						if (ws_path_params.ed) {
 							opt.set(dom_prefix + 'ws_path', ws_path);
 							opt.set(dom_prefix + 'ws_enableEarlyData', true);
@@ -1171,7 +1171,7 @@ local current_node = map:get(section)
 				opt.set(dom_prefix + 'uot', queryParam.udp);
 				opt.set(dom_prefix + 'use_finalmask', !!queryParam.fm);
 				opt.set(dom_prefix + 'finalmask', queryParam.fm || "");
-			
+
 				if (queryParam["shadow-tls"]) {
 					// Parsing SS Shadow-TLS plugin parameters
 					const parseShadowTLSParams = function(base64Str, outObj) {
@@ -1281,7 +1281,7 @@ local current_node = map:get(section)
 						var kv = ws_path_params_array[i].split('=');
 						ws_path_params[decodeURIComponent(kv[0]).toLowerCase()] = decodeURIComponent(kv[1] || '');
 					}
-					
+
 					if (ws_path_params.ed) {
 						opt.set(dom_prefix + 'ws_path', ws_path);
 						opt.set(dom_prefix + 'ws_enableEarlyData', true);
@@ -1468,7 +1468,7 @@ local current_node = map:get(section)
 						var kv = ws_path_params_array[i].split('=');
 						ws_path_params[decodeURIComponent(kv[0]).toLowerCase()] = decodeURIComponent(kv[1] || '');
 					}
-					
+
 					if (ws_path_params.ed) {
 						opt.set(dom_prefix + 'ws_path', ws_path);
 						opt.set(dom_prefix + 'ws_enableEarlyData', true);
@@ -1504,7 +1504,7 @@ local current_node = map:get(section)
 			} else {
 				dom_prefix = "xray_";
 			}
-			
+
 			var m = parseNodeUrl(link);
 			var password = m.passwd;
 			if (password === "") {
@@ -1611,7 +1611,7 @@ local current_node = map:get(section)
 						var kv = ws_path_params_array[i].split('=');
 						ws_path_params[decodeURIComponent(kv[0]).toLowerCase()] = decodeURIComponent(kv[1] || '');
 					}
-					
+
 					if (ws_path_params.ed) {
 						opt.set(dom_prefix + 'ws_path', ws_path);
 						opt.set(dom_prefix + 'ws_enableEarlyData', true);
@@ -1693,10 +1693,10 @@ local current_node = map:get(section)
 				opt.set(dom_prefix + 'use_finalmask', !!queryParam.fm);
 				opt.set(dom_prefix + 'finalmask', queryParam.fm || "");
 			}
-			
+
 			opt.set(dom_prefix + 'address', unbracketIP(m.hostname));
 			opt.set(dom_prefix + 'port', m.port || "443");
-			
+
 			opt.set(dom_prefix + 'tls_serverName', queryParam.sni || "");
 			opt.set(
 				dom_prefix + 'tls_allowInsecure',
@@ -1911,7 +1911,7 @@ local current_node = map:get(section)
 		sessionStorage.removeItem("fromUrl");
 		return true;
 	}
-	
+
 	function exportConfigFile(btn, sid) {
 		window.open('<%=api.url("gen_client_config")%>?id=' + sid, "_blank")
 	}

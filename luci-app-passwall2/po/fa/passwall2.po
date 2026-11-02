@@ -1216,28 +1216,28 @@ msgstr "فرمت IPv6 نامعتبر است، لطفاً دوباره وارد �
 msgid "Not true format, please re-enter!"
 msgstr "فرمت صحیح نیست، لطفاً دوباره وارد کنید!"
 
-msgid "Plaintext: If this string matches any part of the targeting domain, this rule takes effet. Example: rule 'sina.com' matches targeting domain 'sina.com', 'sina.com.cn' and 'www.sina.com', but not 'sina.cn'."
+msgid "Plaintext: If this string matches any part of the targeting domain, this rule takes effect. Example: rule 'sina.com' matches targeting domain 'sina.com', 'sina.com.cn' and 'www.sina.com', but not 'sina.cn'."
 msgstr "متن ساده (Plaintext): اگر این رشته با هر بخشی از دامنه هدف مطابقت داشته باشد، این قانون اعمال می‌شود. مثال: قانون 'sina.com' با دامنه هدف 'sina.com'، 'sina.com.cn' و 'www.sina.com' مطابقت دارد، اما با 'sina.cn' خیر."
 
-msgid "Regular expression: Begining with 'regexp:', the rest is a regular expression. When the regexp matches targeting domain, this rule takes effect. Example: rule 'regexp:\\.goo.*\\.com$' matches 'www.google.com' and 'fonts.googleapis.com', but not 'google.com'."
+msgid "Regular expression: Beginning with 'regexp:', the rest is a regular expression. When the regexp matches targeting domain, this rule takes effect. Example: rule 'regexp:\\.goo.*\\.com$' matches 'www.google.com' and 'fonts.googleapis.com', but not 'google.com'."
 msgstr "عبارت باقاعده (Regular expression): با 'regexp:' شروع می‌شود و بقیه یک عبارت باقاعده است. زمانی که عبارت باقاعده با دامنه هدف مطابقت داشته باشد، این قانون اعمال می‌شود. مثال: قانون 'regexp:\\.goo.*\\.com$' با 'www.google.com' و 'fonts.googleapis.com' مطابقت دارد، اما با 'google.com' خیر."
 
-msgid "Subdomain (recommended): Begining with 'domain:' and the rest is a domain. When the targeting domain is exactly the value, or is a subdomain of the value, this rule takes effect. Example: rule 'domain:v2ray.com' matches 'www.v2ray.com', 'v2ray.com', but not 'xv2ray.com'."
+msgid "Subdomain (recommended): Beginning with 'domain:' and the rest is a domain. When the targeting domain is exactly the value, or is a subdomain of the value, this rule takes effect. Example: rule 'domain:v2ray.com' matches 'www.v2ray.com', 'v2ray.com', but not 'xv2ray.com'."
 msgstr "زیردامنه (توصیه شده): با 'domain:' شروع می‌شود و بقیه یک دامنه است. زمانی که دامنه هدف دقیقاً مقدار باشد، یا زیردامنه‌ای از مقدار باشد، این قانون اعمال می‌شود. مثال: قانون 'domain:v2ray.com' با 'www.v2ray.com' و 'v2ray.com' مطابقت دارد، اما با 'xv2ray.com' خیر."
 
-msgid "Full domain: Begining with 'full:' and the rest is a domain. When the targeting domain is exactly the value, the rule takes effect. Example: rule 'domain:v2ray.com' matches 'v2ray.com', but not 'www.v2ray.com'."
-msgstr "دامنه کامل: با 'full:' شروع می‌شود و بقیه یک دامنه است. زمانی که دامنه هدف دقیقاً مقدار باشد، قانون اعمال می‌شود. مثال: قانون 'domain:v2ray.com' با 'v2ray.com' مطابقت دارد، اما با 'www.v2ray.com' خیر."
+msgid "Full domain: Beginning with 'full:' and the rest is a domain. When the targeting domain is exactly the value, the rule takes effect. Example: rule 'full:v2ray.com' matches 'v2ray.com', but not 'www.v2ray.com'."
+msgstr "دامنه کامل: با 'full:' شروع می‌شود و بقیه یک دامنه است. زمانی که دامنه هدف دقیقاً مقدار باشد، قانون اعمال می‌شود. مثال: قانون 'full:v2ray.com' با 'v2ray.com' مطابقت دارد، اما با 'www.v2ray.com' خیر."
 
-msgid "Sing-Box rule-set: Begining with 'rule-set:remote:' or 'rule-set:local:'"
+msgid "Sing-Box rule-set: Beginning with 'rule-set:remote:' or 'rule-set:local:'"
 msgstr "مجموعه قوانین Sing-Box: با 'rule-set:remote:' یا 'rule-set:local:' شروع می‌شود"
 
 msgid "Such as:"
 msgstr "مانند:"
 
-msgid "Pre-defined domain list: Begining with 'geosite:' and the rest is a name, such as geosite:google or geosite:cn."
+msgid "Pre-defined domain list: Beginning with 'geosite:' and the rest is a name, such as geosite:google or geosite:cn."
 msgstr "لیست دامنه از پیش تعریف شده: با 'geosite:' شروع می‌شود و بقیه یک نام است، مانند geosite:google یا geosite:cn."
 
-msgid "Annotation: Begining with #"
+msgid "Annotation: Beginning with #"
 msgstr "توضیحات: با # شروع می‌شود"
 
 msgid "Invert match result."

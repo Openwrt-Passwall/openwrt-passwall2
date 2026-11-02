@@ -4,25 +4,25 @@ local api = map.api
 -%>
 <style>
 	.dns-con {
-	  padding: 1rem;
+		padding: 1rem;
 	}
 	.faq-title {
-	  color: var(--primary);
-	  font-weight: bolder;
-	  margin-bottom: 0.5rem;
-	  display: inline-block;
+		color: var(--primary);
+		font-weight: bolder;
+		margin-bottom: 0.5rem;
+		display: inline-block;
 	}
 	.reset-title {
-	 color: var(--primary)；
-	 font-weight: bolder;
-	 margin-bottom: 0.3rem;
-	 display: inline-block;
-	 margin-top: 1.2rem;
-	 text-decoration: underline;
+		color: var(--primary)；
+		font-weight: bolder;
+		margin-bottom: 0.3rem;
+		display: inline-block;
+		margin-top: 1.2rem;
+		text-decoration: underline;
 	}
 	.dns-item {
-	 margin-bottom: 0.8rem;
-	 line-height:1.2rem;
+		margin-bottom: 0.8rem;
+		line-height:1.2rem;
 	}
 	.dns-list {
 		text-indent:1rem;
@@ -50,13 +50,13 @@ local api = map.api
 	var origin = window.location.origin;
 	var hide_url = origin + "<%=api.url("hide")%>";
 	var show_url = origin + "<%=api.url("show")%>";
-	
+
 	function hide(url) {
 		if (confirm('<%:Are you sure to hide?%>') == true) {
 			window.location.href = hide_url;
 		}
 	}
-	
+
 	var dom = document.getElementById("faq_reset");
 	if (dom) {
 		var li = "";

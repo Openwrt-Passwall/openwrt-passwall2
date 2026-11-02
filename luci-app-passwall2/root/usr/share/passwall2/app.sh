@@ -781,7 +781,7 @@ run_ipset_chinadns_ng() {
 		node_servers=$(uci show "${CONFIG}" | grep -E "(.address=|.download_address=)" | cut -d "'" -f 2)
 		hosts_foreach "node_servers" host_from_url | grep '[a-zA-Z]$' | sort -u | grep -v "engage.cloudflareclient.com" > $TMP_ACL_PATH/vpslist
 	}
-	
+
 	[ -n "${ipset}" ] && {
 		set_names=$ipset
 		vps_set_names="psw2_vps,psw2_vps6"

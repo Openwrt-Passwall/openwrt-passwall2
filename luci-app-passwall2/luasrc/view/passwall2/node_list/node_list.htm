@@ -478,7 +478,7 @@ table td, .table .td {
 			var code = ajax.encode(data);
 			xhr.open("POST", url, true);
 			xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-			
+
 			if (timeout && timeout > 1000) {
 				xhr.timeout = timeout;
 			}
@@ -645,7 +645,7 @@ table td, .table .td {
 		updateElement(selectAllChk);
 		updateElement(selectAllBtn);
 	}
-	
+
 	function delete_select_nodes() {
 		var ids = [];
 		var visibleContainer = document.querySelector('#cbi-<%=appname%>-nodes > .cbi-tabcontainer[style*="display:block"], #cbi-<%=appname%>-nodes > .cbi-tabcontainer[style*="display: block"]');
@@ -698,7 +698,7 @@ table td, .table .td {
 		address = !reg.test(address) ? address : "";
 		return { address: address, port: port };
 	}
-	
+
 	function get_node_order(group) {
 		let table = document.getElementById("cbi-<%=appname%>-nodes-" + group + "-table");
 		if (!table) {
@@ -756,7 +756,7 @@ table td, .table .td {
 			}
 		);
 	}
-	
+
 	function urltest_node(cbi_id, dom) {
 		if (dom.dataset.busy == "1" || !cbi_id) return;
 		dom.dataset.busy = "1";
@@ -1165,7 +1165,7 @@ table td, .table .td {
 			const dom = document.getElementById('modal-mask');
 			dom.style.display = 'block';
 			dom.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;"><%:Processing, please wait…%></div>';
-			
+
 			const chunkSize = 1000;  // Fragmented sending to overcome uhttpd's limitations, with each fragment containing 1000 characters.
 			const totalChunks = Math.ceil(link.length / chunkSize);
 			let currentChunk = 0;
@@ -1266,7 +1266,7 @@ table td, .table .td {
 			}
 		}
 	}
-	
+
 	const set_node_div = {
 		section: '',
 		open(cbi_id) {
@@ -1606,7 +1606,7 @@ table td, .table .td {
 				}
 			});
 		}
-		
+
 		function dom_event() {
 			waitForElement('input[type="checkbox"][name*="<%=appname%>"][name*="show_node_info"]', function(el) {
 				el.addEventListener("change", () => {
@@ -1662,7 +1662,7 @@ table td, .table .td {
 			};
 		<% end -%>
 		dom_event();
-		
+
 		const links = document.querySelectorAll('a');
 		links.forEach(link => {
 			link.addEventListener('click', (e) => {

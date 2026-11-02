@@ -536,7 +536,7 @@ function strToTable(str)
 	if str == nil or type(str) ~= "string" then
 		return {}
 	end
-	
+
 	return loadstring("return " .. str)()
 end
 
@@ -922,7 +922,7 @@ function clone(org)
 			end
 		end
 	end
- 
+
 	local res = {}
 	copy(org, res)
 	return res

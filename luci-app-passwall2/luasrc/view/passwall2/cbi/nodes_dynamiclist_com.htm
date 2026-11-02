@@ -175,7 +175,7 @@
 		const ctx = canvas.getContext('2d', { willReadFrequently: true });
 		return function(colorStr) {
 			if (!colorStr)
-			   return null;
+				return null;
 			ctx.clearRect(0, 0, 1, 1);
 			// 2. Apply the color
 			ctx.fillStyle = colorStr;
@@ -213,7 +213,7 @@
 		if (!rgb) return 'unknown'; // Handle invalid colors
 		// Calculate YIQ brightness (human eye perception)
 		const brightness = ((rgb.r * 299) + (rgb.g * 587) + (rgb.b * 114)) / 1000;
-		
+
 		return brightness > 128 ? 'light' : 'dark';
 	}
 

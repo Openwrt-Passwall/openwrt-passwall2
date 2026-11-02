@@ -149,6 +149,20 @@ local com = self.com
 
 	function doUpdate(btn, app) {
 		if (luciUpdating || (app === appname && componentUpdates > 0)) return;
+		var appInfo = appInfoList[app];
+		if (!appInfo || !appInfo.data) {
+			onRequestError(btn, updateFailedText);
+			return;
+		}
+		var downloadList = [appInfo.data];
+		if (app === appname && Array.isArray(appInfo.i18n)) downloadList = downloadList.concat(appInfo.i18n);
+		for (var i = 0; i < downloadList.length; i++) {
+			if (!downloadList[i] || !downloadList[i].browser_download_url) {
+				onRequestError(btn, updateFailedText);
+				return;
+			}
+		}
+
 		if (app === appname) luciUpdating = true;
 		else componentUpdates++;
 		setButtonDisabled(btn, true);
@@ -157,10 +171,7 @@ local com = self.com
 		addPageNotice();
 
 		var appUpdateUrl = '<%=api.url("update_")%>' + app;
-		var appInfo = appInfoList[app];
 		var downloadId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
-		var downloadList = appInfo && appInfo.data ? [appInfo.data] : [];
-		if (app === appname && Array.isArray(appInfo.i18n)) downloadList = downloadList.concat(appInfo.i18n);
 		var totalSize = 0;
 		for (var i = 0; i < downloadList.length; i++) totalSize += Number(downloadList[i].size) || 0;
 		if (!isFinite(totalSize) || totalSize <= 0) {
@@ -312,11 +323,35 @@ local com = self.com
 //]]>
 </script>
 
+<style>
+	#app_version > .cbi-value {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		margin-top: 0;
+		margin-bottom: 0;
+		padding-top: .25rem;
+		padding-bottom: .25rem;
+	}
+	#app_version > .cbi-value > .cbi-value-title {
+		padding-top: 0;
+		padding-bottom: 0;
+		line-height: 1.2;
+	}
+	#app_version .app-version-sub {
+		display: block;
+		font-size: .85em;
+		font-weight: normal;
+		opacity: .7;
+	}
+</style>
+
 <div class="cbi-value">
-	<label class="cbi-value-title">Passwall2 <%:Version%></label>
+	<label class="cbi-value-title">Passwall2 <%:Version%>
+		<span class="app-version-sub"><%=api.get_version()%></span>
+	</label>
 	<div class="cbi-value-field">
 		<div class="cbi-value-description">
-			<span>【 <%=api.get_version()%> 】</span>
 			<input class="btn cbi-button cbi-button-apply" type="button" id="<%=api.appname%>-check_btn" data-update-app="<%=api.appname%>"
 				onclick="onBtnClick(this, appname);" value="<%:Check update%>" />
 			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=api.appname%>-force_btn" data-update-app="<%=api.appname%>"
@@ -332,10 +367,10 @@ local com = self.com
 <div class="cbi-value">
 	<label class="cbi-value-title"><%=v.name%>
 		<%:Version%>
+		<span class="app-version-sub"><span class="com_version" key="<%=k%>"><%=translate("Null")%></span></span>
 	</label>
 	<div class="cbi-value-field">
 		<div class="cbi-value-description">
-			<span>【 <span class="com_version" key="<%=k%>"><%=translate("Null")%></span> 】</span>
 			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-check_btn" data-update-app="<%=k%>"
 				onclick="onBtnClick(this,'<%=k%>');" value="<%:Check update%>" />
 			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-force_btn" data-update-app="<%=k%>"

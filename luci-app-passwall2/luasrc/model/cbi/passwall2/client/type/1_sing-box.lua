@@ -715,7 +715,7 @@ if singbox_tags:find("with_utls") then
 
 	o = s:option(Value, "reality_publicKey", translate("Public Key"))
 	o:depends({ reality = true })
-	
+
 	o = s:option(Value, "reality_shortId", translate("Short Id"))
 	o:depends({ reality = true })
 end

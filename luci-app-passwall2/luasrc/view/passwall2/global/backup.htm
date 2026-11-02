@@ -153,7 +153,7 @@ local api = map.api
 				if (confirm("<%: Are you sure you want to restore the client to default settings?%>")) {
 					const xhr = new XMLHttpRequest();
 					xhr.open("GET",'<%= api.url("reset_config") %>', false);
-					xhr.send(); 
+					xhr.send();
 					window.location.href = '<%= api.url("log") %>'
 				}
 			}, 1000);

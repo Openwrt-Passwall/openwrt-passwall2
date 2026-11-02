@@ -291,7 +291,7 @@ load_acl() {
 			}
 
 			local comment_l="$(i18n "Local")"
-			
+
 			if [ -n "$node" ] && ([ -z "$no_tcp_local_proxy" ] || [ -z "$no_udp_local_proxy" ]); then
 				[ -n "$dns_redirect_port" ] && {
 					#$ipt_m -A PSW2_OUTPUT $(comment "${comment_l}") -p udp --dport 53 -j ACCEPT
@@ -390,7 +390,7 @@ load_acl() {
 
 			$ipt_m -I OUTPUT $(comment "mangle-OUTPUT-PSW2") -o lo -j RETURN
 			insert_rule_before "$ipt_m" "OUTPUT" "mwan3" "$(comment mangle-OUTPUT-PSW2) -m mark --mark ${FWMARK} -j RETURN"
-			
+
 			$ip6t_m -I OUTPUT $(comment "mangle-OUTPUT-PSW2") -o lo -j RETURN
 			insert_rule_before "$ip6t_m" "OUTPUT" "mwan3" "$(comment mangle-OUTPUT-PSW2) -m mark --mark ${FWMARK} -j RETURN"
 
@@ -463,7 +463,7 @@ load_acl() {
 						log 2 "${msg}$(i18n "not proxy all %s" "TCP")"
 					fi
 				}
-				
+
 				[ -n "$udp_no_redir_ports" ] && {
 					if ! has_1_65535 "$udp_no_redir_ports"; then
 						[ "$_ipv4" != "1" ] && add_port_rules "$ip6t_m -A PSW2 $(comment "$remarks") ${_ipt_source} -p udp" $udp_no_redir_ports "-j RETURN" 2>/dev/null
@@ -475,7 +475,7 @@ load_acl() {
 						log 2 "${msg}$(i18n "not proxy all %s" "UDP")"
 					fi
 				}
-				
+
 				if ([ -z "$no_tcp_proxy" ] || [ -z "$no_udp_proxy" ]) && [ -n "$dns_redirect_port" ]; then
 					$ipt_m -A PSW2 $(comment "$remarks") -p udp ${_ipt_source} --dport 53 -j ACCEPT
 					$ipt_m -A PSW2 $(comment "$remarks") -p tcp ${_ipt_source} --dport 53 -j ACCEPT
@@ -508,7 +508,7 @@ load_acl() {
 						add_shunt_t_rule "${shunt_list4}" "$ipt_n -A PSW2 $(comment "$remarks") -p icmp ${_ipt_source}" "$(REDIRECT)"
 						$ipt_n -A PSW2 $(comment "$remarks") -p icmp ${_ipt_source} $(REDIRECT)
 					}
-					
+
 					[ "$accept_icmpv6" = "1" ] && [ "$PROXY_IPV6" == "1" ] && {
 						$ip6t_n -A PSW2 $(comment "$remarks") -p ipv6-icmp ${_ipt_source} -d $FAKE_IP_6 $(REDIRECT) 2>/dev/null
 						add_shunt_t_rule "${shunt_list6}" "$ip6t_n -A PSW2 $(comment "$remarks") -p ipv6-icmp ${_ipt_source}" "$(REDIRECT)" 2>/dev/null
@@ -650,12 +650,12 @@ update_wan_sets() {
 
 add_firewall_rule() {
 	log_i18n 0 "Starting to load %s firewall rules..." "iptables"
-	
+
 	ipset -! create $IPSET_LOCAL nethash maxelem 1048576
 	ipset -! create $IPSET_DIRECT nethash maxelem 1048576
 	ipset -! create $IPSET_VPS iphash maxelem 1048576
 	ipset -! create $IPSET_WAN nethash maxelem 1048576
-	
+
 	ipset -! create $IPSET_LOCAL6 nethash family inet6 maxelem 1048576
 	ipset -! create $IPSET_DIRECT6 nethash family inet6 maxelem 1048576
 	ipset -! create $IPSET_VPS6 iphash family inet6 maxelem 1048576
@@ -734,7 +734,7 @@ add_firewall_rule() {
 	$ipt_n -N PSW2
 	$ipt_n -A PSW2 $(dst $IPSET_VPS) -j RETURN
 	$ipt_n -A PSW2 $(comment "WAN_IP_RETURN") $(dst $IPSET_WAN) -j RETURN
-	
+
 	[ "$accept_icmp" = "1" ] && insert_rule_after "$ipt_n" "PREROUTING" "prerouting_rule" "$(dst $IPSET_DIRECT !) -p icmp -j PSW2"
 	[ -z "${is_tproxy}" ] && insert_rule_after "$ipt_n" "PREROUTING" "prerouting_rule" "$(dst $IPSET_DIRECT !) -p tcp -j PSW2"
 
@@ -784,7 +784,7 @@ add_firewall_rule() {
 		$ip6t_n -A PSW2_OUTPUT $(dst $IPSET_VPS6) -j RETURN
 		$ip6t_n -A PSW2_OUTPUT -m mark --mark 0xff/0xff -j RETURN
 	}
-	
+
 	$ip6t_n -N PSW2_DNS
 	if [ $(config_n_get @global[0] dns_redirect "1") = "0" ]; then
 		#Only hijack when dest address is local IP
@@ -945,7 +945,7 @@ gen_include() {
 		${__ipt}
 
 		${__ip6t}
-		
+
 		return 0
 	EOF
 	return 0
