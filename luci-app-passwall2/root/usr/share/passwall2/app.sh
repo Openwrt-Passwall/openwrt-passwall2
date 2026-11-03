@@ -991,10 +991,12 @@ start() {
 			sysctl -w net.bridge.bridge-nf-call-ip6tables=0 >/dev/null 2>&1
 		}
 	fi
+	run_process_queue
+	# Started after the queue so a fast download cannot trigger the restart in
+	# auto_adblock_update() while the service is still coming up.
 	if [ "$ENABLED_DEFAULT_ACL" == 1 ] || [ "$ENABLED_ACLS" == 1 ]; then
 		auto_adblock_update
 	fi
-	run_process_queue
 	start_crontab "$1"
 	log_i18n 0 "Running complete!"
 	echolog "\n"
