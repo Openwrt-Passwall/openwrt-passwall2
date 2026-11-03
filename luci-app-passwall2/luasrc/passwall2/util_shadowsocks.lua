@@ -78,7 +78,7 @@ function gen_config(var)
 		fast_open = (node.tcp_fast_open and node.tcp_fast_open == "1") and true or false,
 		reuse_port = true
 	}
-	
+
 	if node.type == "SSR" then
 		config.protocol = node.protocol
 		config.protocol_param = node.protocol_param
@@ -115,7 +115,7 @@ function gen_config(var)
 			})
 		end
 	end
-	
+
 	return jsonc.stringify(config, 1)
 end
 

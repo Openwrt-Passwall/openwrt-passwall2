@@ -22,6 +22,7 @@ if node then
 end
 -%>
 <script src="<%=resource%>/view/<%=appname%>/Sortable.min.js"></script>
+<script src="<%=resource%>/view/<%=appname%>/node_list_sort.js"></script>
 
 <style>
 table th, .table .th {
@@ -297,89 +298,124 @@ table td, .table .td {
 		text-align: right;
 	}
 
-	.custom-dropdown {
-		position: relative;
-		border: 1px solid #d9d9d9;
-		border-radius: 2px;
+	.pw-group-select {
 		width: 180px;
 		height: 28px;
-		font-size: 13px;
-		background: #fff;
-		cursor: pointer;
-		box-sizing: border-box;
-		display: block;
-	}
-
-	.selected-display {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 0 8px;
-		width: 100%;
-		height: 100%;
-		box-sizing: border-box;
-		font-size: 12px;
-		color: #666;
-	}
-
-	.selected-display:hover {
-		background-color: #f7f7f7;
-	}
-
-	.dropdown-list {
-		position: absolute;
-		top: calc(100% + 2px);
-		left: -1px;
-		width: calc(100% + 2px);
-		border: 1px solid #d9d9d9;
-		border-radius: 2px;
-		border-top: none;
-		box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-		background: #fff;
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		max-height: 200px;
-		overflow-y: auto;
-		overflow-x: hidden;
-		z-index: 100;
-		box-sizing: border-box;
-		color: #666;
-	}
-
-	.dropdown-item {
-		padding: 4px 8px;
-		line-height: 20px;
-		cursor: pointer;
-	}
-
-	.dropdown-item.selected {
-		background-color: #1e90ff;
-		color: #fff;
-	}
-
-	.create-item-input::placeholder {
-		text-align: center;
-	}
-
-	.dropdown-item.custom-input input {
-		width: 100%;
-		box-sizing: border-box;
-		padding: 3px;
-		font-size: 13px;
-		line-height: 20px;
-		border: 1px solid #ccc;
+		flex: 0 0 180px;
 		text-align: left;
 	}
 
-	.arrow-down-small {
-		width: 0;
-		height: 0;
-		border-left: 4px solid transparent;
-		border-right: 4px solid transparent;
-		border-top: 5px solid #555;
+	.pw-group-select > .cbi-dropdown,
+	.pw-group-select > .cbi-input-text,
+	.pw-group-select > .cbi-input-select {
+		width: 100% !important;
+		min-width: 0 !important;
+		max-width: 100% !important;
+		height: 28px !important;
+		min-height: 28px !important;
+		box-sizing: border-box;
+		margin: 0;
+		padding-top: 0;
+		padding-bottom: 0;
+		font-size: 13px;
+	}
+
+	.pw-group-select > .cbi-dropdown > ul:not(.dropdown) > li,
+	.pw-group-select > .cbi-dropdown > .open {
+		height: 26px;
+		min-height: 0;
+		line-height: 26px;
+		padding-top: 0;
+		padding-bottom: 0;
+		box-sizing: border-box;
+	}
+</style>
+
+<style>
+	/* node list: click-to-sort headers and the per-group filter bar */
+	th[data-pw-sort] {
+		cursor: pointer;
+		user-select: none;
+		white-space: nowrap;
+	}
+
+	th[data-pw-sort]:hover {
+		text-decoration: underline;
+	}
+
+	.pw-sort-arrow {
 		display: inline-block;
-		vertical-align: middle;
+		min-width: 1em;
+		margin-left: 0.25em;
+		font-size: 90%;
+	}
+
+	.pw-sort-sub {
+		font-weight: normal;
+		font-size: 85%;
+		opacity: 0.85;
+		margin-left: 0.6em;
+		cursor: pointer;
+		text-decoration: underline dotted;
+		white-space: nowrap;
+	}
+
+	.pw-sort-sub.pw-sort-active {
+		opacity: 1;
+		font-weight: bold;
+	}
+
+	.pw-sort-note {
+		margin: 0.3em 0;
+		padding: 0.3em 0.6em;
+		border-radius: 3px;
+		background: rgba(251, 154, 5, 0.15);
+		font-size: 90%;
+	}
+
+	tr.pw-row-hidden {
+		display: none !important;
+	}
+
+	.pw-filter {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.3em 0.8em;
+		margin: 0.4em 0;
+		font-size: 90%;
+	}
+
+	.pw-filter label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3em;
+		white-space: nowrap;
+	}
+
+	.pw-filter select,
+	.pw-filter input[type="search"],
+	.pw-filter .cbi-button {
+		box-sizing: border-box !important;
+		width: auto !important;
+		min-width: 6em;
+		max-width: 22em;
+		height: 1.65rem !important;
+		min-height: 0 !important;
+		max-height: none !important;
+		font: inherit !important;
+		line-height: 1.2 !important;
+		padding: 0.15em 0.3em !important;
+		margin: 0 !important;
+	}
+
+	.pw-filter .pw-filter-count {
+		opacity: 0.8;
+	}
+
+	.pw-filter.pw-filter-on .pw-filter-count {
+		font-weight: bold;
+		opacity: 1;
 	}
 </style>
 
@@ -442,7 +478,7 @@ table td, .table .td {
 			var code = ajax.encode(data);
 			xhr.open("POST", url, true);
 			xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-			
+
 			if (timeout && timeout > 1000) {
 				xhr.timeout = timeout;
 			}
@@ -538,15 +574,29 @@ table td, .table .td {
 		}
 	}
 
+	function node_row_visible(el) {
+		if (window.pw2NodeSort && typeof pw2NodeSort.rowVisible === "function")
+			return pw2NodeSort.rowVisible(el);
+		var row = el && el.closest ? el.closest("tr") : null;
+		return !row || !row.classList.contains("pw-row-hidden");
+	}
+
 	function set_select_all_state(sectionChecked) {
 		var visibleContainer = document.querySelector('#cbi-<%=appname%>-nodes > .cbi-tabcontainer[style*="display:block"], #cbi-<%=appname%>-nodes > .cbi-tabcontainer[style*="display: block"]');
 		if (!visibleContainer) return;
 		var nodes = visibleContainer.getElementsByClassName("nodes_select");
 		var selectAllChk = visibleContainer.querySelector(".nodes_select_all");
 		var selectAllBtn = document.getElementById("select_all_btn");
+		var visibleCount = 0;
 		for (var i = 0; i < nodes.length; i++) {
+			if (!node_row_visible(nodes[i])) {
+				nodes[i].checked = false;
+				continue;
+			}
 			nodes[i].checked = sectionChecked;
+			visibleCount++;
 		}
+		sectionChecked = sectionChecked && visibleCount > 0;
 		if (selectAllChk) {
 			selectAllChk.checked = sectionChecked;
 			selectAllChk.title = sectionChecked ? "<%:DeSelect all%>" : "<%:Select all%>";
@@ -574,10 +624,13 @@ table td, .table .td {
 		var selectAllChk = visibleContainer.querySelector(".nodes_select_all");
 		var selectAllBtn = document.getElementById("select_all_btn");
 		var checkedCount = 0;
+		var visibleCount = 0;
 		for (var i = 0; i < nodes.length; i++) {
+			if (!node_row_visible(nodes[i])) continue;
+			visibleCount++;
 			if (nodes[i].checked) checkedCount++;
 		}
-		var allChecked = checkedCount === nodes.length;
+		var allChecked = visibleCount > 0 && checkedCount === visibleCount;
 		var title = allChecked ? "<%:DeSelect all%>" : "<%:Select all%>";
 		var onclickFunc = allChecked ? "dechecked_all_node(this)" : "checked_all_node(this)";
 
@@ -592,7 +645,7 @@ table td, .table .td {
 		updateElement(selectAllChk);
 		updateElement(selectAllBtn);
 	}
-	
+
 	function delete_select_nodes() {
 		var ids = [];
 		var visibleContainer = document.querySelector('#cbi-<%=appname%>-nodes > .cbi-tabcontainer[style*="display:block"], #cbi-<%=appname%>-nodes > .cbi-tabcontainer[style*="display: block"]');
@@ -600,7 +653,7 @@ table td, .table .td {
 		var doms = visibleContainer.getElementsByClassName("nodes_select");
 		if (doms && doms.length > 0) {
 			for (var i = 0 ; i < doms.length; i++) {
-				if (doms[i].checked) {
+				if (doms[i].checked && node_row_visible(doms[i])) {
 					ids.push(doms[i].getAttribute("cbid"))
 				}
 			}
@@ -645,7 +698,7 @@ table td, .table .td {
 		address = !reg.test(address) ? address : "";
 		return { address: address, port: port };
 	}
-	
+
 	function get_node_order(group) {
 		let table = document.getElementById("cbi-<%=appname%>-nodes-" + group + "-table");
 		if (!table) {
@@ -703,7 +756,7 @@ table td, .table .td {
 			}
 		);
 	}
-	
+
 	function urltest_node(cbi_id, dom) {
 		if (dom.dataset.busy == "1" || !cbi_id) return;
 		dom.dataset.busy = "1";
@@ -966,97 +1019,103 @@ table td, .table .td {
 	//<![CDATA[
 	//Pop-up logic
 
-	// Custom group dropdown list events
-	function dropdown_list_fun(div_id) {
-		const dropdown = document.getElementById(div_id);
-		if (!dropdown) return;
+	function normalize_group_name(value, groups) {
+		const name = value.trim();
+		return groups.find(group => group.toLowerCase() === name.toLowerCase()) || name;
+	}
 
-		const display = dropdown.querySelector(".selected-display");
-		const displayText = display.querySelector(".text");
-		const list = dropdown.querySelector(".dropdown-list");
-		const hidden = dropdown.querySelector('input[type="hidden"]');
-		const input = dropdown.querySelector(".create-item-input");
-
-		display.addEventListener("click", function() {
-			list.style.display = list.style.display === "none" ? "block" : "none";
-			input.value = "";
-			//input.focus();
-		});
-
-		function selectItem(li) {
-			list.querySelectorAll(".dropdown-item").forEach(function(el){
-				el.classList.remove("selected");
-			});
-			li.classList.add("selected");
-			hidden.value = li.dataset.value;
-			displayText.textContent = li.dataset.value || "<%:default%>";
-			list.style.display = "none";
+	function init_group_dropdown(div_id) {
+		const container = document.getElementById(div_id);
+		if (!container || container._group_ready || container._group_loading) return;
+		const tabs = document.querySelector("#node_list .cbi-tabmenu");
+		if (!tabs) {
+			setTimeout(() => init_group_dropdown(div_id), 50);
+			return;
 		}
 
-		list.addEventListener("click", function(e){
-			const li = e.target.closest(".dropdown-item");
-			if (!li || li.classList.contains("custom-input")) return;
-			selectItem(li);
-		});
-
-		input.addEventListener("keydown", function(e){
-			const isEnter = e.key === "Enter" || e.keyCode === 13;
-			if (!isEnter) return;
-			e.stopPropagation();
-			e.preventDefault();
-
-			const val = input.value.trim();
-			if (!val) return;
-
-			if (val.toLowerCase() === "default") {
-				const emptyLi = Array.from(list.querySelectorAll(".dropdown-item"))
-					.find(function(el){ return !el.dataset.value; });
-				if (emptyLi) selectItem(emptyLi);
-				input.value = "";
-				return;
+		const choices = { "default": "<%:default%>" };
+		const groups = ["default"];
+		tabs.querySelectorAll("li[group_name]").forEach(function(tab) {
+			const group = tab.getAttribute("group_name");
+			if (group !== "default" && !groups.includes(group)) {
+				choices[group] = group;
+				groups.push(group);
 			}
-
-			let li = Array.from(list.querySelectorAll(".dropdown-item")).find(function(el){
-				return el.dataset.value && el.dataset.value.toLowerCase() === val.toLowerCase();
+		});
+		const input = container.querySelector("input");
+		<% if api.is_js_luci() then -%>
+		container._group_loading = true;
+		L.require("ui").then(function(ui) {
+			const widget = new ui.Dropdown("default", choices, {
+				id: input.id,
+				name: input.name,
+				multiple: false,
+				optional: false,
+				create: true,
+				sort: groups,
+				custom_placeholder: "-- <%:custom%> --"
 			});
-			if (!li) {
-				li = document.createElement("li");
-				li.className = "dropdown-item";
-				li.dataset.value = val;
-				li.textContent = val;
-				list.insertBefore(li, input.parentNode); 
-			}
-
-			input.value = "";
-			selectItem(li);
-		});
-		// Read group names from tab
-		function InsertGroup(list, input) {
-			const tabs = document.querySelectorAll(".cbi-tabmenu li");
-			if (!tabs.length) {
-				setTimeout(() => InsertGroup(list, input), 50);
-				return;
-			}
-
-			tabs.forEach(function(li){
-				const group = li.id.split('.').pop();
-				if(group === "default") return;
-				if(Array.from(list.querySelectorAll(".dropdown-item")).some(el => el.dataset.value === group)) return;
-				const newLi = document.createElement("li");
-				newLi.className = "dropdown-item";
-				newLi.dataset.value = group;
-				newLi.textContent = group;
-				list.insertBefore(newLi, input.parentNode);
+			const dropdown = widget.render();
+			// Normalize before LuCI handles Enter and replaces its single custom item.
+			dropdown.addEventListener("keydown", function(e) {
+				if (!e.target.classList.contains("create-item-input") ||
+					(e.key !== "Enter" && e.keyCode !== 13)) return;
+				if (e.isComposing) {
+					e.stopPropagation();
+					return;
+				}
+				const values = Array.from(dropdown.querySelectorAll("ul.dropdown > li[data-value]:not([unselectable])"), li => li.dataset.value);
+				e.target.value = normalize_group_name(e.target.value, values);
+				if (!e.target.value) {
+					e.preventDefault();
+					e.stopPropagation();
+				}
+			}, true);
+			const customInput = dropdown.querySelector(".create-item-input");
+			// The custom input row must not shadow a group named "-".
+			customInput.parentNode.removeAttribute("data-value");
+			customInput.setAttribute("inputmode", "text");
+			customInput.setAttribute("enterkeyhint", "done");
+			dropdown.addEventListener("cbi-dropdown-change", function() {
+				customInput.value = "";
 			});
-		}
-		InsertGroup(list, input);
-
-		// Automatically collapses when clicking on the outside.
-		document.addEventListener("click", function(e) {
-			if (!dropdown.contains(e.target)) {
-				list.style.display = "none";
+			container.replaceChild(dropdown, input);
+			container._group_widget = widget;
+			container._group_ready = true;
+			container._group_loading = false;
+		}).catch(function(error) {
+			container._group_loading = false;
+			console.error("Group dropdown init failed:", error);
+			alert("<%:Error%>");
+		});
+		<% else -%>
+		input.disabled = false;
+		input.addEventListener("blur", function() {
+			input.value = normalize_group_name(input.value, groups) || "default";
+		});
+		input.addEventListener("keydown", function(e) {
+			if ((e.key === "Enter" || e.keyCode === 13) && !e.isComposing) {
+				e.preventDefault();
+				e.stopPropagation();
+				input.blur();
 			}
 		});
+		cbi_combobox_init(input.id, choices, "<%:default%>", "-- <%:custom%> --");
+		container._group_ready = true;
+		<% end -%>
+	}
+
+	function get_group_value(div_id) {
+		const container = document.getElementById(div_id);
+		return (container._group_widget ? container._group_widget.getValue() : container.querySelector("input").value) || "default";
+	}
+
+	function close_group_dropdown(div_id) {
+		const container = document.getElementById(div_id);
+		const dropdown = container.querySelector(".cbi-dropdown[open]");
+		if (dropdown) dropdown.dispatchEvent(new CustomEvent("cbi-dropdown-close"));
+		const input = container.querySelector(".create-item-input");
+		if (input) input.value = "";
 	}
 
 	function getBg(el) {
@@ -1076,20 +1135,18 @@ table td, .table .td {
 			const addLinkDiv = document.getElementById("add_link_div");
 			addLinkDiv.style.background = getBg(document.querySelector('.cbi-section')) || getBg(document.body) || '';
 			addLinkDiv.style.display = "block";
-			if (!addLinkDiv._dropdown_inited) {
-				addLinkDiv._dropdown_inited = true;
-				dropdown_list_fun("addlink_group_custom");
-			}
+			init_group_dropdown("addlink_group_custom");
 			document.getElementById("nodes_link").focus();
 		},
 		close() {
+			close_group_dropdown("addlink_group_custom");
 			document.getElementById('modal-mask').style.display = 'none';
 			document.getElementById("add_link_div").style.display = "none";
 			document.body.classList.remove('modal-open');
 		},
 		add_node() {
 			let nodes_link = document.getElementById("nodes_link").value;
-			const group = (document.querySelector('#addlink_group_custom input[type="hidden"]')?.value || "default");
+			const group = get_group_value("addlink_group_custom");
 			nodes_link = nodes_link.replace(/\t/g, "").replace(/\r\n|\r/g, "\n").replace(/<[^>]*>/g, '').trim();
 			if (nodes_link != "") {
 				nodes_link = decodeIfBase64(nodes_link);
@@ -1108,7 +1165,7 @@ table td, .table .td {
 			const dom = document.getElementById('modal-mask');
 			dom.style.display = 'block';
 			dom.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;"><%:Processing, please wait…%></div>';
-			
+
 			const chunkSize = 1000;  // Fragmented sending to overcome uhttpd's limitations, with each fragment containing 1000 characters.
 			const totalChunks = Math.ceil(link.length / chunkSize);
 			let currentChunk = 0;
@@ -1158,7 +1215,7 @@ table td, .table .td {
 			const doms = visibleContainer.getElementsByClassName("nodes_select");
 			if (doms && doms.length > 0) {
 				for (let i = 0 ; i < doms.length; i++) {
-					if (doms[i].checked) {
+					if (doms[i].checked && node_row_visible(doms[i])) {
 						ids.push(doms[i].getAttribute("cbid"))
 					}
 				}
@@ -1168,29 +1225,27 @@ table td, .table .td {
 					const reassignGroupDiv = document.getElementById("reassign_group_div");
 					reassignGroupDiv.style.background = getBg(document.querySelector('.cbi-section')) || getBg(document.body) || '';
 					reassignGroupDiv.style.display = "block";
-					if (!reassignGroupDiv._dropdown_inited) {
-						reassignGroupDiv._dropdown_inited = true;
-						dropdown_list_fun("reassign_group_custom");
-					}
+					init_group_dropdown("reassign_group_custom");
 				} else {
 					alert("<%:You no select nodes !%>");
 				}
 			}
 		},
 		close() {
+			close_group_dropdown("reassign_group_custom");
 			document.getElementById('modal-mask').style.display = 'none';
 			document.getElementById("reassign_group_div").style.display = "none";
 			document.body.classList.remove('modal-open');
 		},
 		action() {
 			const ids = [];
-			const group = (document.querySelector('#reassign_group_custom input[type="hidden"]')?.value || "default");
+			const group = get_group_value("reassign_group_custom");
 			const visibleContainer = document.querySelector('#cbi-passwall2-nodes > .cbi-tabcontainer[style*="display:block"], #cbi-passwall2-nodes > .cbi-tabcontainer[style*="display: block"]');
 			if (!visibleContainer) return;
 			const doms = visibleContainer.getElementsByClassName("nodes_select");
 			if (doms && doms.length > 0) {
 				for (let i = 0 ; i < doms.length; i++) {
-					if (doms[i].checked) {
+					if (doms[i].checked && node_row_visible(doms[i])) {
 						ids.push(doms[i].getAttribute("cbid"))
 					}
 				}
@@ -1211,7 +1266,7 @@ table td, .table .td {
 			}
 		}
 	}
-	
+
 	const set_node_div = {
 		section: '',
 		open(cbi_id) {
@@ -1298,8 +1353,33 @@ table td, .table .td {
 <fieldset class="cbi-section" id="node_list">
 </fieldset>
 
+<div id="pw2-nodesort-i18n" data-app="<%=appname%>" style="display:none">
+	<span data-k="hint"><%:Click to sort; click again to reverse. Press Save & Apply to keep the order.%></span>
+	<span data-k="typeHint"><%:Sort by type or protocol, then by name%></span>
+	<span data-k="addrHint"><%:Sort by server address and port%></span>
+	<span data-k="origHint"><%:Restore the saved order%></span>
+	<span data-k="changed"><%:The order changed on this page only. Press Save & Apply to store it on the router.%></span>
+	<span data-k="restored"><%:Saved order restored.%></span>
+	<span data-k="wait"><%:Automatic ping is still running (%d left). Sorting will run when it finishes.%></span>
+	<span data-k="waitFail"><%:Automatic ping did not finish within 2 minutes. Sorting was cancelled. Reload the page and try again.%></span>
+	<span data-k="filter"><%:Filter:%></span>
+	<span data-k="all"><%:All%></span>
+	<span data-k="empty"><%:(empty)%></span>
+	<span data-k="type"><%:Type%></span>
+	<span data-k="addr"><%:Address%></span>
+	<span data-k="fWord"><%:Word in remarks%></span>
+	<span data-k="search"><%:search...%></span>
+	<span data-k="searchHint"><%:Show only rows that contain this text%></span>
+	<span data-k="shown"><%:Shown %s of %t%></span>
+	<span data-k="reset"><%:Reset%></span>
+	<span data-k="resetHint"><%:Show all rows%></span>
+	<span data-k="filterHint"><%:The filter only hides rows on this page and changes nothing on the router. Select all skips hidden rows.%></span>
+</div>
+
 <script type="text/javascript">
 	//init logic
+	if (window.pw2NodeSort)
+		pw2NodeSort.init();
 
 	function get_remarks_name(o) {
 		let str = "";
@@ -1499,8 +1579,10 @@ table td, .table .td {
 			}
 
 			get_now_use_node();
-			
+
 			pingAllNodes();
+			if (window.pw2NodeSort)
+				pw2NodeSort.enhanceAll();
 		});
 	}
 
@@ -1524,7 +1606,7 @@ table td, .table .td {
 				}
 			});
 		}
-		
+
 		function dom_event() {
 			waitForElement('input[type="checkbox"][name*="<%=appname%>"][name*="show_node_info"]', function(el) {
 				el.addEventListener("change", () => {
@@ -1580,7 +1662,7 @@ table td, .table .td {
 			};
 		<% end -%>
 		dom_event();
-		
+
 		const links = document.querySelectorAll('a');
 		links.forEach(link => {
 			link.addEventListener('click', (e) => {
@@ -1607,19 +1689,9 @@ table td, .table .td {
 		</div>
 		<div class="value-custom">
 			<div class="value-field-custom">
-				<label class="value-title-custom" for="addlink_group_custom"><%:Group Name%></label>
-				<div id="addlink_group_custom" class="custom-dropdown">
-					<div class="selected-display">
-						<span class="text"><%:default%></span>
-						<span class="arrow-down-small"></span>
-					</div>
-					<ul class="dropdown-list" style="display:none;">
-						<li class="dropdown-item selected" data-value=""><%:default%></li>
-						<li class="dropdown-item custom-input">
-							<input type="text" placeholder="-- <%:custom%> --" class="create-item-input" inputmode="text" enterkeyhint="done">
-						</li>
-					</ul>
-					<input type="hidden" name="addlink_group" value="">
+				<label class="value-title-custom" for="addlink_group"><%:Group Name%></label>
+				<div id="addlink_group_custom" class="pw-group-select">
+					<input id="addlink_group" name="addlink_group" class="cbi-input-text" type="text" value="default" disabled>
 				</div>
 			</div>
 		</div>
@@ -1635,19 +1707,9 @@ table td, .table .td {
 		<h3><%:Reassign Node Group%></h3>
 		<div class="value-custom">
 			<div class="value-field-custom">
-				<label class="value-title-custom" for="reassign_group_custom"><%:Group Name%></label>
-				<div id="reassign_group_custom" class="custom-dropdown">
-					<div class="selected-display">
-						<span class="text"><%:default%></span>
-						<span class="arrow-down-small"></span>
-					</div>
-					<ul class="dropdown-list" style="display:none;">
-						<li class="dropdown-item selected" data-value=""><%:default%></li>
-						<li class="dropdown-item custom-input">
-							<input type="text" placeholder="-- <%:custom%> --" class="create-item-input" inputmode="text" enterkeyhint="done">
-						</li>
-					</ul>
-					<input type="hidden" name="to_group" value="">
+				<label class="value-title-custom" for="to_group"><%:Group Name%></label>
+				<div id="reassign_group_custom" class="pw-group-select">
+					<input id="to_group" name="to_group" class="cbi-input-text" type="text" value="default" disabled>
 				</div>
 			</div>
 		</div>

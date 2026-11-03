@@ -9,13 +9,13 @@ local api = map.api
 	function add_node_by_key() {
 		var key = prompt("<%:Please enter the node keyword, pay attention to distinguish between spaces, uppercase and lowercase.%>", "");
 		if (key) {
-			window.location.href = '<%=api.url("socks_autoswitch_add_node")%>' + "?id=" + socks_id + "&key=" + key;
+			window.location.href = '<%=api.url("socks_autoswitch_add_node")%>' + "?id=" + encodeURIComponent(socks_id) + "&key=" + encodeURIComponent(key);
 		}
 	}
 	function remove_node_by_key() {
 		var key = prompt("<%:Please enter the node keyword, pay attention to distinguish between spaces, uppercase and lowercase.%>", "");
 		if (key) {
-			window.location.href = '<%=api.url("socks_autoswitch_remove_node")%>' + "?id=" + socks_id + "&key=" + key;
+			window.location.href = '<%=api.url("socks_autoswitch_remove_node")%>' + "?id=" + encodeURIComponent(socks_id) + "&key=" + encodeURIComponent(key);
 		}
 	}
 	//]]>

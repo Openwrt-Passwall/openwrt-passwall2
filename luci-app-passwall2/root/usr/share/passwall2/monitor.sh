@@ -26,7 +26,7 @@ while [ "$ENABLED" -eq 1 ]; do
 			fi
 		done
 	}
-	
+
 	rm -f $LOCK_FILE
 	sleep 58s
 done

@@ -160,7 +160,7 @@ o = s:option(Value, "autoswitch_retry_num", translate("Timeout retry num"))
 o.datatype = "min(1)"
 o.default = 1
 o:depends("enable_autoswitch", true)
-	
+
 o = s:option(Flag, "autoswitch_restore_switch", translate("Restore Switch"), translate("When detects main node is available, switch back to the main node."))
 o:depends("enable_autoswitch", true)
 

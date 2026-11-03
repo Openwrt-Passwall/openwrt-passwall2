@@ -47,7 +47,7 @@ check_run_environment() {
 		[ -d "/lib/apk/packages" ] && { file_path="/lib/apk/packages"; file_ext=".list"; }
 
 		if [ "$USE_TABLES" = "iptables" ]; then
-			dep_list="iptables-mod-tproxy iptables-mod-socket iptables-mod-iprange iptables-mod-conntrack-extra kmod-ipt-nat"
+			dep_list="iptables-mod-tproxy iptables-mod-socket iptables-mod-iprange iptables-mod-conntrack-extra iptables-mod-extra kmod-ipt-nat"
 		else
 			dep_list="kmod-nft-socket kmod-nft-tproxy kmod-nft-nat"
 			nftflag=1
@@ -380,7 +380,7 @@ run_socks() {
 	if [ -n "$server_host" ] && [ -n "$server_port" ]; then
 		check_host $server_host
 		[ $? != 0 ] && {
-			log 1 "$(i18n "Socks node: [%s]%s is an invalid server address and cannot be started!" "${$remarks}" "${server_host}")"
+			log 1 "$(i18n "Socks node: [%s]%s is an invalid server address and cannot be started!" "${remarks}" "${server_host}")"
 			return 1
 		}
 		tmp="${server_host}:${server_port}"
@@ -553,9 +553,12 @@ socks_node_switch() {
 		local http_config_file="${flag}_http.json"
 		LOG_FILE="/dev/null"
 		run_socks flag=$flag node=$new_node bind=$bind socks_port=$port config_file=$config_file http_port=$http_port http_config_file=$http_config_file log_file=$log_file
+		sleep 2s
+		[ "$(check_port_exists "$port" tcp)" = "0" ] && return 1
 		set_cache_var "${flag}" "$new_node"
 		local USE_TABLES=$(get_cache_var "USE_TABLES")
 		[ -n "$USE_TABLES" ] && source $APP_PATH/${USE_TABLES}.sh filter_direct_node_list
+		return 0
 	}
 }
 
@@ -579,11 +582,15 @@ start_socks() {
 				[ "$log" == "0" ] && log_file=""
 				local http_port=$(config_n_get $id http_port 0)
 				local http_config_file="${id}_http.json"
-				run_socks flag=$id node=$node bind=$bind socks_port=$port config_file=$config_file http_port=$http_port http_config_file=$http_config_file log_file=$log_file
+				local enable_autoswitch=$(config_n_get $id enable_autoswitch 0)
+				if [ "$enable_autoswitch" = "1" ]; then
+					NO_REC_PROCESS=1 $APP_PATH/app.sh run_socks flag=$id node=$node bind=$bind socks_port=$port config_file=$config_file http_port=$http_port http_config_file=$http_config_file log_file=$log_file
+				else
+					run_socks flag=$id node=$node bind=$bind socks_port=$port config_file=$config_file http_port=$http_port http_config_file=$http_config_file log_file=$log_file
+				fi
 				set_cache_var "${id}" "$node"
 
 				# Auto switch logic
-				local enable_autoswitch=$(config_n_get $id enable_autoswitch 0)
 				[ "$enable_autoswitch" = "1" ] && { $APP_PATH/socks_auto_switch.sh ${id} > /dev/null 2>&1 & }
 			done
 		}
@@ -591,7 +598,6 @@ start_socks() {
 }
 
 clean_crontab() {
-	[ -f "${LOCK_PATH}/${CONFIG}_cron.lock" ] && return
 	touch /etc/crontabs/root
 	#sed -i "/${CONFIG}/d" /etc/crontabs/root >/dev/null 2>&1
 	sed -i "/$(echo "/etc/init.d/${CONFIG}" | sed 's#\/#\\\/#g')/d" /etc/crontabs/root >/dev/null 2>&1
@@ -608,11 +614,10 @@ start_crontab() {
 		[ "$start_daemon" = "1" ] && { $APP_PATH/monitor.sh > /dev/null 2>&1 & }
 	fi
 
-	[ -f "${LOCK_PATH}/${CONFIG}_cron.lock" ] && {
-		rm -rf "${LOCK_PATH}/${CONFIG}_cron.lock"
+	if [ "$1" = "cron" ]; then
 		log_i18n 0 "The task is currently running automatically as a scheduled task; no reconfiguration of the scheduled task is required."
 		return
-	}
+	fi
 
 	clean_crontab
 
@@ -621,6 +626,9 @@ start_crontab() {
 		return
 	}
 
+	local setsid_cmd=""
+	command -v setsid >/dev/null 2>&1 && setsid_cmd="setsid "
+
 	stop_week_mode=$(config_n_get @global_delay[0] stop_week_mode)
 	stop_time_mode=$(config_n_get @global_delay[0] stop_time_mode)
 	if [ -n "$stop_week_mode" ]; then
@@ -628,7 +636,7 @@ start_crontab() {
 		stop_time_mm=$(echo $stop_time_mode | awk -F ':' '{print $2}')
 		local t="$stop_time_mm $stop_time_hh * * $stop_week_mode"
 		[ "$stop_week_mode" = "7" ] && t="$stop_time_mm $stop_time_hh * * *"
-		echo "$t /etc/init.d/$CONFIG stop > /dev/null 2>&1 &" >>/etc/crontabs/root
+		echo "$t ${setsid_cmd}/etc/init.d/$CONFIG stop cron > /dev/null 2>&1 &" >>/etc/crontabs/root
 		log_i18n 0 "Scheduled tasks: Auto stop service."
 	fi
 
@@ -639,7 +647,7 @@ start_crontab() {
 		start_time_mm=$(echo $start_time_mode | awk -F ':' '{print $2}')
 		local t="$start_time_mm $start_time_hh * * $start_week_mode"
 		[ "$start_week_mode" = "7" ] && t="$start_time_mm $start_time_hh * * *"
-		echo "$t /etc/init.d/$CONFIG start > /dev/null 2>&1 &" >>/etc/crontabs/root
+		echo "$t ${setsid_cmd}/etc/init.d/$CONFIG start cron > /dev/null 2>&1 &" >>/etc/crontabs/root
 		log_i18n 0 "Scheduled tasks: Auto start service."
 	fi
 
@@ -653,7 +661,7 @@ start_crontab() {
 		if [ "$restart_week_mode" = "8" ]; then
 			update_loop=1
 		else
-			echo "$t /etc/init.d/$CONFIG restart > /dev/null 2>&1 &" >>/etc/crontabs/root
+			echo "$t ${setsid_cmd}/etc/init.d/$CONFIG restart cron > /dev/null 2>&1 &" >>/etc/crontabs/root
 		fi
 		log_i18n 0 "Scheduled tasks: Auto restart service."
 	fi
@@ -668,7 +676,7 @@ start_crontab() {
 		if [ "$rules_update_week_mode" = "8" ]; then
 			update_loop=1
 		else
-			echo "$t lua $APP_PATH/rule_update.lua log all cron > /dev/null 2>&1 &" >>/etc/crontabs/root
+			echo "$t ${setsid_cmd}lua $APP_PATH/rule_update.lua log all cron > /dev/null 2>&1 &" >>/etc/crontabs/root
 		fi
 		log_i18n 0 "Scheduled tasks: Auto update rules."
 	fi
@@ -697,7 +705,7 @@ start_crontab() {
 			if [ "$sub_update_week_mode" = "8" ]; then
 				update_loop=1
 			else
-				echo "$t lua $APP_PATH/subscribe.lua start $cfgids cron > /dev/null 2>&1 &" >>/etc/crontabs/root
+				echo "$t ${setsid_cmd}lua $APP_PATH/subscribe.lua start $cfgids cron > /dev/null 2>&1 &" >>/etc/crontabs/root
 			fi
 		done
 		rm -rf $TMP_SUB_PATH
@@ -716,7 +724,7 @@ start_crontab() {
 }
 
 stop_crontab() {
-	[ -f "${LOCK_PATH}/${CONFIG}_cron.lock" ] && return
+	[ "$1" = "cron" ] && return
 	clean_crontab
 	/etc/init.d/cron restart
 	#log_i18n 0 "Clear scheduled commands."
@@ -773,7 +781,7 @@ run_ipset_chinadns_ng() {
 		node_servers=$(uci show "${CONFIG}" | grep -E "(.address=|.download_address=)" | cut -d "'" -f 2)
 		hosts_foreach "node_servers" host_from_url | grep '[a-zA-Z]$' | sort -u | grep -v "engage.cloudflareclient.com" > $TMP_ACL_PATH/vpslist
 	}
-	
+
 	[ -n "${ipset}" ] && {
 		set_names=$ipset
 		vps_set_names="psw2_vps,psw2_vps6"
@@ -894,7 +902,7 @@ acl_node() {
 start() {
 	busybox pgrep -f ${TMP_PATH}/bin > /dev/null 2>&1 && {
 		logger -t PW2-RESTART "Upgrade or overload residue is detected, and the subprocess is being called to perform complete cleaning..."
-		(stop)
+		(stop "$1")
 		sleep 2
 	}
 	mkdir -p /tmp/etc /tmp/log $TMP_PATH $TMP_BIN_PATH $TMP_SCRIPT_FUNC_PATH $TMP_ROUTE_PATH $TMP_ACL_PATH $TMP_PATH2
@@ -923,6 +931,8 @@ start() {
 			set_cache_var "USE_TABLES" "$USE_TABLES"
 		fi
 	}
+	set_cache_var "ENABLED_DEFAULT_ACL" "$ENABLED_DEFAULT_ACL"
+	set_cache_var "ENABLED_ACLS" "$ENABLED_ACLS"
 	if [ "$ENABLED_DEFAULT_ACL" == 1 ] || [ "$ENABLED_ACLS" == 1 ]; then
 		bridge_nf_ipt=$(sysctl -e -n net.bridge.bridge-nf-call-iptables)
 		set_cache_var "bak_bridge_nf_ipt" "$bridge_nf_ipt"
@@ -934,10 +944,7 @@ start() {
 		}
 	fi
 	run_process_queue
-	[ "$1" = "boot" ] && {
-		rm -f "${LOCK_PATH}/${CONFIG}_cron.lock"
-	}
-	start_crontab
+	start_crontab "$1"
 	log_i18n 0 "Running complete!"
 	echolog "\n"
 
@@ -953,6 +960,7 @@ start() {
 			lua $APP_PATH/subscribe.lua start $cfgids cron > /dev/null 2>&1 &
 		}
 	}
+	return 0
 }
 
 stop() {
@@ -975,7 +983,7 @@ stop() {
 	unset V2RAY_LOCATION_ASSET
 	unset XRAY_LOCATION_ASSET
 	unset SS_SYSTEM_DNS_RESOLVER_FORCE_BUILTIN
-	stop_crontab
+	stop_crontab "$1"
 	rm -rf $DEFAULT_DNSMASQ_CONF
 	rm -rf $DEFAULT_DNSMASQ_CONF_PATH
 	[ "1" = "1" ] && {
@@ -999,15 +1007,7 @@ stop() {
 		[ -n "${bak_bridge_nf_ip6t}" ] && sysctl -w net.bridge.bridge-nf-call-ip6tables=${bak_bridge_nf_ip6t} >/dev/null 2>&1
 	}
 	rm -rf $TMP_PATH
-	rm -f ${LOCK_PATH}/${CONFIG}_socks_auto_switch*
-	rm -f ${LOCK_PATH}/${CONFIG}_lease2hosts*
 	rm -f ${LOCK_PATH}/${CONFIG}_monitor*
-	if ! busybox pgrep -af "${CONFIG}/" | grep -q '/subscribe\.lua'; then
-		rm -f "${LOCK_PATH}/${CONFIG}_subscribe.lock"
-	fi
-	if ! busybox pgrep -af "${CONFIG}/" | grep -q '/rule_update\.lua'; then
-		rm -f "${LOCK_PATH}/${CONFIG}_rule_update.lock"
-	fi
 	log_i18n 0 "Clearing and closing related programs and cache complete."
 	exit 0
 }
@@ -1059,6 +1059,12 @@ get_config() {
 	DIRECT_DNS_QUERY_STRATEGY=$(config_n_get @global[0] direct_dns_query_strategy UseIP)
 
 	get_direct_dns
+	# nslookup uses UDP; TCP direct DNS remains configured for the proxy cores.
+	if [ "$DIRECT_DNS_PROTO" = "udp" ]; then
+		set_cache_var "DIRECT_DNS" "${DIRECT_DNS_SERVER}#${DIRECT_DNS_PORT}"
+	else
+		set_cache_var "DIRECT_DNS" "${AUTO_DNS%%,*}"
+	fi
 
 	DEFAULT_DNSMASQ_CONF_DIR=/tmp/dnsmasq.d
 	DNSMASQ_CONF_DIR=${DEFAULT_DNSMASQ_CONF_DIR}
@@ -1091,9 +1097,9 @@ socks_node_switch)
 	socks_node_switch $@
 	;;
 start)
-	start $@
+	start "$@"
 	;;
 stop)
-	stop
+	stop "$@"
 	;;
 esac

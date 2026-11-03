@@ -21,7 +21,7 @@ local haproxy_dns = "127.0.0.1"
 
 local cpu_thread = sys.exec('echo -n $(cat /proc/cpuinfo | grep "processor" | wc -l)') or "1"
 local health_check_type = api.uci_get_c("@global_haproxy[0]", "health_check_type") or "tcp"
-local health_check_inter = api.uci_get_c("@global_haproxy[0]", "health_check_inter") or "20"
+local health_check_inter = api.uci_get_c("@global_haproxy[0]", "health_check_inter") or "60"
 local balancingStrategy = api.uci_get_c("@global_haproxy[0]", "balancingStrategy") or "roundrobin"
 local console_port = api.uci_get_c("@global_haproxy[0]", "console_port")
 local bind_local = api.uci_get_c("@global_haproxy[0]", "bind_local") or "0"
@@ -44,7 +44,7 @@ global
 	nbthread {{nbthread}}
 	external-check
 	insecure-fork-wanted
-	spread-checks 50
+	spread-checks 20
 	tune.max-checks-per-thread 5
 
 defaults
@@ -99,7 +99,7 @@ api.uci_foreach_c("haproxy_config", function(t)
 		local lbss = t.lbss
 		local listen_port = tonumber(t.haproxy_port) or 0
 		local server_node = api.uci_get_c(lbss)
-		local hop = (health_check_type == "script_logic") and (server_node.hysteria_hop or server_node.hysteria2_hop) or nil
+		local hop = (health_check_type == "script_logic") and server_node and (server_node.hysteria_hop or server_node.hysteria2_hop) or nil
 		hop = hop and hop:gsub(":", "-") or nil
 		if server_node and server_node.address and (server_node.port or hop) then
 			server_remark = server_node.address .. ":" .. (server_node.port or hop)
@@ -153,9 +153,12 @@ api.uci_foreach_c("haproxy_config", function(t)
 	end
 end)
 
-local inter = tonumber((health_check_inter or "20"):match("^%d+"))
-inter = (inter and inter >= 20) and inter or 20
-local inter_arg = "inter " .. inter .. "s fastinter " .. inter / 2 .. "s downinter " .. inter * 1.5 .. "s"
+local inter = tonumber(health_check_inter:match("^%d+")) or 60
+inter = math.max(inter, 20)
+-- Bound transition checks so long normal intervals do not delay removal or recovery.
+local fastinter = math.max(10, math.min(15, math.floor(inter / 2)))
+local downinter = math.ceil(inter * 1.5)
+local inter_arg = string.format("inter %ds fastinter %ds downinter %ds", inter, fastinter, downinter)
 
 local sortTable = {}
 for i in pairs(listens) do
@@ -165,7 +168,28 @@ for i in pairs(listens) do
 end
 table.sort(sortTable, function(a,b) return (a < b) end)
 
-for i, port in pairs(sortTable) do
+local function server_endpoint(o)
+	local address = o.server_address:gsub("^%[(.*)%]$", "%1")
+	if address:find(":", 1, true) then address = "[" .. address .. "]" end
+	return address .. ":" .. o.server_port
+end
+
+local check_counts = {}
+if health_check_type == "script_logic" then
+	for _, port in ipairs(sortTable) do
+		for _, o in ipairs(listens[port]) do
+			-- Domains can resolve to different IPs; share checks only for actual IP endpoints.
+			if api.is_ip(o.server_address) then
+				local endpoint = server_endpoint(o)
+				check_counts[endpoint] = (check_counts[endpoint] or 0) + 1
+			end
+		end
+	end
+end
+local shared_checks = {}
+local shared_check_names = {}
+
+for i, port in ipairs(sortTable) do
 	log(1, api.i18n.translatef("Entrance %s:%s", bind_address, port))
 
 	f_out:write("\n" .. string.format([[
@@ -184,7 +208,7 @@ listen %s
 
 	local count_M, count_B = 1, 1
 	for i, o in ipairs(listens[port]) do
-		local remark = o.server_remark or ""
+		local remark = (o.server_remark or ""):gsub("[%[%]]", "")
 		-- To prevent duplicate names from causing the program to fail to run.
 		if tostring(o.backup) ~= "1" then
 			remark = "M" .. count_M .. "-" .. remark
@@ -193,8 +217,18 @@ listen %s
 			remark = "B" .. count_B .. "-" .. remark
 			count_B = count_B + 1
 		end
-		local server = o.server_address .. ":" .. o.server_port
-		local server_conf = "server {{remark}} {{server}} weight {{weight}} {{resolvers}} check {{inter_arg}} rise 2 fall 2 {{backup}}"
+		local server = server_endpoint(o)
+		local check_arg = "check " .. inter_arg .. " rise 2 fall 2"
+		if (check_counts[server] or 0) > 1 then
+			local name = shared_check_names[server]
+			if not name then
+				name = "check_" .. (#shared_checks + 1)
+				shared_check_names[server] = name
+				table.insert(shared_checks, {name = name, server = server})
+			end
+			check_arg = "track " .. appname .. "_health_checks/" .. name
+		end
+		local server_conf = "server {{remark}} {{server}} weight {{weight}} {{resolvers}} {{check_arg}} {{backup}}"
 		server_conf = server_conf:gsub("{{remark}}", remark)
 		server_conf = server_conf:gsub("{{server}}", server)
 		server_conf = server_conf:gsub("{{weight}}", o.lbweight)
@@ -203,7 +237,7 @@ listen %s
 			resolvers = ""
 		end
 		server_conf = server_conf:gsub("{{resolvers}}", resolvers)
-		server_conf = server_conf:gsub("{{inter_arg}}", inter_arg)
+		server_conf = server_conf:gsub("{{check_arg}}", check_arg)
 		server_conf = server_conf:gsub("{{backup}}", tostring(o.backup) == "1" and "backup" or "")
 
 		f_out:write("	" .. api.trim(server_conf) .. "\n")
@@ -213,6 +247,20 @@ listen %s
 		end
 
 		log(2, string.format(api.i18n.translatef("Node: %s:%s, Weight: %s", o.origin_address, o.origin_port, o.lbweight)))
+	end
+end
+
+-- A separate backend keeps manual maintenance on one listener from affecting others.
+if #shared_checks > 0 then
+	f_out:write(string.format([[
+
+backend %s_health_checks
+	mode tcp
+	option external-check
+	external-check command "/usr/share/%s/haproxy_check.sh"
+]], appname, appname))
+	for _, check in ipairs(shared_checks) do
+		f_out:write(string.format("\tserver %s %s check %s rise 2 fall 2\n", check.name, check.server, inter_arg))
 	end
 end
 
@@ -234,8 +282,7 @@ f_out:close()
 
 -- Built-in health check URL
 if health_check_type == "script_logic" then
-	local probeUrl = api.uci_get_c("@global_haproxy[0]", "health_probe_url") or "https://www.google.com/generate_204"
-	local f_url = io.open(haproxy_path .. "/Probe_URL", "w")
-	f_url:write(probeUrl)
-	f_url:close()
+	local probeUrl = api.trim(api.uci_get_c("@global_haproxy[0]", "health_probe_url") or "")
+	if probeUrl == "" then probeUrl = "https://www.google.com/generate_204" end
+	api.set_cache_var("HAPROXY_PROBE_URL", probeUrl)
 end

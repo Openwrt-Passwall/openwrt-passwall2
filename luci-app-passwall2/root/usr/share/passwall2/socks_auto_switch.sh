@@ -3,11 +3,9 @@
 . /usr/share/passwall2/utils.sh
 APP_FILE=${APP_PATH}/app.sh
 
-flag=0
-
 check_process() {
 	while busybox pgrep -af "${CONFIG}/" | grep -E 'app\.sh.*(start|stop)|nftables\.sh|iptables\.sh|subscribe\.lua' >/dev/null; do
-		sleep 6s
+		sleep 6s 8>&- 9>&-
 	done
 }
 
@@ -25,19 +23,21 @@ test_url() {
 	fi
 	[ "$curl_retry_all_errors" = "1" ] && extra_params="--retry-all-errors ${extra_params}"
 
-	local max_time=$((timeout * (try + 1) + try + 3))
+	local max_time=$((timeout + 3))
+	local retry_max_time=$((max_time * (try + 1) + try))
 	curl_test() {
-		/usr/bin/curl -skIL -o /dev/null ${extra_params} --max-time ${max_time} --connect-timeout ${timeout} --retry ${try} --retry-delay 1 -w "%{http_code}" "$url"
+		/usr/bin/curl -skIL -o /dev/null ${extra_params} --max-time ${max_time} --connect-timeout ${timeout} --retry ${try} --retry-delay 1 --retry-max-time ${retry_max_time} -w "%{http_code}" "$url" 8>&- 9>&-
 	}
 
-	local status=$(curl_test)
+	local status
+	status=$(curl_test) || status=000
 	[ "$status" = "204" ] && status=200
 	if [ "$status" = "200" ] && [ "$repeat" = "1" ]; then
-		sleep 3s
-		status=$(curl_test)
+		sleep 3s 8>&- 9>&-
+		status=$(curl_test) || status=000
 		[ "$status" = "204" ] && status=200
 	fi
-	echo $status
+	printf '%s' "$status"
 }
 
 test_proxy() {
@@ -51,7 +51,7 @@ test_proxy() {
 			result=1
 		else
 			result=2
-			ping -c 3 -W 1 223.5.5.5 > /dev/null 2>&1
+			ping -c 3 -W 1 223.5.5.5 > /dev/null 2>&1 8>&- 9>&-
 			[ $? -eq 0 ] && {
 				result=1
 			}
@@ -62,24 +62,31 @@ test_proxy() {
 
 test_node() {
 	local node_id=$1
-	local _type=$(echo $(config_n_get ${node_id} type) | tr 'A-Z' 'a-z')
-	[ -n "${_type}" ] && {
-		check_process
-		local _tmp_port=$(get_new_port 48800 tcp,udp)
-		NO_REC_PROCESS=1 $APP_FILE run_socks flag="test_node_${node_id}" node=${node_id} bind=127.0.0.1 socks_port=${_tmp_port} config_file=test_node_${node_id}.json
-		sleep 2s
-		local curlx="socks5h://127.0.0.1:${_tmp_port}"
-		local _proxy_status=$(test_url "${probe_url}" ${retry_num} ${connect_timeout} "-x $curlx" 1)
-		# Kill the SS plugin process
-		local pid_file="${TMP_PATH}/test_node_${node_id}_plugin.pid"
-		[ -s "$pid_file" ] && kill -9 "$(head -n 1 "$pid_file")" >/dev/null 2>&1
-		busybox pgrep -af "test_node_${node_id}" | awk '! /socks_auto_switch\.sh/{print $1}' | xargs kill -9 >/dev/null 2>&1
-		rm -rf ${TMP_PATH}/test_node_${node_id}*.*
-		if [ "${_proxy_status}" -eq 200 ]; then
-			return 0
-		fi
-	}
-	return 1
+	local test_flag="test_node_${id}_${node_id}"
+	local _type _tmp_port curlx _proxy_status pid_file
+	(
+		exec 9>&-
+		exec 8>"${LOCK_PATH}/${CONFIG}_socks_auto_switch_test.lock"
+		flock -x 8 || exit 1
+		_type=$(echo $(config_n_get ${node_id} type) | tr 'A-Z' 'a-z')
+		[ -n "${_type}" ] && {
+			check_process
+			_tmp_port=$(get_new_port 48800 tcp,udp) || exit 1
+			NO_REC_PROCESS=1 "$APP_FILE" run_socks flag="$test_flag" node="$node_id" bind=127.0.0.1 socks_port="$_tmp_port" config_file="${test_flag}.json" 8>&- 9>&-
+			sleep 2s 8>&- 9>&-
+			curlx="socks5h://127.0.0.1:${_tmp_port}"
+			_proxy_status=$(test_url "${probe_url}" ${retry_num} ${connect_timeout} "-x $curlx" 1)
+			# Kill the SS plugin process.
+			pid_file="${TMP_PATH}/${test_flag}_plugin.pid"
+			[ -s "$pid_file" ] && kill -9 "$(head -n 1 "$pid_file")" >/dev/null 2>&1
+			busybox pgrep -af "${TMP_PATH}/${test_flag}[._]" | awk '! /socks_auto_switch\.sh/{print $1}' | xargs -r kill -9 >/dev/null 2>&1
+			rm -f "$TMP_PATH/${test_flag}"*.*
+			if [ "${_proxy_status}" -eq 200 ]; then
+				exit 0
+			fi
+		}
+		exit 1
+	)
 }
 
 try_switch_backup() {
@@ -122,23 +129,23 @@ try_switch_backup() {
 		if test_node ${new_node}; then
 			check_process
 			log_i18n 0 "Socks switch detection: Port [%s] [%s:[%s]] normal, switch to this node!" "${socks_port}" "${node_type}" "${node_remarks}"
-			NO_REC_PROCESS=1 $APP_FILE socks_node_switch flag=${id} new_node=${new_node}
-			[ $? -eq 0 ] && {
+			if NO_REC_PROCESS=1 "$APP_FILE" socks_node_switch flag="$id" new_node="$new_node" 9>&-; then
 				log_i18n 0 "Socks switch detection: Port [%s] node switch complete!" "${socks_port}"
-			}
-			return 0
+				return 0
+			fi
+			log_i18n 0 "Socks switch detection: Port [%s] node switch failed, continue trying other nodes!" "${socks_port}"
+		else
+			log_i18n 0 "Socks switch detection: Port [%s] [%s:[%s]] abnormal." "${socks_port}" "${node_type}" "${node_remarks}"
 		fi
-		log_i18n 0 "Socks switch detection: Port [%s] [%s:[%s]] abnormal." "${socks_port}" "${node_type}" "${node_remarks}"
 		now_node="$new_node"
 		tried=$((tried + 1))
 	done
 
-	log_i18n 0 "Socks switch detection: Port [%s] all nodes are unavailable!" "${socks_port}"
+	log_i18n 0 "Socks switch detection: Port [%s] all nodes are unavailable or switching failed!" "${socks_port}"
 	return 1
 }
 
 test_auto_switch() {
-	flag=$((flag + 1))
 	local b_nodes=$1
 	local now_node=$2
 	[ -z "$now_node" ] && {
@@ -150,9 +157,7 @@ test_auto_switch() {
 		fi
 	}
 
-	[ $flag -le 1 ] && main_node=$now_node
-
-	local status=$(test_proxy)
+	local status=$(test_proxy 9>&-)
 	if [ "$status" = "2" ]; then
 		log_i18n 0 "Socks switch detection: Port [%s] Unable to connect to the network. Please check if the network is working properly!" "${socks_port}"
 		return 2
@@ -163,13 +168,13 @@ test_auto_switch() {
 		test_node ${main_node}
 		[ $? -eq 0 ] && {
 			check_process
-			# The main node is working properly; switch to the main node.
 			log_i18n 0 "Socks switch detection: Port [%s] Primary node [%s: [%s]] is normal. Switch to the primary node!" "${socks_port}" "$(config_n_get $main_node type)" "$(config_n_get $main_node remarks)"
-			NO_REC_PROCESS=1 $APP_FILE socks_node_switch flag=${id} new_node=${main_node}
-			[ $? -eq 0 ] && {
+			if NO_REC_PROCESS=1 "$APP_FILE" socks_node_switch flag="$id" new_node="$main_node" 9>&-; then
 				log_i18n 0 "Socks switch detection: Port [%s] node switch complete!" "${socks_port}"
-			}
-			return 0
+				return 0
+			fi
+			log_i18n 0 "Socks switch detection: Port [%s] failed to restore the primary node!" "${socks_port}"
+			status=1
 		}
 	fi
 
@@ -186,6 +191,8 @@ test_auto_switch() {
 start() {
 	id=$1
 	LOCK_FILE=${LOCK_PATH}/${CONFIG}_socks_auto_switch_${id}.lock
+	exec 9>"$LOCK_FILE"
+	flock -n 9 || return 0
 	main_node=$(config_n_get $id node)
 	socks_port=$(config_n_get $id port 0)
 	delay=$(config_n_get $id autoswitch_testing_time 30)
@@ -201,7 +208,10 @@ start() {
 			[ "$main_node" = "$backup_node" ] && return
 		elif [ "$backup_node_num" -gt 1 ]; then
 			[ "$restore_switch" != "1" ] && {
-				[ -z "$(echo $backup_node | grep -F "$main_node")" ] && backup_node="${backup_node} ${main_node}"
+				case " $backup_node " in
+					*" $main_node "*) ;;
+					*) backup_node="${backup_node} ${main_node}" ;;
+				esac
 			}
 		fi
 	else
@@ -209,15 +219,9 @@ start() {
 		return
 	fi
 	while [ -n "$backup_node" ]; do
-		[ -f "$LOCK_FILE" ] && {
-			sleep 6s
-			continue
-		}
 		check_process
-		touch $LOCK_FILE
 		test_auto_switch "$backup_node"
-		rm -f $LOCK_FILE
-		sleep ${delay}
+		sleep ${delay} 9>&-
 	done
 }
 

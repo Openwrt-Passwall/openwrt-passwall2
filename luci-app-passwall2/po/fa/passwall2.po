@@ -442,7 +442,7 @@ msgid "Failure Tolerance (%)"
 msgstr "تحمل شکست (%)"
 
 msgid "The maximum acceptable speed test failure rate. For example, 1 means allowing a 1% failure rate."
-msgstr "حداکثر نرخ شکست قابل قبول در تست سرعت. برای مثال، عدد ۱ به معنای مجاز بودن نرخ شکست ۱٪ است.
+msgstr "حداکثر نرخ شکست قابل قبول در تست سرعت. برای مثال، عدد ۱ به معنای مجاز بودن نرخ شکست ۱٪ است."
 
 msgid "Shunt"
 msgstr "شنت (Shunt)"
@@ -1009,6 +1009,15 @@ msgstr "در حال انتقال..."
 msgid "App Update"
 msgstr "به‌روزرسانی برنامه"
 
+msgid "GitHub Proxy"
+msgstr "پروکسی معکوس GitHub"
+
+msgid "Use GitHub instead of proxy nodes for component updates."
+msgstr "برای بررسی و دانلود به‌روزرسانی اجزا، مستقیماً از سرویس پروکسی معکوس GitHub استفاده کنید، بدون عبور از گره‌های پروکسی."
+
+msgid "Close(Not use)"
+msgstr "خاموش (عدم استفاده)"
+
 msgid "if you want to run from memory, change the path, /tmp beginning then save the application and update it manually."
 msgstr "اگر می‌خواهید از حافظه اجرا کنید، مسیر را تغییر دهید، با /tmp شروع شود سپس برنامه را ذخیره و دستی به‌روزرسانی کنید."
 
@@ -1207,28 +1216,28 @@ msgstr "فرمت IPv6 نامعتبر است، لطفاً دوباره وارد �
 msgid "Not true format, please re-enter!"
 msgstr "فرمت صحیح نیست، لطفاً دوباره وارد کنید!"
 
-msgid "Plaintext: If this string matches any part of the targeting domain, this rule takes effet. Example: rule 'sina.com' matches targeting domain 'sina.com', 'sina.com.cn' and 'www.sina.com', but not 'sina.cn'."
+msgid "Plaintext: If this string matches any part of the targeting domain, this rule takes effect. Example: rule 'sina.com' matches targeting domain 'sina.com', 'sina.com.cn' and 'www.sina.com', but not 'sina.cn'."
 msgstr "متن ساده (Plaintext): اگر این رشته با هر بخشی از دامنه هدف مطابقت داشته باشد، این قانون اعمال می‌شود. مثال: قانون 'sina.com' با دامنه هدف 'sina.com'، 'sina.com.cn' و 'www.sina.com' مطابقت دارد، اما با 'sina.cn' خیر."
 
-msgid "Regular expression: Begining with 'regexp:', the rest is a regular expression. When the regexp matches targeting domain, this rule takes effect. Example: rule 'regexp:\\.goo.*\\.com$' matches 'www.google.com' and 'fonts.googleapis.com', but not 'google.com'."
+msgid "Regular expression: Beginning with 'regexp:', the rest is a regular expression. When the regexp matches targeting domain, this rule takes effect. Example: rule 'regexp:\\.goo.*\\.com$' matches 'www.google.com' and 'fonts.googleapis.com', but not 'google.com'."
 msgstr "عبارت باقاعده (Regular expression): با 'regexp:' شروع می‌شود و بقیه یک عبارت باقاعده است. زمانی که عبارت باقاعده با دامنه هدف مطابقت داشته باشد، این قانون اعمال می‌شود. مثال: قانون 'regexp:\\.goo.*\\.com$' با 'www.google.com' و 'fonts.googleapis.com' مطابقت دارد، اما با 'google.com' خیر."
 
-msgid "Subdomain (recommended): Begining with 'domain:' and the rest is a domain. When the targeting domain is exactly the value, or is a subdomain of the value, this rule takes effect. Example: rule 'domain:v2ray.com' matches 'www.v2ray.com', 'v2ray.com', but not 'xv2ray.com'."
+msgid "Subdomain (recommended): Beginning with 'domain:' and the rest is a domain. When the targeting domain is exactly the value, or is a subdomain of the value, this rule takes effect. Example: rule 'domain:v2ray.com' matches 'www.v2ray.com', 'v2ray.com', but not 'xv2ray.com'."
 msgstr "زیردامنه (توصیه شده): با 'domain:' شروع می‌شود و بقیه یک دامنه است. زمانی که دامنه هدف دقیقاً مقدار باشد، یا زیردامنه‌ای از مقدار باشد، این قانون اعمال می‌شود. مثال: قانون 'domain:v2ray.com' با 'www.v2ray.com' و 'v2ray.com' مطابقت دارد، اما با 'xv2ray.com' خیر."
 
-msgid "Full domain: Begining with 'full:' and the rest is a domain. When the targeting domain is exactly the value, the rule takes effect. Example: rule 'domain:v2ray.com' matches 'v2ray.com', but not 'www.v2ray.com'."
-msgstr "دامنه کامل: با 'full:' شروع می‌شود و بقیه یک دامنه است. زمانی که دامنه هدف دقیقاً مقدار باشد، قانون اعمال می‌شود. مثال: قانون 'domain:v2ray.com' با 'v2ray.com' مطابقت دارد، اما با 'www.v2ray.com' خیر."
+msgid "Full domain: Beginning with 'full:' and the rest is a domain. When the targeting domain is exactly the value, the rule takes effect. Example: rule 'full:v2ray.com' matches 'v2ray.com', but not 'www.v2ray.com'."
+msgstr "دامنه کامل: با 'full:' شروع می‌شود و بقیه یک دامنه است. زمانی که دامنه هدف دقیقاً مقدار باشد، قانون اعمال می‌شود. مثال: قانون 'full:v2ray.com' با 'v2ray.com' مطابقت دارد، اما با 'www.v2ray.com' خیر."
 
-msgid "Sing-Box rule-set: Begining with 'rule-set:remote:' or 'rule-set:local:'"
+msgid "Sing-Box rule-set: Beginning with 'rule-set:remote:' or 'rule-set:local:'"
 msgstr "مجموعه قوانین Sing-Box: با 'rule-set:remote:' یا 'rule-set:local:' شروع می‌شود"
 
 msgid "Such as:"
 msgstr "مانند:"
 
-msgid "Pre-defined domain list: Begining with 'geosite:' and the rest is a name, such as geosite:google or geosite:cn."
+msgid "Pre-defined domain list: Beginning with 'geosite:' and the rest is a name, such as geosite:google or geosite:cn."
 msgstr "لیست دامنه از پیش تعریف شده: با 'geosite:' شروع می‌شود و بقیه یک نام است، مانند geosite:google یا geosite:cn."
 
-msgid "Annotation: Begining with #"
+msgid "Annotation: Beginning with #"
 msgstr "توضیحات: با # شروع می‌شود"
 
 msgid "Invert match result."
@@ -1539,6 +1548,9 @@ msgstr "URL دانلود الزامی است."
 
 msgid "File download failed or timed out: %s"
 msgstr "دانلود فایل ناموفق بود یا زمان آن تمام شد: %s"
+
+msgid "File verification failed."
+msgstr "تأیید فایل ناموفق بود."
 
 msgid "File path required."
 msgstr "مسیر فایل الزامی است."
@@ -2210,8 +2222,14 @@ msgstr "تشخیص تغییر وضعیت سوکت‌ها: تغییر وضعیت 
 msgid "Socks switch detection: Port [%s] [%s:[%s]] abnormal."
 msgstr "تشخیص وضعیت سوئیچ: پورت [%s] [%s:[%s]] غیرعادی است."
 
-msgid "Socks switch detection: Port [%s] all nodes are unavailable!"
-msgstr "تشخیص تغییر وضعیت سوئیچ: در پورت [%s]، تمام گره‌ها در دسترس نیستند!"
+msgid "Socks switch detection: Port [%s] all nodes are unavailable or switching failed!"
+msgstr "بررسی تغییر گره SOCKS: پورت [%s]، همه گره‌ها در دسترس نیستند یا تغییر گره ناموفق بود!"
+
+msgid "Socks switch detection: Port [%s] node switch failed, continue trying other nodes!"
+msgstr "بررسی تغییر گره SOCKS: پورت [%s]، تغییر گره ناموفق بود؛ تلاش با گره‌های دیگر ادامه دارد!"
+
+msgid "Socks switch detection: Port [%s] failed to restore the primary node!"
+msgstr "بررسی تغییر گره SOCKS: پورت [%s]، بازیابی گره اصلی ناموفق بود!"
 
 msgid "Socks switch detection: Port [%s] Unknown error."
 msgstr "تشخیص وضعیت سوئیچ جوراب: پورت [%s] خطای ناشناخته."
@@ -2243,17 +2261,38 @@ msgstr "ورودی %s:%s"
 msgid "Node: %s:%s, Weight: %s"
 msgstr "گره: %s:%s، وزن: %s"
 
-msgid "[Rule update] instance is running; please try again later."
-msgstr "نمونه [به‌روزرسانی قانون] در حال اجرا است؛ لطفاً بعداً دوباره امتحان کنید."
+msgid "Unable to open the subscription/rule update lock. Exiting."
+msgstr "باز کردن قفل به‌روزرسانی اشتراک/قوانین ممکن نشد. خروج."
 
-msgid "[Subscription] instance is running; [Rule Update] queue and wait."
-msgstr "نمونه [اشتراک] در حال اجرا است؛ [به‌روزرسانی قانون] در صف انتظار قرار می‌گیرد."
+msgid "A subscription or rule update is already running. Skipping this request."
+msgstr "به‌روزرسانی اشتراک یا قوانین در حال اجرا است. این درخواست نادیده گرفته می‌شود."
+
+msgid "Unable to acquire the update lock. Scheduled task failed."
+msgstr "دریافت قفل به‌روزرسانی ممکن نشد. وظیفه زمان‌بندی‌شده ناموفق بود."
+
+msgid "Subscription"
+msgstr "اشتراک"
+
+msgid "Rule Update"
+msgstr "به‌روزرسانی قوانین"
+
+msgid "Subscription/Rule Update"
+msgstr "به‌روزرسانی اشتراک/قوانین"
+
+msgid "[%s] is running; [%s] is queued and waiting..."
+msgstr "[%s] در حال اجرا است؛ [%s] در صف قرار گرفته و منتظر است..."
 
 msgid "Start updating the rules..."
 msgstr "شروع به‌روزرسانی قوانین..."
 
 msgid "Download file size verification error. Original file size: %sB. Downloaded file size: %sB."
 msgstr "خطای تأیید اندازه فایل دانلود شده. اندازه فایل اصلی: %sB. اندازه فایل دانلود شده: %sB."
+
+msgid "%s SHA256 verification information is invalid. Update failed."
+msgstr "اطلاعات تأیید SHA256 برای %s نامعتبر است. به‌روزرسانی ناموفق بود."
+
+msgid "%s file format verification failed. Update failed."
+msgstr "قالب فایل %s نامعتبر است. به‌روزرسانی ناموفق بود."
 
 msgid "Downloaded file is empty or an error occurred while reading it."
 msgstr "فایل دانلود شده خالی است یا خطایی هنگام خواندن آن رخ داده است."
@@ -2405,11 +2444,11 @@ msgstr "بدون پروکسی"
 msgid "Proxy"
 msgstr "پروکسی"
 
-msgid "[Subscription] instance is running; please try again later."
-msgstr "نمونه [اشتراک] در حال اجرا است؛ لطفاً بعداً دوباره امتحان کنید."
+msgid "Unable to acquire the stop lock. Exiting."
+msgstr "دریافت قفل توقف ممکن نشد. خروج."
 
-msgid "[Rule Update] instance is running; [Subscription] queue and wait."
-msgstr "نمونه [به‌روزرسانی قانون] در حال اجرا است؛ [اشتراک] در صف انتظار قرار دارد."
+msgid "Failed or timed out waiting for subscription/rule updates. Restart cancelled."
+msgstr "انتظار برای به‌روزرسانی اشتراک/قوانین ناموفق بود یا مهلت آن به پایان رسید. راه‌اندازی مجدد لغو شد."
 
 msgid "Start subscribing..."
 msgstr "شروع اشتراک‌گیری..."
@@ -2420,11 +2459,14 @@ msgstr "شروع اشتراک‌گیری: %s"
 msgid "Subscription: [%s] No changes, no update required."
 msgstr "اشتراک: [%s] بدون تغییر، نیازی به به‌روزرسانی نیست."
 
+msgid "Refresh subscription [%s] account usage and expiration information."
+msgstr "به‌روزرسانی اطلاعات میزان مصرف حساب و زمان انقضای اشتراک [%s]."
+
 msgid "[%s] Subscription failed. This could be due to an invalid subscription address or a network issue. Please diagnose the problem! [%s]"
 msgstr "[%s] اشتراک ناموفق بود. این می‌تواند به دلیل آدرس اشتراک نامعتبر یا مشکل شبکه باشد. لطفاً مشکل را بررسی کنید! [%s]"
 
-msgid "Error, restoring service."
-msgstr "خطا، بازیابی سرویس."
+msgid "An error occurred during subscription."
+msgstr "هنگام به‌روزرسانی اشتراک خطایی رخ داد."
 
 msgid "Subscription complete..."
 msgstr "اشتراک کامل شد..."
@@ -2461,3 +2503,84 @@ msgstr "فهرست مجموعه‌های رمز پشتیبانی‌شده را �
 
 msgid "This username already exists."
 msgstr "این نام کاربری از قبل وجود دارد."
+
+msgid "Update Options"
+msgstr "گزینه‌های به‌روزرسانی"
+
+msgid "MASQUE Path"
+msgstr "مسیر MASQUE"
+
+msgid "Custom HTTP Headers"
+msgstr "سرآیندهای سفارشی HTTP"
+
+msgid "MASQUE Address"
+msgstr "آدرس تونل MASQUE"
+
+msgid "WARP Device Private Key"
+msgstr "کلید خصوصی دستگاه WARP"
+
+msgid "WARP Endpoint Public Key"
+msgstr "کلید عمومی سرور WARP"
+
+msgid "Installing..."
+msgstr "در حال نصب..."
+
+msgid "Do not refresh or switch pages during installation."
+msgstr "در حین نصب، صفحه را بازخوانی نکنید و به صفحه دیگری نروید."
+
+msgid "Update failed"
+msgstr "به‌روزرسانی ناموفق بود"
+
+msgid "Unknown error"
+msgstr "خطای ناشناخته"
+
+msgid "Click to sort; click again to reverse. Press Save & Apply to keep the order."
+msgstr "برای مرتب‌سازی کلیک کنید؛ کلیک دوباره جهت را عوض می‌کند. برای نگه داشتن ترتیب، ذخیره و اعمال را بزنید."
+
+msgid "Sort by type or protocol, then by name"
+msgstr "مرتب‌سازی بر اساس نوع یا پروتکل، سپس نام"
+
+msgid "Sort by server address and port"
+msgstr "مرتب‌سازی بر اساس آدرس سرور و درگاه"
+
+msgid "Restore the saved order"
+msgstr "بازگرداندن ترتیب ذخیره‌شده"
+
+msgid "The order changed on this page only. Press Save & Apply to store it on the router."
+msgstr "ترتیب فقط در این صفحه عوض شده است. برای نوشتن آن روی روتر، ذخیره و اعمال را بزنید."
+
+msgid "Saved order restored."
+msgstr "ترتیب ذخیره‌شده بازگردانده شد."
+
+msgid "Automatic ping is still running (%d left). Sorting will run when it finishes."
+msgstr "بررسی خودکار هنوز در حال اجراست (%d باقی مانده). مرتب‌سازی بلافاصله پس از پایان آن انجام می‌شود."
+
+msgid "Automatic ping did not finish within 2 minutes. Sorting was cancelled. Reload the page and try again."
+msgstr "بررسی خودکار ظرف 2 دقیقه تمام نشد. مرتب‌سازی لغو شد. صفحه را دوباره بارگذاری کنید و دوباره تلاش کنید."
+
+msgid "Filter:"
+msgstr "فیلتر:"
+
+msgid "(empty)"
+msgstr "(خالی)"
+
+msgid "Word in remarks"
+msgstr "کلمه در توضیحات"
+
+msgid "search..."
+msgstr "جستجو..."
+
+msgid "Show only rows that contain this text"
+msgstr "فقط ردیف‌هایی را نشان بده که این متن را دارند"
+
+msgid "Shown %s of %t"
+msgstr "نمایش %s از %t"
+
+msgid "Reset"
+msgstr "بازنشانی"
+
+msgid "Show all rows"
+msgstr "نمایش همه ردیف‌ها"
+
+msgid "The filter only hides rows on this page and changes nothing on the router. Select all skips hidden rows."
+msgstr "فیلتر فقط ردیف‌ها را در این صفحه پنهان می‌کند و چیزی را روی روتر تغییر نمی‌دهد. انتخاب همه، ردیف‌های پنهان را رد می‌کند."

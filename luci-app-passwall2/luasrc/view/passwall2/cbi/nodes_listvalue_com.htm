@@ -169,7 +169,7 @@
 		const ctx = canvas.getContext('2d', { willReadFrequently: true });
 		return function(colorStr) {
 			if (!colorStr)
-			   return null;
+				return null;
 			ctx.clearRect(0, 0, 1, 1);
 			// 2. Apply the color
 			ctx.fillStyle = colorStr;
@@ -207,7 +207,7 @@
 		if (!rgb) return 'unknown'; // Handle invalid colors
 		// Calculate YIQ brightness (human eye perception)
 		const brightness = ((rgb.r * 299) + (rgb.g * 587) + (rgb.b * 114)) / 1000;
-		
+
 		return brightness > 128 ? 'light' : 'dark';
 	}
 
@@ -538,7 +538,7 @@
 			"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
 		}[c]));
 	}
-	
+
 	function lv_change(cbid, listContainer, hiddenSelect, labelSpan, searchInput, new_key, new_text) {
 		//改值
 		hiddenSelect.options[0].value = new_key;
@@ -549,7 +549,7 @@
 		lv_highlightSelectedItem(listContainer, hiddenSelect);
 		lv_updateGroupCounts(cbid, listContainer, hiddenSelect, searchInput);
 	}
-	
+
 	function lv_render_dropdown_list(cbid, panel, listContainer, hiddenSelect, labelSpan, searchInput, display) {
 		if (window.lv_dropdown_rendered[cbid]) return;
 		const data = window.lv_dropdown_data[cbid];
@@ -577,8 +577,10 @@
 		}
 
 		// 分组项
-		data.group_order.forEach(gname => {
-			const items = data.groups[gname];
+		const groupPool = window.lv_groups_pool && window.lv_groups_pool[data.appname];
+		data.group_order.forEach((gname, index) => {
+			const items = data.groups ? data.groups[gname] : groupPool && groupPool[data.group_refs[index]];
+			if (!Array.isArray(items)) return;
 
 			html += `
 			<div class="lv-group" data-group="${lv_idSafe(gname)}" style="margin-bottom:8px;">

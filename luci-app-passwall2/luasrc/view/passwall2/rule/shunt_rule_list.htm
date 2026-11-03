@@ -389,7 +389,7 @@ table td, .table .td {
 					'' + table_html +
 					'</div>'
 			}
-			
+
 			function addTabDOM(li, content) {
 				let tab_ul_html = '<ul class="cbi-tabmenu">';
 				let tab_content_html = '<fieldset class="cbi-section-shunt_rule cbi-section-shunt_rule-tabbed" id="cbi-<%=appname%>-shunt_rules">';
@@ -413,7 +413,7 @@ table td, .table .td {
 			if (default_group) {
 				cbi_t_switch("<%=appname%>.shunt_rules", default_group)
 			}
-			
+
 			origin_group_shunt_rule_order = {};
 			for (let group in group_shunt_rules) {
 				origin_group_shunt_rule_order[group] = get_shunt_rule_order(group);

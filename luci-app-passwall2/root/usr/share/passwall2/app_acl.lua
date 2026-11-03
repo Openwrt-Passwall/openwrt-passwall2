@@ -213,7 +213,7 @@ function acl_app(l)
 			add_args(run_args, "config_file", config_file)
 			add_args(run_args, "loglevel", v.loglevel)
 			add_args(run_args, "log_file", log_file)
-			
+
 			local out = io.open(api.TMP_ACL_PATH .. "/acl_node_" .. flag , "a")
 			out:write(table.concat(run_args, " "))
 			out:close()

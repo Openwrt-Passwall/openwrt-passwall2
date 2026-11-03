@@ -8,39 +8,30 @@ APP_FILE=${APP_PATH}/app.sh
 LOCK_FILE=${LOCK_PATH}/${CONFIG}.lock
 
 set_lock() {
-	[ ! -d "$LOCK_PATH" ] && mkdir -p $LOCK_PATH
-	exec 999>"$LOCK_FILE"
-	flock -xn 999
+	mkdir -p "$LOCK_PATH" || return 1
+	command exec 9>"$LOCK_FILE" || return 1
+	flock -xn 9
+}
+
+set_lock_wait() {
+	mkdir -p "$LOCK_PATH" || return 1
+	command exec 9>"$LOCK_FILE" || return 1
+	flock -x 9
 }
 
 unset_lock() {
-	flock -u 999
-	rm -rf "$LOCK_FILE"
-}
-
-unlock() {
-	failcount=1
-	while [ "$failcount" -le 10 ]; do
-		if [ -f "$LOCK_FILE" ]; then
-			let "failcount++"
-			sleep 1s
-			[ "$failcount" -ge 10 ] && unset_lock
-		else
-			break
-		fi
-	done
+	flock -u 9
+	exec 9>&-
 }
 
 boot_func() {
 	rm -f ${LOCK_PATH}/${CONFIG}_ready.lock
-	rm -f ${LOCK_PATH}/${CONFIG}_rule_update.lock
-	rm -f ${LOCK_PATH}/${CONFIG}_subscribe.lock
 	local delay=$(uci -q get ${CONFIG}.@global_delay[0].start_delay || echo 1)
 	if [ "$delay" -gt 0 ]; then
 		log_i18n 0 "Start after a delay of %s seconds!" "${delay}"
 		sleep $delay
 	fi
-	restart boot
+	restart boot || return 1
 	touch ${LOCK_PATH}/${CONFIG}_ready.lock
 }
 
@@ -49,35 +40,55 @@ boot() {
 }
 
 start() {
-	set_lock
-	[ $? == 1 ] && log_i18n 0 "The script is already running, do not run it again. Exit." && exit 0
-	$APP_FILE start
+	local action=${2:-$1}
+	[ "$action" = "start" ] && action=
+	set_lock || { log_i18n 0 "The script is already running, do not run it again. Exit."; return 0; }
+	"$APP_FILE" start "$action" 9>&-
+	local status=$?
 	unset_lock
+	return "$status"
 }
 
 stop() {
-	unlock
-	set_lock
-	[ $? == 1 ] && log_i18n 0 "Stop the script and wait for a timeout, then exit without repeating the process." && exit 0
-	$APP_FILE stop
+	local action=${2:-$1}
+	[ "$action" = "stop" ] && action=
+	set_lock_wait || { log_i18n 0 "Unable to acquire the stop lock. Exiting."; return 1; }
+	"$APP_FILE" stop "$action" 9>&-
+	local status=$?
 	unset_lock
+	return "$status"
 }
 
 restart() {
-	set_lock
-	[ $? == 1 ] && log_i18n 0 "The script is already running, do not run it again. Exit." && exit 0
-	rule_lock=${LOCK_PATH}/${CONFIG}_rule_update.lock
-	sub_lock=${LOCK_PATH}/${CONFIG}_subscribe.lock
+	local action=${2:-$1}
+	[ "$action" = "restart" ] && action=
+	set_lock || {
+		log_i18n 0 "The script is already running, do not run it again. Exit."
+		[ "$action" = "boot" ] && return 1
+		return 0
+	}
+	local update_status=1
 	for i in $(seq 1 300); do
-		if [ ! -f "$rule_lock" ] && [ ! -f "$sub_lock" ]; then
-			break
-		fi
+		PASSWALL2_UPDATE_LOCK="${LOCK_PATH}/${CONFIG}_sub_rule.lock" lua -e '
+			local nixio = require "nixio"
+			local file = nixio.open(os.getenv("PASSWALL2_UPDATE_LOCK"), "a")
+			if not file then os.exit(2) end
+			os.exit(file:lock("tlock") and 0 or 1)
+		'
+		update_status=$?
+		[ "$update_status" -ne 1 ] && break
 		sleep 2
 	done
-	rm -f "$rule_lock" "$sub_lock"
-	$APP_FILE stop
-	$APP_FILE start $1
+	if [ "$update_status" -ne 0 ]; then
+		log_i18n 0 "Failed or timed out waiting for subscription/rule updates. Restart cancelled."
+		unset_lock
+		return 1
+	fi
+	"$APP_FILE" stop "$action" 9>&-
+	"$APP_FILE" start "$action" 9>&-
+	local status=$?
 	unset_lock
+	return "$status"
 }
 
 reload() {

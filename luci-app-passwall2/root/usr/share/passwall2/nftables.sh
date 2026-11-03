@@ -147,51 +147,36 @@ gen_nft_tables() {
 	fi
 }
 
+# Avoid terminal stdin or open-ended pipes to prevent hanging.
 insert_nftset() {
 	local nftset_name="${1}"; shift
-	local timeout_argument="${1:--1}"; shift
-	local default_timeout="365d"
-	local suffix=""
+	[ -n "$nftset_name" ] || return 0
 
-	if [ -n "$nftset_name" ] && { [ $# -gt 0 ] || [ ! -t 0 ]; }; then
-		case "$timeout_argument" in
-			"-1") suffix="" ;;
-			 "0") suffix=" timeout $default_timeout" ;;
-			   *) suffix=" timeout $timeout_argument" ;;
-		esac
-		{
-			if [ $# -gt 0 ] && [ $# -le 1000 ]; then
-				printf "%s\n" "$@"
-			elif [ $# -gt 1000 ]; then
-				printf "%s\n" "$*"
-			else
-				cat
-			fi | awk -v s="$suffix" -v n="$nftset_name" -v t="$NFTABLE_NAME" '
-				BEGIN {
-					RS = "[ \t\n\r]+"
-					ORS = ""
-				}
-				$0 != "" {
-					if (!first) {
-						printf "add element %s %s { \n", t, n
-						first = 1;
-					} else {
-						print ",\n"
-					}
-					print $0 s
-				}
-				END {
-					if (first) print "\n }\n"
-				}
-			'
-		} | nft -f -
-	fi
+	awk -v n="$nftset_name" -v t="$NFTABLE_NAME" '
+		BEGIN {
+			RS = "[ \t\n\r]+"
+			ORS = ""
+		}
+		$0 != "" {
+			if (!first) {
+				printf "add element %s %s { \n", t, n
+				first = 1
+			} else {
+				print ",\n"
+			}
+			printf " %s", $0
+		}
+		END {
+			if (first) {
+				print "\n }\n"
+			}
+		}' | nft -f -
 }
 
 gen_nftset() {
 	local nftset_name="${1}"; shift
 	local ip_type="${1}"; shift
-	#  0 - don't set defalut timeout
+	#  0 - don't set default timeout
 	local timeout_argument_set="${1}"; shift
 	#  0 - don't let element timeout(365 days) when set's timeout parameters be seted
 	# -1 - follow the set's timeout parameters
@@ -204,9 +189,6 @@ gen_nftset() {
 		else
 			nft "add set $NFTABLE_NAME $nftset_name { type $ip_type; flags interval, timeout; timeout $timeout_argument_set; gc-interval $gc_interval_time; auto-merge; }"
 		fi
-	fi
-	if [ $# -gt 0 ]; then
-		insert_nftset "$nftset_name" "$timeout_argument_element" "$@"
 	fi
 }
 
@@ -245,13 +227,13 @@ gen_shunt_list() {
 					[ "$shunt_node" = "_default" ] && outbound="${default_outbound}"
 					_SHUNT_LIST4="${_SHUNT_LIST4} ${nftset_v4}:${outbound}"
 					_SHUNT_LIST6="${_SHUNT_LIST6} ${nftset_v6}:${outbound}"
-					config_n_get $shunt_id ip_list | sed 's/#.*//' | grep -E "(\.((2(5[0-5]|[0-4][0-9]))|[0-1]?[0-9]{1,2})){3}" | insert_nftset $nftset_v4 "0"
-					config_n_get $shunt_id ip_list | sed 's/#.*//' | grep -E "([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}" | insert_nftset $nftset_v6 "0"
+					config_n_get $shunt_id ip_list | sed 's/#.*//' | grep -E "(\.((2(5[0-5]|[0-4][0-9]))|[0-1]?[0-9]{1,2})){3}" | insert_nftset $nftset_v4
+					config_n_get $shunt_id ip_list | sed 's/#.*//' | grep -E "([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}" | insert_nftset $nftset_v6
 					[ "${enable_geoview_ip}" = "1" ] && {
 						local _geoip_code=$(config_n_get $shunt_id ip_list | tr -s "\r\n" "\n" | sed -e "/^$/d" | grep -E "^geoip:" | grep -v "^geoip:private" | sed -E 's/^geoip:(.*)/\1/' | sed ':a;N;$!ba;s/\n/,/g')
 						[ -n "$_geoip_code" ] && {
-							get_geoip $_geoip_code ipv4 | grep -E "(\.((2(5[0-5]|[0-4][0-9]))|[0-1]?[0-9]{1,2})){3}" | insert_nftset $nftset_v4 "0"
-							get_geoip $_geoip_code ipv6 | grep -E "([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}" | insert_nftset $nftset_v6 "0"
+							get_geoip $_geoip_code ipv4 | grep -E "(\.((2(5[0-5]|[0-4][0-9]))|[0-1]?[0-9]{1,2})){3}" | insert_nftset $nftset_v4
+							get_geoip $_geoip_code ipv6 | grep -E "([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}" | insert_nftset $nftset_v6
 							#log 3 "$(i18n "parse the traffic splitting rules[%s]-[geoip:%s] add to %s to complete." "${shunt_id}" "${_geoip_code}" "NFTSET[${nftset_v4},${nftset_v6}]")"
 						}
 					}
@@ -473,7 +455,7 @@ load_acl() {
 					continue
 				fi
 				msg="${msg1}${msg}"
-				
+
 				[ -n "$tcp_no_redir_ports" ] && {
 					if ! has_1_65535 "$tcp_no_redir_ports"; then
 						nft "add rule $NFTABLE_NAME $nft_prerouting_chain ${_ipt_source} ip protocol tcp $(factor $tcp_no_redir_ports "tcp dport") counter return comment \"$remarks\""
@@ -485,7 +467,7 @@ load_acl() {
 						log 2 "${msg}$(i18n "not proxy all %s" "TCP")"
 					fi
 				}
-				
+
 				[ -n "$udp_no_redir_ports" ] && {
 					if ! has_1_65535 "$udp_no_redir_ports"; then
 						nft "add rule $NFTABLE_NAME PSW2_MANGLE ip protocol udp ${_ipt_source} $(factor $udp_no_redir_ports "udp dport") counter return comment \"$remarks\""
@@ -584,29 +566,29 @@ filter_haproxy() {
 	[ "$(config_n_get @global_haproxy[0] balancing_enable 0)" != "1" ] && return
 	for item in $(uci show $CONFIG | grep ".lbss=" | cut -d "'" -f 2); do
 		get_host_ip ipv4 $(echo $item | awk -F ":" '{print $1}') 1
-	done | insert_nftset $NFTSET_VPS "-1"
+	done | insert_nftset $NFTSET_VPS
 	log_i18n 1 "Add node to the load balancer is directly connected to %s[%s]." "nftset" "${NFTSET_VPS}"
 }
 
 filter_vps_addr() {
 	for server_host in "$@"; do
 		get_host_ip "ipv4" ${server_host}
-	done | insert_nftset $NFTSET_VPS "-1"
+	done | insert_nftset $NFTSET_VPS
 
 	for server_host in "$@"; do
 		get_host_ip "ipv6" ${server_host}
-	done | insert_nftset $NFTSET_VPS6 "-1"
+	done | insert_nftset $NFTSET_VPS6
 }
 
 filter_vpsip() {
 	local ipv4_addrs=$(uci show $CONFIG | grep -E "(.address=|.download_address=)" | cut -d "'" -f 2 | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}" | grep -v "^127\.0\.0\.1$")
 	[ -n "$ipv4_addrs" ] && {
-		echo "$ipv4_addrs" | insert_nftset $NFTSET_VPS "-1"
+		echo "$ipv4_addrs" | insert_nftset $NFTSET_VPS
 		log_i18n 1 "Add all %s nodes to %s[%s] direct connection complete." "IPv4" "nftset" "${NFTSET_VPS}"
 	}
 	local ipv6_addrs=$(uci show $CONFIG | grep -E "(.address=|.download_address=)" | cut -d "'" -f 2 | grep -E "([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}")
 	[ -n "$ipv6_addrs" ] && {
-		echo "$ipv6_addrs" | insert_nftset $NFTSET_VPS6 "-1"
+		echo "$ipv6_addrs" | insert_nftset $NFTSET_VPS6
 		log_i18n 1 "Add all %s nodes to %s[%s] direct connection complete." "IPv6" "nftset" "${NFTSET_VPS6}"
 	}
 }
@@ -692,13 +674,13 @@ update_wan_sets() {
 		local WAN_IP=$(get_wan_ips ip4)
 		[ -n "$WAN_IP" ] && {
 			# nft flush set $NFTABLE_NAME $NFTSET_WAN
-			echo "$WAN_IP" | insert_nftset $NFTSET_WAN "-1"
+			echo "$WAN_IP" | insert_nftset $NFTSET_WAN
 		}
 
 		local WAN6_IP=$(get_wan_ips ip6)
 		[ -n "${WAN6_IP}" ] && {
 			# nft flush set $NFTABLE_NAME $NFTSET_WAN6
-			echo "$WAN6_IP" | insert_nftset $NFTSET_WAN6 "-1"
+			echo "$WAN6_IP" | insert_nftset $NFTSET_WAN6
 		}
 	) 9>"${LOCK_PATH}/${CONFIG}_update_wan_sets.lock"
 }
@@ -719,18 +701,18 @@ add_firewall_rule() {
 	gen_nftset $NFTSET_VPS6 ipv6_addr 0 "-1"
 	gen_nftset $NFTSET_WAN6 ipv6_addr 0 "-1"
 
-	get_local_ips ip4 | insert_nftset $NFTSET_LOCAL "-1"
-	get_local_ips ip6 | insert_nftset $NFTSET_LOCAL6 "-1"
+	get_local_ips ip4 | insert_nftset $NFTSET_LOCAL
+	get_local_ips ip6 | insert_nftset $NFTSET_LOCAL6
 
 	for ip in $(cat /usr/share/passwall2/direct_ip | tr -s "\r\n" "\n" | grep -v "^#" | sed -e "/^$/d"); do
 		if [[ "$ip" == *::* ]]; then
-			echo "$ip" | insert_nftset $NFTSET_DIRECT6 "-1"
+			echo "$ip" | insert_nftset $NFTSET_DIRECT6
 		elif [[ "$ip" == "geoip:"* ]]; then
 			local _geoip_code=$(echo $ip | awk -F ':' '{print $2}')
-			get_geoip $_geoip_code ipv4 | grep -E "(\.((2(5[0-5]|[0-4][0-9]))|[0-1]?[0-9]{1,2})){3}" | insert_nftset $NFTSET_DIRECT "-1"
-			get_geoip $_geoip_code ipv6 | grep -E "([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}" | insert_nftset $NFTSET_DIRECT6 "-1"
+			get_geoip $_geoip_code ipv4 | grep -E "(\.((2(5[0-5]|[0-4][0-9]))|[0-1]?[0-9]{1,2})){3}" | insert_nftset $NFTSET_DIRECT
+			get_geoip $_geoip_code ipv6 | grep -E "([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}" | insert_nftset $NFTSET_DIRECT6
 		else
-			echo "$ip" | insert_nftset $NFTSET_DIRECT "-1"
+			echo "$ip" | insert_nftset $NFTSET_DIRECT
 		fi
 	done
 
@@ -743,21 +725,21 @@ add_firewall_rule() {
 		#log_i18n 1 "local network segments (%s) direct connection: %s" "IPv4" "${lan_ip}"
 		#log_i18n 1 "local network segments (%s) direct connection: %s" "IPv6" "${lan_ip6}"
 
-		[ -n "$lan_ip" ] && echo $lan_ip | insert_nftset $NFTSET_DIRECT "-1"
-		[ -n "$lan_ip6" ] && echo $lan_ip6 | insert_nftset $NFTSET_DIRECT6 "-1"
+		[ -n "$lan_ip" ] && echo $lan_ip | insert_nftset $NFTSET_DIRECT
+		[ -n "$lan_ip6" ] && echo $lan_ip6 | insert_nftset $NFTSET_DIRECT6
 	}
 
 	update_wan_sets
 
 	[ -n "$ISP_DNS" ] && {
-		echo "$ISP_DNS" | insert_nftset $NFTSET_DIRECT "-1"
+		echo "$ISP_DNS" | insert_nftset $NFTSET_DIRECT
 		for ispip in $ISP_DNS; do
 			log_i18n 1 "$(i18n "Add ISP %s DNS to the whitelist: %s" "IPv4" "${ispip}")"
 		done
 	}
 
 	[ -n "$ISP_DNS6" ] && {
-		echo $ISP_DNS6 | insert_nftset $NFTSET_DIRECT6 "-1"
+		echo $ISP_DNS6 | insert_nftset $NFTSET_DIRECT6
 		for ispip6 in $ISP_DNS6; do
 			log_i18n 1 "$(i18n "Add ISP %s DNS to the whitelist: %s" "IPv6" "${ispip6}")"
 		done
@@ -902,6 +884,9 @@ add_firewall_rule() {
 
 	filter_direct_node_list > /dev/null 2>&1 &
 
+	nft "insert rule $NFTABLE_NAME mangle_output meta skgid $DIRECT_GID counter return comment \"PSW2_DIRECT\""
+	nft "insert rule $NFTABLE_NAME nat_output meta skgid $DIRECT_GID counter return comment \"PSW2_DIRECT\""
+
 	log_i18n 0 "%s firewall rules load complete!" "nftables"
 }
 
@@ -973,7 +958,7 @@ gen_include() {
 
 	cat <<-EOF >> $FWI
 	${__nft}
-	
+
 	return 0
 	EOF
 	return 0
@@ -1002,9 +987,6 @@ stop() {
 arg1=$1
 shift
 case $arg1 in
-insert_nftset)
-	insert_nftset "$@"
-	;;
 filter_direct_node_list)
 	filter_direct_node_list
 	;;

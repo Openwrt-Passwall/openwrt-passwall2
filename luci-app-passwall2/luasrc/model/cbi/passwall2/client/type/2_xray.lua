@@ -31,8 +31,6 @@ local header_type_list = {
 	"none", "srtp", "utp", "wechat-video", "dtls", "wireguard", "dns"
 }
 
-local xray_version = api.get_app_version("xray")
-
 o = s:option(ListValue, "protocol", translate("Protocol"))
 o:value("vmess", translate("Vmess"))
 o:value("vless", translate("VLESS"))
@@ -41,12 +39,9 @@ o:value("socks", translate("Socks"))
 o:value("shadowsocks", translate("Shadowsocks"))
 o:value("trojan", translate("Trojan"))
 o:value("wireguard", translate("WireGuard"))
-if api.compare_versions(xray_version, ">=", "26.1.13") then
-	o:value("hysteria2", translate("Hysteria2"))
-end
-if api.compare_versions(xray_version, ">=", "1.8.12") then
-	o:value("_balancing", translate("Balancing"))
-end
+o:value("hysteria2", translate("Hysteria2"))
+o:value("masque", "MASQUE")
+o:value("_balancing", translate("Balancing"))
 o:value("_shunt", translate("Shunt"))
 o:value("_iface", translate("Custom Interface"))
 
@@ -260,6 +255,7 @@ o:depends({ protocol = "vless" })
 o = s:option(Value, "username", translate("Username"))
 o:depends({ protocol = "http" })
 o:depends({ protocol = "socks" })
+o:depends({ protocol = "masque" })
 
 o = s:option(Value, "password", translate("Password"))
 o.password = true
@@ -267,6 +263,57 @@ o:depends({ protocol = "http" })
 o:depends({ protocol = "socks" })
 o:depends({ protocol = "shadowsocks" })
 o:depends({ protocol = "trojan" })
+o:depends({ protocol = "masque" })
+
+-- [[ MASQUE ]] --
+o = s:option(Flag, "masque_warp", "WARP")
+o.default = "0"
+o:depends({ protocol = "masque" })
+
+for _, field in ipairs({
+	{ "masque_warp_private_key", translate("WARP Device Private Key") },
+	{ "masque_warp_public_key", translate("WARP Endpoint Public Key") }
+}) do
+	o = s:option(TextValue, field[1], field[2])
+	o.rows = 3
+	o.wrap = "off"
+	o:depends({ protocol = "masque", masque_warp = "1" })
+	o.cfgvalue = function(self, section)
+		return (m:get(section, self.config_option) or ""):gsub("\\n", "\n")
+	end
+	o.validate = function(self, value)
+		return api.trim(value):gsub("\r\n?", "\n"):gsub("\n", "\\n")
+	end
+end
+
+o = s:option(DynamicList, "masque_warp_address", "WARP " .. translate("Local Address"))
+o:depends({ protocol = "masque", masque_warp = "1" })
+
+o = s:option(Value, "masque_path", translate("MASQUE Path"))
+o:depends({ protocol = "masque" })
+
+o = s:option(TextValue, "masque_headers", translate("Custom HTTP Headers"))
+o.rows = 5
+o.wrap = "off"
+o:depends({ protocol = "masque" })
+o.cfgvalue = function(self, section)
+	return (m:get(section, self.config_option) or ""):gsub("\\n", "\n")
+end
+o.validate = function(self, value)
+	value = api.trim(value):gsub("\r\n", "\n"):gsub("\r", "\n")
+	local headers = {}
+	for line in value:gmatch("[^\n]+") do
+		if api.trim(line) ~= "" then
+			local key = line:match("^%s*([^:]+):")
+			key = key and api.trim(key):lower()
+			if not key or not key:match("^[!#$%%&'*+%.%^_`|~%w%-]+$") or headers[key] or key == "host" or key == "capsule-protocol" then
+				return nil, translate("Not true format, please re-enter!") .. " (" .. line .. ")"
+			end
+			headers[key] = true
+		end
+	end
+	return value:gsub("\n", "\\n")
+end
 
 o = s:option(ListValue, "security", translate("Encrypt Method"))
 for a, t in ipairs(security_list) do o:value(t) end
@@ -305,11 +352,7 @@ o:depends({ protocol = "hysteria2", hysteria2_realms = false })
 
 o = s:option(Flag, "hysteria2_realms", translate("Realms"))
 o.default = "0"
-if api.compare_versions(xray_version, ">", "26.5.9") then
-	o:depends({ protocol = "hysteria2"})
-else
-	o:depends({ protocol = "__hide"})
-end
+o:depends({ protocol = "hysteria2"})
 
 o = s:option(Value, "hysteria2_realm_url", translate("Realm URL"), translate("Example:") .. "realm://public@realm.hy2.io/your-realm-name")
 o:depends({ hysteria2_realms = "1" })
@@ -360,6 +403,16 @@ o:depends({ protocol = "hysteria2" })
 o = s:option(Value, "hysteria2_down_mbps", translate("Max download Mbps"))
 o:depends({ protocol = "hysteria2" })
 
+o = s:option(Value, "hysteria2_stream_recv_win", translate("QUIC stream receive window") .. " (MB)")
+o.datatype = "range(1,1000)"
+o.placeholder = "8"
+o:depends({ protocol = "hysteria2" })
+
+o = s:option(Value, "hysteria2_conn_recv_win", translate("QUIC connection receive window") .. " (MB)")
+o.datatype = "range(1,1000)"
+o.placeholder = "20"
+o:depends({ protocol = "hysteria2" })
+
 o = s:option(Value, "hysteria2_idle_timeout", translate("Idle Timeout"), translate("Units:seconds") .. " (4~120)")
 o.datatype = "range(4,120)"
 o:depends({ protocol = "hysteria2"})
@@ -400,6 +453,7 @@ o:value("http/1.1")
 o:value("h2,http/1.1")
 o:value("h3,h2,http/1.1")
 o:depends({ tls = true, reality = false })
+o:depends({ protocol = "masque" })
 
 -- o = s:option(Value, "minversion", translate("minversion"))
 -- o.default = "1.3"
@@ -409,21 +463,25 @@ o:depends({ tls = true, reality = false })
 o = s:option(Value, "tls_serverName", "SNI " .. translate("Domain"))
 o:depends({ tls = true })
 o:depends({ protocol = "hysteria2" })
+o:depends({ protocol = "masque" })
 
 o = s:option(Value, "tls_pinSHA256", translate("TLS Chain Fingerprint (SHA256)"))
 o:depends({ tls = true, reality = false })
 o:depends({ protocol = "hysteria2" })
+o:depends({ protocol = "masque" })
 o.description = translate("Once set, connects only when the server’s chain fingerprint matches.") ..
 		string.format("<a href='javascript:void(0)' onclick='javascript:fetchCertSha256(this)'>%s</a>", "→ " .. translate("Fetch Manually"))
 
 o = s:option(Value, "tls_CertByName", translate("TLS Certificate Name (CertName)"), translate("TLS is used to verify the leaf certificate name."))
 o:depends({ tls = true, reality = false })
 o:depends({ protocol = "hysteria2" })
+o:depends({ protocol = "masque" })
 
 o = s:option(Flag, "tls_certificate", translate("TLS Certificate (PEM)"))
 o.default = "0"
 o:depends({ tls = true, reality = false })
 o:depends({ protocol = "hysteria2" })
+o:depends({ protocol = "masque" })
 
 o = s:option(TextValue, "tls_certificate_pem", "　", translate("Full certificate (chain), PEM format."))
 o.default = ""
@@ -442,6 +500,7 @@ o = s:option(Flag, "ech", translate("ECH"))
 o.default = "0"
 o:depends({ tls = true, reality = false })
 o:depends({ protocol = "hysteria2", hysteria2_realms = false })
+o:depends({ protocol = "masque" })
 
 o = s:option(TextValue, "ech_config", translate("ECH Config"))
 o.default = ""
@@ -502,6 +561,7 @@ o:value("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384")
 o:value("TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256")
 o:value("TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256")
 o:depends({ tls = true, reality = false })
+o:depends({ protocol = "masque" })
 
 o = s:option(TextValue, "reality_mldsa65Verify", "ML-DSA-65 " .. translate("Public key"))
 o.default = ""
@@ -541,10 +601,8 @@ o = s:option(Value, "wireguard_mtu", translate("MTU"))
 o.default = "1420"
 o:depends({ protocol = "wireguard" })
 
-if api.compare_versions(xray_version, ">=", "1.8.0") then
-	o = s:option(Value, "wireguard_reserved", translate("Reserved"), translate("Decimal numbers separated by \",\" or Base64-encoded strings."))
-	o:depends({ protocol = "wireguard" })
-end
+o = s:option(Value, "wireguard_reserved", translate("Reserved"), translate("Decimal numbers separated by \",\" or Base64-encoded strings."))
+o:depends({ protocol = "wireguard" })
 
 o = s:option(Value, "wireguard_keepAlive", translate("Keep Alive"))
 o.default = "0"
@@ -701,6 +759,7 @@ o:depends({ transport = "ws" })
 o:depends({ transport = "httpupgrade" })
 o:depends({ transport = "xhttp" })
 o:depends({ transport = "grpc" })
+o:depends({ protocol = "masque" })
 
 -- [[ Mux.Cool ]]--
 o = s:option(Flag, "mux", "Mux", translate("Enable Mux.Cool"))
@@ -731,6 +790,7 @@ o:depends({ protocol = "trojan" })
 o:depends({ protocol = "shadowsocks" })
 o:depends({ protocol = "wireguard" })
 o:depends({ protocol = "hysteria2", hysteria2_realms = false })
+o:depends({ protocol = "masque" })
 
 o = s:option(TextValue, "finalmask", "　")
 o:depends({ use_finalmask = true })

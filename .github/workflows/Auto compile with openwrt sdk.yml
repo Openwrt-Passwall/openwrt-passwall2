@@ -233,6 +233,21 @@ jobs:
           files: ${{ env.FIRMWARE }}/*
 
 
+  job_trigger_packages_cache:
+    name: Trigger packages cache workflow
+    needs: job_build_passwall2
+    if: ${{ needs.job_build_passwall2.result == 'success' }}
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Dispatch Auto Cache Software Release JSONs
+        env:
+          GH_TOKEN: ${{ secrets.PACKAGES_DISPATCH_TOKEN }}
+        run: |
+          gh workflow run "Auto cache software release jsons.yml" \
+            --repo "${{ env.packages }}" \
+            --ref main
+
+
   job_auto_compile:
     if: ${{ needs.job_check.outputs.has_update == 'true' && needs.job_check.outputs.prerelease == 'false' }}
     needs: job_check
@@ -376,7 +391,7 @@ jobs:
           echo "CONFIG_ALL=n" >> .config
           echo "CONFIG_AUTOREMOVE=n" >> .config
           echo "CONFIG_SIGNED_PACKAGES=n" >> .config
-          echo "CONFIG_PACKAGE_luci-app-passwall2=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-passwall2=y" >> .config
           echo "CONFIG_PACKAGE_luci-app-passwall2_Basic_Core_All=y" >> .config
           echo "CONFIG_PACKAGE_luci-app-passwall2_Iptables_Transparent_Proxy=y" >> .config
           echo "CONFIG_PACKAGE_luci-app-passwall2_Nftables_Transparent_Proxy=y" >> .config

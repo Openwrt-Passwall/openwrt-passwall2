@@ -7,6 +7,7 @@
 --	Description: Passwall(2) UI template
 
 local json = require "luci.jsonc"
+local api = self.map.api
 
 -- 读取值（keylist/vallist/group）
 local values = {}
@@ -48,6 +49,30 @@ for _, item in ipairs(values) do
 	end
 end
 
+-- 仅共享组名、节点 key/label 及顺序完全相同的分组，保留各控件的候选限制
+local group_cache = self.map._lv_group_cache
+if not group_cache then
+	group_cache = {}
+	self.map._lv_group_cache = group_cache
+end
+local group_refs = {}
+local new_groups = {}
+for i, g in ipairs(group_order) do
+	-- 使用有序数组生成完整签名，不依赖 JSON 对象的字段顺序或哈希值
+	local signature = {g}
+	for _, item in ipairs(groups[g]) do
+		signature[#signature + 1] = {item.key, item.label}
+	end
+	local cache_key = json.stringify(signature)
+	local ref = group_cache[cache_key]
+	if not ref then
+		ref = cbid .. ".group." .. i
+		group_cache[cache_key] = ref
+		new_groups[ref] = groups[g]
+	end
+	group_refs[i] = ref
+end
+
 -- 如果没有配置值，默认取第一个（优先无组第一项，否则第一组第一项）
 if not current_key then
 	if #ungrouped > 0 then
@@ -73,19 +98,28 @@ local function find_label_by_key(k)
 end
 local current_label = find_label_by_key(current_key) or ""
 
--- 打包数据给 JS
+-- 控件只携带分组引用，重复的候选数据在页面中仅输出一次
 local dropdown_data = {
+	appname = api.appname,
 	current_key = current_key,
 	current_label = current_label,
 	ungrouped = ungrouped,
-	groups = groups,
+	group_refs = group_refs,
 	group_order = group_order,
 	cbid = cbid,
 }
 %>
 <script>
-window.lv_dropdown_data = window.lv_dropdown_data || {};
-window.lv_dropdown_data["<%=cbid%>"] = <%=json.stringify(dropdown_data)%>;
+(function() {
+	const appname = <%=json.stringify(api.appname)%>;
+	window.lv_groups_pool = window.lv_groups_pool || Object.create(null);
+	const pool = window.lv_groups_pool[appname] || (window.lv_groups_pool[appname] = Object.create(null));
+<% if next(new_groups) then %>
+	Object.assign(pool, <%=json.stringify(new_groups)%>);
+<% end %>
+	window.lv_dropdown_data = window.lv_dropdown_data || {};
+	window.lv_dropdown_data[<%=json.stringify(cbid)%>] = <%=json.stringify(dropdown_data)%>;
+})();
 </script>
 
 <div id="<%=cbid%>.main" class="lv-dropdown-container">
@@ -98,7 +132,7 @@ window.lv_dropdown_data["<%=cbid%>"] = <%=json.stringify(dropdown_data)%>;
 	<!-- 模拟 ListValue 控件外观 -->
 	<div class="cbi-input-value cbi-input-select lv-dropdown-display" id="<%=cbid%>.display" tabindex="0">
 		<span id="<%=cbid%>.label" class="lv-dropdown-label" title="<%=pcdata(current_label)%>">
-			<%=pcdata("("..translate("Not set")..")")%>
+			<%=pcdata("( "..translate("Not Set").." )")%>
 		</span>
 		<span class="lv-arrow-down"></span>
 	</div>
@@ -141,7 +175,7 @@ window.lv_dropdown_data["<%=cbid%>"] = <%=json.stringify(dropdown_data)%>;
 	});
 	lv_registerAdaptive(cbid);
 	setTimeout(() => {
-		labelSpan.textContent = lv_ellipsisByWidth(cbid, '<%=pcdata(current_label ~= "" and current_label or ("("..translate("Not set")..")"))%>');
+		labelSpan.textContent = lv_ellipsisByWidth(cbid, '<%=pcdata(current_label ~= "" and current_label or ("( "..translate("Not Set").." )"))%>');
 	}, 100);
 })();
 //]]>

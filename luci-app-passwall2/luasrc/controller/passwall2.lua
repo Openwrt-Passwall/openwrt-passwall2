@@ -100,10 +100,11 @@ function index()
 	entry({"admin", "services", appname, "delete_select_shunt_rules"}, call("delete_select_shunt_rules")).leaf = true
 
 	--[[Components update]]
-	entry({"admin", "services", appname, "check_passwall2"}, call("app_check")).leaf = true
+	entry({"admin", "services", appname, "check_" .. appname}, call("app_check")).leaf = true
+	entry({"admin", "services", appname, "update_" .. appname}, call("app_update")).leaf = true
 	local coms = require "luci.passwall2.com"
 	local com
-	for com, _ in pairs(coms) do
+	for _, com in ipairs(coms.order) do
 		entry({"admin", "services", appname, "check_" .. com}, call("com_check", com)).leaf = true
 		entry({"admin", "services", appname, "update_" .. com}, call("com_update", com)).leaf = true
 		entry({"admin", "services", appname, "version_" .. com}, call("com_version", com)).leaf = true
@@ -191,12 +192,12 @@ function socks_autoswitch_add_node()
 		uci_set(id, "enable_autoswitch", "1")
 		local new_list = uci_get(id, "autoswitch_backup_node") or {}
 		for i = #new_list, 1, -1 do
-			if (uci_get(new_list[i], "remarks") or ""):find(key) then
+			if (uci_get(new_list[i], "remarks") or ""):find(key, 1, true) then
 				table.remove(new_list, i)
 			end
 		end
 		for k, e in ipairs(api.get_valid_nodes()) do
-			if e.node_type == "normal" and e["remark"]:find(key) then
+			if e.node_type == "normal" and e["remark"]:find(key, 1, true) then
 				table.insert(new_list, e.id)
 			end
 		end
@@ -213,7 +214,7 @@ function socks_autoswitch_remove_node()
 		uci_set(id, "enable_autoswitch", "1")
 		local new_list = uci_get(id, "autoswitch_backup_node") or {}
 		for i = #new_list, 1, -1 do
-			if (uci_get(new_list[i], "remarks") or ""):find(key) then
+			if (uci_get(new_list[i], "remarks") or ""):find(key, 1, true) then
 				table.remove(new_list, i)
 			end
 		end
@@ -691,6 +692,30 @@ function app_check()
 	http_write_json(json)
 end
 
+function app_update()
+	local id = http.formvalue("id")
+	if not id or not id:match("^[%w_-]+$") then
+		http_write_json({code = 1, error = i18n.translate("Invalid download task.")})
+		return
+	end
+	local task = http.formvalue("task")
+	local result
+	if task == "progress" then
+		result = api.to_download_progress(appname, id, http.formvalue("total_size"))
+	elseif task == "install" then
+		if not luci.dispatcher.test_post_security() then return end
+		result = api.to_install_self(id, http.formvalue("force"), http.formvalue("languages"))
+	else
+		local part = tonumber(http.formvalue("part")) or 1
+		if part < 1 or part > 5 or part ~= math.floor(part) then
+			http_write_json({code = 1, error = i18n.translate("Invalid download task.")})
+			return
+		end
+		result = api.to_download(appname, http.formvalue("url"), http.formvalue("size"), id .. part, part > 1)
+	end
+	http_write_json(result)
+end
+
 function com_check(comname)
 	local json = api.to_check("", comname)
 	http_write_json(json)
@@ -699,12 +724,14 @@ end
 function com_update(comname)
 	local json = nil
 	local task = http.formvalue("task")
-	if task == "extract" then
+	if task == "progress" then
+		json = api.to_download_progress(comname, http.formvalue("id"), http.formvalue("total_size"))
+	elseif task == "extract" then
 		json = api.to_extract(comname, http.formvalue("file"), http.formvalue("subfix"))
 	elseif task == "move" then
 		json = api.to_move(comname, http.formvalue("file"))
 	else
-		json = api.to_download(comname, http.formvalue("url"), http.formvalue("size"))
+		json = api.to_download(comname, http.formvalue("url"), http.formvalue("size"), http.formvalue("id"))
 	end
 
 	http_write_json(json)

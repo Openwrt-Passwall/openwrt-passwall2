@@ -1001,6 +1001,15 @@ msgstr "移动中"
 msgid "App Update"
 msgstr "组件更新"
 
+msgid "GitHub Proxy"
+msgstr "GitHub 反向代理"
+
+msgid "Use GitHub instead of proxy nodes for component updates."
+msgstr "组件更新时使用 GitHub 反向代理服务直连检查和下载，不通过代理节点。"
+
+msgid "Close(Not use)"
+msgstr "关闭（不使用）"
+
 msgid "if you want to run from memory, change the path, /tmp beginning then save the application and update it manually."
 msgstr "如果你希望从内存中运行，请更改路径，/tmp 开头，然后保存应用后，再手动更新。"
 
@@ -1199,28 +1208,28 @@ msgstr "不是有效IPv6格式，请重新输入！"
 msgid "Not true format, please re-enter!"
 msgstr "不是正确的格式，请重新输入！"
 
-msgid "Plaintext: If this string matches any part of the targeting domain, this rule takes effet. Example: rule 'sina.com' matches targeting domain 'sina.com', 'sina.com.cn' and 'www.sina.com', but not 'sina.cn'."
+msgid "Plaintext: If this string matches any part of the targeting domain, this rule takes effect. Example: rule 'sina.com' matches targeting domain 'sina.com', 'sina.com.cn' and 'www.sina.com', but not 'sina.cn'."
 msgstr "纯字符串: 当此字符串匹配目标域名中任意部分，该规则生效。比如'sina.com'可以匹配'sina.com'、'sina.com.cn'和'www.sina.com'，但不匹配'sina.cn'。"
 
-msgid "Regular expression: Begining with 'regexp:', the rest is a regular expression. When the regexp matches targeting domain, this rule takes effect. Example: rule 'regexp:\\.goo.*\\.com$' matches 'www.google.com' and 'fonts.googleapis.com', but not 'google.com'."
+msgid "Regular expression: Beginning with 'regexp:', the rest is a regular expression. When the regexp matches targeting domain, this rule takes effect. Example: rule 'regexp:\\.goo.*\\.com$' matches 'www.google.com' and 'fonts.googleapis.com', but not 'google.com'."
 msgstr "正则表达式: 由'regexp:'开始，余下部分是一个正则表达式。当此正则表达式匹配目标域名时，该规则生效。例如'regexp:\\.goo.*\\.com$'匹配'www.google.com'、'fonts.googleapis.com'，但不匹配'google.com'。"
 
-msgid "Subdomain (recommended): Begining with 'domain:' and the rest is a domain. When the targeting domain is exactly the value, or is a subdomain of the value, this rule takes effect. Example: rule 'domain:v2ray.com' matches 'www.v2ray.com', 'v2ray.com', but not 'xv2ray.com'."
+msgid "Subdomain (recommended): Beginning with 'domain:' and the rest is a domain. When the targeting domain is exactly the value, or is a subdomain of the value, this rule takes effect. Example: rule 'domain:v2ray.com' matches 'www.v2ray.com', 'v2ray.com', but not 'xv2ray.com'."
 msgstr "子域名 (推荐): 由'domain:'开始，余下部分是一个域名。当此域名是目标域名或其子域名时，该规则生效。例如'domain:v2ray.com'匹配'www.v2ray.com'、'v2ray.com'，但不匹配'xv2ray.com'。"
 
-msgid "Full domain: Begining with 'full:' and the rest is a domain. When the targeting domain is exactly the value, the rule takes effect. Example: rule 'domain:v2ray.com' matches 'v2ray.com', but not 'www.v2ray.com'."
+msgid "Full domain: Beginning with 'full:' and the rest is a domain. When the targeting domain is exactly the value, the rule takes effect. Example: rule 'full:v2ray.com' matches 'v2ray.com', but not 'www.v2ray.com'."
 msgstr "完整匹配: 由'full:'开始，余下部分是一个域名。当此域名完整匹配目标域名时，该规则生效。例如'full:v2ray.com'匹配'v2ray.com'但不匹配'www.v2ray.com'。"
 
-msgid "Sing-Box rule-set: Begining with 'rule-set:remote:' or 'rule-set:local:'"
+msgid "Sing-Box rule-set: Beginning with 'rule-set:remote:' or 'rule-set:local:'"
 msgstr "Sing-Box 规则集： 由 'rule-set:remote:' 或 'rule-set:local:' 开始"
 
 msgid "Such as:"
 msgstr "例如："
 
-msgid "Pre-defined domain list: Begining with 'geosite:' and the rest is a name, such as geosite:google or geosite:cn."
+msgid "Pre-defined domain list: Beginning with 'geosite:' and the rest is a name, such as geosite:google or geosite:cn."
 msgstr "预定义域名列表：由'geosite:'开头，余下部分是一个名称，如geosite:google或者geosite:cn。"
 
-msgid "Annotation: Begining with #"
+msgid "Annotation: Beginning with #"
 msgstr "注释: 由 # 开头"
 
 msgid "Invert match result."
@@ -1531,6 +1540,9 @@ msgstr "请指定下载地址。"
 
 msgid "File download failed or timed out: %s"
 msgstr "文件下载失败或超时：%s"
+
+msgid "File verification failed."
+msgstr "文件校验失败"
 
 msgid "File path required."
 msgstr "请指定文件路径。"
@@ -2196,8 +2208,14 @@ msgstr "Socks切换检测：端口 [%s] 节点切换完毕！"
 msgid "Socks switch detection: Port [%s] [%s:[%s]] abnormal."
 msgstr "Socks切换检测：端口 [%s] 异常。"
 
-msgid "Socks switch detection: Port [%s] all nodes are unavailable!"
-msgstr "Socks切换检测：端口 [%s] 所有节点均不可用！"
+msgid "Socks switch detection: Port [%s] all nodes are unavailable or switching failed!"
+msgstr "Socks切换检测：端口 [%s] 所有节点均不可用或切换失败！"
+
+msgid "Socks switch detection: Port [%s] node switch failed, continue trying other nodes!"
+msgstr "Socks切换检测：端口 [%s] 节点切换失败，继续尝试其他节点！"
+
+msgid "Socks switch detection: Port [%s] failed to restore the primary node!"
+msgstr "Socks切换检测：端口 [%s] 恢复主节点失败！"
 
 msgid "Socks switch detection: Port [%s] Unknown error."
 msgstr "Socks切换检测：端口 [%s] 未知错误。"
@@ -2229,17 +2247,38 @@ msgstr "入口 %s:%s"
 msgid "Node: %s:%s, Weight: %s"
 msgstr "节点：%s:%s，权重：%s"
 
-msgid "[Rule update] instance is running; please try again later."
-msgstr "[规则更新]实例正在运行，请稍后再试..."
+msgid "Unable to open the subscription/rule update lock. Exiting."
+msgstr "无法打开订阅/规则更新锁，退出。"
 
-msgid "[Subscription] instance is running; [Rule Update] queue and wait."
-msgstr "[订阅]实例正在运行，[规则更新]进入队列等待..."
+msgid "A subscription or rule update is already running. Skipping this request."
+msgstr "订阅或规则更新已在运行，跳过本次请求。"
+
+msgid "Unable to acquire the update lock. Scheduled task failed."
+msgstr "无法获取更新锁，定时任务失败。"
+
+msgid "Subscription"
+msgstr "订阅"
+
+msgid "Rule Update"
+msgstr "规则更新"
+
+msgid "Subscription/Rule Update"
+msgstr "订阅/规则更新"
+
+msgid "[%s] is running; [%s] is queued and waiting..."
+msgstr "[%s]正在运行，[%s]已进入队列等待..."
 
 msgid "Start updating the rules..."
 msgstr "开始更新规则..."
 
 msgid "Download file size verification error. Original file size: %sB. Downloaded file size: %sB."
 msgstr "下载文件大小校验出错，原始文件大小 %sB，下载文件大小：%sB。"
+
+msgid "%s SHA256 verification information is invalid. Update failed."
+msgstr "%s SHA256 校验信息无效，更新失败。"
+
+msgid "%s file format verification failed. Update failed."
+msgstr "%s 文件格式校验错误，更新失败。"
 
 msgid "Downloaded file is empty or an error occurred while reading it."
 msgstr "下载的文件为空或读取文件时发生错误。"
@@ -2391,11 +2430,11 @@ msgstr "不代理"
 msgid "Proxy"
 msgstr "代理"
 
-msgid "[Subscription] instance is running; please try again later."
-msgstr "[订阅]实例正在运行，请稍后再试..."
+msgid "Unable to acquire the stop lock. Exiting."
+msgstr "无法获取停止锁，退出。"
 
-msgid "[Rule Update] instance is running; [Subscription] queue and wait."
-msgstr "[规则更新]实例正在运行，[订阅]进入队列等待..."
+msgid "Failed or timed out waiting for subscription/rule updates. Restart cancelled."
+msgstr "等待订阅/规则更新失败或超时，已取消重启。"
 
 msgid "Start subscribing..."
 msgstr "开始订阅..."
@@ -2406,11 +2445,14 @@ msgstr "开始订阅：%s"
 msgid "Subscription: [%s] No changes, no update required."
 msgstr "订阅:【%s】没有变化，无需更新。"
 
+msgid "Refresh subscription [%s] account usage and expiration information."
+msgstr "刷新订阅【%s】账户用量与到期时间信息。"
+
 msgid "[%s] Subscription failed. This could be due to an invalid subscription address or a network issue. Please diagnose the problem! [%s]"
 msgstr "【%s】订阅失败，可能是订阅地址无效，或是网络问题，请诊断！[%s]"
 
-msgid "Error, restoring service."
-msgstr "发生错误, 正在恢复服务。"
+msgid "An error occurred during subscription."
+msgstr "订阅过程中发生错误。"
 
 msgid "Subscription complete..."
 msgstr "订阅完毕..."
@@ -2451,3 +2493,80 @@ msgstr "该用户名已存在。"
 msgid "Update Options"
 msgstr "更新选项"
 
+msgid "MASQUE Path"
+msgstr "MASQUE 路径"
+
+msgid "Custom HTTP Headers"
+msgstr "自定义 HTTP 请求头"
+
+msgid "MASQUE Address"
+msgstr "MASQUE 隧道地址"
+
+msgid "WARP Device Private Key"
+msgstr "WARP 设备私钥"
+
+msgid "WARP Endpoint Public Key"
+msgstr "WARP 服务端公钥"
+
+msgid "Installing..."
+msgstr "安装中"
+
+msgid "Do not refresh or switch pages during installation."
+msgstr "安装时请勿刷新页面和切换页面。"
+
+msgid "Update failed"
+msgstr "更新失败"
+
+msgid "Unknown error"
+msgstr "未知错误"
+
+msgid "Click to sort; click again to reverse. Press Save & Apply to keep the order."
+msgstr "点击表头排序，再次点击切换方向。按保存并应用可保留顺序。"
+
+msgid "Sort by type or protocol, then by name"
+msgstr "先按类型或协议排序，再按名称排序"
+
+msgid "Sort by server address and port"
+msgstr "按服务器地址和端口排序"
+
+msgid "Restore the saved order"
+msgstr "恢复已保存的顺序"
+
+msgid "The order changed on this page only. Press Save & Apply to store it on the router."
+msgstr "顺序仅在本页改变。按保存并应用才会写入路由器。"
+
+msgid "Saved order restored."
+msgstr "已恢复保存的顺序。"
+
+msgid "Automatic ping is still running (%d left). Sorting will run when it finishes."
+msgstr "自动探测仍在进行（剩余 %d）。结束后会立即排序。"
+
+msgid "Automatic ping did not finish within 2 minutes. Sorting was cancelled. Reload the page and try again."
+msgstr "自动探测在 2 分钟内未结束，已取消排序。请刷新页面后重试。"
+
+msgid "Filter:"
+msgstr "筛选："
+
+msgid "(empty)"
+msgstr "(空)"
+
+msgid "Word in remarks"
+msgstr "备注关键词"
+
+msgid "search..."
+msgstr "搜索..."
+
+msgid "Show only rows that contain this text"
+msgstr "只显示包含此文本的行"
+
+msgid "Shown %s of %t"
+msgstr "显示 %s / %t"
+
+msgid "Reset"
+msgstr "重置"
+
+msgid "Show all rows"
+msgstr "显示全部行"
+
+msgid "The filter only hides rows on this page and changes nothing on the router. Select all skips hidden rows."
+msgstr "筛选只在本页隐藏行，不会改动路由器上的设置。全选会跳过隐藏行。"

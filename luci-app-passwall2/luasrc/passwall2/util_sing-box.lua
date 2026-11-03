@@ -114,8 +114,8 @@ function gen_outbound(flag, node, tag, proxy_table)
 		local proxy_tag, fragment, record_fragment
 		if proxy_table ~= nil and type(proxy_table) == "table" then
 			proxy_tag = proxy_table.tag or nil
-			fragment = (proxy_table.fragment and node.protocol ~= "naive" and not node.hysteria2_realms) and true or nil
-			record_fragment = (proxy_table.record_fragment and node.protocol ~= "naive" and not node.hysteria2_realms) and true or nil
+			fragment = (proxy_table.fragment and node.protocol ~= "naive" and node.protocol ~= "masque" and not node.hysteria2_realms) and true or nil
+			record_fragment = (proxy_table.record_fragment and node.protocol ~= "naive" and node.protocol ~= "masque" and not node.hysteria2_realms) and true or nil
 		end
 
 		if node.type ~= "sing-box" then
@@ -233,7 +233,14 @@ function gen_outbound(flag, node, tag, proxy_table)
 		end
 
 		local tls = nil
-		if node.protocol == "hysteria" or node.protocol == "hysteria2" or node.protocol == "tuic" or node.protocol == "naive" then
+		if node.protocol == "masque" then
+			node.alpn = nil
+			node.utls = nil
+			node.reality = nil
+			node.transport = nil
+			node.mux = nil
+		end
+		if node.protocol == "hysteria" or node.protocol == "hysteria2" or node.protocol == "tuic" or node.protocol == "naive" or node.protocol == "masque" then
 			node.tls = "1"
 		end
 		if node.tls == "1" then
@@ -254,7 +261,7 @@ function gen_outbound(flag, node, tag, proxy_table)
 				fragment = fragment,
 				record_fragment = record_fragment,
 				certificate = (node.tls_certificate == "1" and node.tls_certificate_pem ~= "") and api.split(node.tls_certificate_pem:gsub("\\n", "\n"), "\n") or nil,
-				cipher_suites = (node.cipherSuites and node.cipherSuites ~= "") and api.split(node.cipherSuites, ":") or nil,
+				cipher_suites = (node.cipherSuites and node.cipherSuites ~= "") and (type(node.cipherSuites) == "table" and node.cipherSuites or api.split(node.cipherSuites, ":")) or nil,
 				ech = (node.ech == "1") and (function()
 					local function get_ech_domain(s) --兼容xray "域名+DNS" 格式ech
 						local domain, dns = s:match("^([^+]+)%+(.+)$")
@@ -628,7 +635,9 @@ function gen_outbound(flag, node, tag, proxy_table)
 					t = tonumber(tostring(t or "0"):match("^%d+"))
 					return (t and t >= 2 and t <= 60) and t .. "s" or nil
 				end)(node.hysteria2_keep_alive_period),
-				disable_path_mtu_discovery = version_ge_1_14_0 and (tonumber(node.hysteria2_disable_mtu_discovery) == 1) or nil,
+				stream_receive_window = tonumber(node.hysteria2_stream_recv_win) and tonumber(node.hysteria2_stream_recv_win) .. " MB" or nil,
+				connection_receive_window = tonumber(node.hysteria2_conn_recv_win) and tonumber(node.hysteria2_conn_recv_win) .. " MB" or nil,
+				disable_path_mtu_discovery = version_ge_1_14_0 and (node.hysteria2_disable_mtu_discovery == "1") or nil,
 				tls = tls,
 				realm = node.hysteria2_realms and (function()
 					result.server = nil
@@ -690,6 +699,25 @@ function gen_outbound(flag, node, tag, proxy_table)
 			}
 		end
 
+		if node.protocol == "masque" then
+			local headers = {}
+			if node.user_agent and node.user_agent ~= "" then
+				headers["user-agent"] = { node.user_agent }
+			end
+			for line in (node.masque_headers or ""):gsub("\\n", "\n"):gmatch("[^\r\n]+") do
+				local key, value = line:match("^%s*([^:]+):%s*(.-)%s*$")
+				if key then headers[api.trim(key):lower()] = { value } end
+			end
+			protocol_table = {
+				type = "masque-client",
+				username = not headers.authorization and node.username or nil,
+				password = not headers.authorization and node.password or nil,
+				path = (node.masque_path and node.masque_path ~= "") and node.masque_path or nil,
+				headers = next(headers) and headers or nil,
+				tls = tls
+			}
+		end
+
 		if node.protocol == "snell" then
 			protocol_table = {
 				version = tonumber(node.snell_version),
@@ -718,6 +746,11 @@ function gen_config_server(node)
 	local outbounds = {
 		{ type = "direct", tag = "direct" }
 	}
+
+	if node.protocol == "masque" then
+		node.tls = "1"
+		node.reality = nil
+	end
 
 	local tls = {
 		enabled = true,
@@ -830,7 +863,7 @@ function gen_config_server(node)
 			local user = api.uci_get_s(v) or {}
 			if user[".type"] == "user" then
 				local u = {}
-				if node.protocol == "mixed" or node.protocol == "socks" or node.protocol == "http" or node.protocol == "naive" then
+				if node.protocol == "mixed" or node.protocol == "socks" or node.protocol == "http" or node.protocol == "naive" or node.protocol == "masque" then
 					u.username = user.username
 					u.password = user.password
 				end
@@ -876,6 +909,18 @@ function gen_config_server(node)
 	end
 
 	local protocol_table = nil
+
+	if node.protocol == "masque" then
+		tls.alpn = nil
+		protocol_table = {
+			type = "masque-server",
+			users = users,
+			path = (node.masque_path and node.masque_path ~= "") and node.masque_path or nil,
+			address = node.masque_address,
+			mtu = tonumber(node.masque_mtu or 1280),
+			tls = tls
+		}
+	end
 
 	if node.protocol == "mixed" then
 		protocol_table = {
@@ -1071,8 +1116,7 @@ function gen_config_server(node)
 		end
 	end
 
-	if node.protocol == "wireguard" then
-		inbound.listen = nil
+	if node.protocol == "wireguard" or node.protocol == "masque" then
 		table.insert(endpoints, inbound)
 	else
 		table.insert(inbounds, inbound)
@@ -1144,6 +1188,12 @@ function gen_config_server(node)
 			if k:find("_") == 1 then
 				config.outbounds[index][k] = nil
 			end
+		end
+	end
+	for i = #config.outbounds, 1, -1 do
+		if config.outbounds[i].type == "masque-client" then
+			endpoints[#endpoints + 1] = config.outbounds[i]
+			table.remove(config.outbounds, i)
 		end
 	end
 
@@ -1680,7 +1730,7 @@ function gen_config(var)
 							end
 						end
 					end
-					
+
 					local rule = {
 						action = "route",
 						inbound = inboundTag,
@@ -2276,7 +2326,7 @@ function gen_config(var)
 			table.insert(route.rule_set, v)
 		end
 	end
-	
+
 	if inbounds or outbounds then
 		local config = {
 			log = {
@@ -2340,6 +2390,9 @@ function gen_config(var)
 						detour = value.detour
 					}
 					endpoints[#endpoints + 1] = endpoint
+					table.remove(config.outbounds, i)
+				elseif value.type == "masque-client" then
+					endpoints[#endpoints + 1] = value
 					table.remove(config.outbounds, i)
 				end
 			end
@@ -2415,7 +2468,7 @@ function gen_proto_config(var)
 		}
 		if outbound then table.insert(outbounds, outbound) end
 	end
-	
+
 	local config = {
 		log = {
 			disabled = true,

@@ -131,6 +131,16 @@ if api.is_finded("geoview") then
 		.. "<li>" .. translate("Analyzes and preloads GeoIP data to enhance the shunt performance.") .. "</li>"
 		.. "<li>" .. translate("Note: Increases resource usage.") .. " " .. translate("Maybe conflict with some special circumstances.") .. "</li>"
 		.. "</ul>"
+	-- The preloaded NFTSet/IPSet are kept across restarts, so they must be
+	-- flushed when this option changes, otherwise stale GeoIP entries stay.
+	local write = o.write
+	o.write = function(self, section, value)
+		local old = m:get(current_node_id, self.option) or "0"
+		write(self, section, value)
+		if (m:get(current_node_id, self.option) or "0") ~= old then
+			m:set("@global[0]", "flush_set", "1")
+		end
+	end
 end
 
 shunt_group = add_option(ListValue, "shunt_group", translate("Shunt Rule Group"))

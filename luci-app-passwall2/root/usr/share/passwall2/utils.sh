@@ -3,6 +3,7 @@
 # Copyright (C) 2026 Openwrt-Passwall Organization
 
 CONFIG=passwall2
+DIRECT_GID=9912
 APP_PATH=/usr/share/${CONFIG}
 TMP_PATH=/tmp/etc/${CONFIG}
 TMP_PATH2=${TMP_PATH}_tmp

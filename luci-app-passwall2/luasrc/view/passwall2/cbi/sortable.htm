@@ -36,7 +36,7 @@ local appname = self.appname or map.config
 		background-color: rgba(131, 191, 255, 0.7) !important;
 		box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 	}
-	
+
 	@media screen and (max-width: 1152px) {
 		#cbi-<%=appname%>-<%=sectiontype%> .cbi-section-table-titles {
 			display: none !important;
@@ -116,7 +116,7 @@ local appname = self.appname or map.config
 				hiddenInput.value = changed ? newOrder.join(" ") : "";
 			}
 		}
-		
+
 		// hide lua luci version up/down
 		function hideSortColumn(section) {
 			var table = section.getElementsByTagName("table")[0];

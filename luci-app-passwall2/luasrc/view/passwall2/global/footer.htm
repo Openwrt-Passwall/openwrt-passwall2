@@ -5,11 +5,11 @@ local appname = map.config
 local sid = "@global[0]"
 -%>
 <style>
- #cbi-<%=appname%>-socks .td.cbi-value-field > div { 
+#cbi-<%=appname%>-socks .td.cbi-value-field > div {
 	white-space: nowrap;
 }
 @media (max-width: 1152px) {
-	 #cbi-<%=appname%>-socks .td.cbi-value-field > div {
+	#cbi-<%=appname%>-socks .td.cbi-value-field > div {
 		white-space: normal;
 	}
 }
@@ -162,7 +162,7 @@ local sid = "@global[0]"
 					html += '<a href="#" onclick="window.open(\'' + '<%=api.url("get_socks_log")%>?name=' + id.replace("cbi-<%=appname%>-", "") + '\', \'_blank\')"><%:Log%></a>';
 
 					node_select.insertAdjacentHTML("afterend",
-						'<div class="node-actions" style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap; margin-left:4px;">'  
+						'<div class="node-actions" style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap; margin-left:4px;">'
 						+ html + '</div>'
 					);
 				} catch(err) {

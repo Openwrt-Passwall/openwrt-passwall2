@@ -35,10 +35,10 @@ local groups = {}
 local group_order = {}
 for _, item in ipairs(values) do
 	local g = item.group
-	if not g or g == "" then 
-		g = translate("default") 
+	if not g or g == "" then
+		g = translate("default")
 	end
-	if not groups[g] then 
+	if not groups[g] then
 		groups[g] = {}
 		table.insert(group_order, g)
 	end

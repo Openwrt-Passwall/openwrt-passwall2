@@ -22,7 +22,7 @@ do
 		restart_interval_mode=$(expr "$restart_interval_mode" \* 60)
 		if [ -n "$restart_week_mode" ]; then
 			[ "$restart_week_mode" = "8" ] && {
-				[ "$(expr "$CFG_UPDATE_INT" % "$restart_interval_mode")" -eq 0 ] && { /etc/init.d/$CONFIG restart > /dev/null 2>&1 & }
+				[ "$(expr "$CFG_UPDATE_INT" % "$restart_interval_mode")" -eq 0 ] && { /etc/init.d/$CONFIG restart cron > /dev/null 2>&1 & }
 			}
 		fi
 

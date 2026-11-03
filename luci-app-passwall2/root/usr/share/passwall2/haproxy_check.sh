@@ -1,7 +1,7 @@
 #!/bin/sh
 
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin:/root/bin
-CONFIG=passwall2
+. /usr/share/passwall2/utils.sh
 
 listen_address=$1
 listen_port=$2
@@ -13,19 +13,16 @@ busybox pgrep -af "${CONFIG}/" | grep -E 'app\.sh.*(start|stop)|nftables\.sh|ipt
 	exit 0
 }
 
-probe_file="/tmp/etc/${CONFIG}/haproxy/Probe_URL"
-probeUrl="https://www.google.com/generate_204"
-if [ -f "$probe_file" ]; then
-	firstLine=$(head -n 1 "$probe_file" | tr -d ' \t\n')
-	[ -n "$firstLine" ] && probeUrl="$firstLine"
-fi
+probeUrl=$(get_cache_var "HAPROXY_PROBE_URL")
+probeUrl="${probeUrl:-https://www.google.com/generate_204}"
 
-extra_params="-x socks5h://${server_address}:${server_port}"
-if /usr/bin/curl --help all | grep -q "\-\-retry-all-errors"; then
-	extra_params="${extra_params} --retry-all-errors"
-fi
+case "$server_address" in
+	\[*\]) ;;
+	*:*) server_address="[$server_address]" ;;
+esac
 
-status=$(/usr/bin/curl -I -o /dev/null -skL ${extra_params} --connect-timeout 3 --retry 1 --max-time 6 -w "%{http_code}" "${probeUrl}")
+# Probe once per round; HAProxy rise/fall handles consecutive successes and failures.
+status=$(/usr/bin/curl -q -I -o /dev/null -sk --noproxy "" -x "socks5h://${server_address}:${server_port}" --connect-timeout 3 --max-time 6 -w "%{http_code}" "$probeUrl") || exit 1
 
 case "$status" in
 	200|204)

@@ -7,6 +7,7 @@ local com = self.com
 
 <script type="text/javascript">
 	//<![CDATA[
+	var appname = '<%=api.appname%>';
 	var appInfoList = new Array();
 	var inProgressCount = 0;
 	var tokenStr = '<%=token%>';
@@ -22,6 +23,25 @@ local com = self.com
 	var downloadingText = '<%:Downloading...%>';
 	var decompressioningText = '<%:Unpacking...%>';
 	var movingText = '<%:Moving...%>';
+	var installingText = '<%:Installing...%>';
+	var installingNotice = '<%:Do not refresh or switch pages during installation.%>';
+	var updateFailedText = '<%:Update failed%>';
+	var unknownErrorText = '<%:Unknown error%>';
+	var componentUpdates = 0, luciUpdating = false;
+
+	function syncUpdateButtons() {
+		var buttons = document.querySelectorAll('#app_version input[data-update-app]');
+		for (var i = 0; i < buttons.length; i++) {
+			var btn = buttons[i];
+			btn.disabled = !!btn.updateDisabled || luciUpdating ||
+				(btn.getAttribute('data-update-app') === appname && componentUpdates > 0);
+		}
+	}
+
+	function setButtonDisabled(btn, disabled) {
+		btn.updateDisabled = disabled;
+		syncUpdateButtons();
+	}
 
 	//window.onload = function () {};
 
@@ -35,8 +55,11 @@ local com = self.com
 		inProgressCount++;
 	}
 
-	function removePageNotice() {
+	function removePageNotice(app) {
+		if (app === appname) luciUpdating = false;
+		else if (app) componentUpdates--;
 		inProgressCount--;
+		syncUpdateButtons();
 		if (inProgressCount === 0) {
 			window.onbeforeunload = undefined;
 		}
@@ -46,21 +69,24 @@ local com = self.com
 		if (btn) {
 			btn.value = updateSuccessText;
 			btn.placeholder = updateSuccessText;
-			btn.disabled = true;
+			setButtonDisabled(btn, true);
 		}
 
 		if (inProgressCount === 0) {
 			window.setTimeout(function () {
-				window.location.reload();
+				if (inProgressCount === 0 && !luciUpdating) window.location.reload();
 			}, 1000);
 		}
 	}
 
-	function onRequestError(btn, errorMessage) {
-		btn.disabled = false;
+	function onRequestError(btn, errorMessage, checking) {
+		setButtonDisabled(btn, false);
 		btn.value = retryText;
 
-		var ckeckDetailElm = document.getElementById(btn.id + '-detail');
+		var app = btn.getAttribute('data-update-app');
+		var detailId = app === appname ? appname + '-check_btn' : '_' + app + '-check_btn';
+		var ckeckDetailElm = document.getElementById(detailId + '-detail');
+		if (app === appname && !checking && !errorMessage) errorMessage = unknownErrorText;
 		if (errorMessage && ckeckDetailElm) {
 			ckeckDetailElm.textContent = errorMessage
 		}
@@ -75,7 +101,7 @@ local com = self.com
 	}
 
 	function checkUpdate(btn, app) {
-		btn.disabled = true;
+		setButtonDisabled(btn, true);
 		btn.value = inProgressText;
 
 		addPageNotice();
@@ -89,13 +115,13 @@ local com = self.com
 			arch: ''
 		}, function (x, json) {
 			removePageNotice();
-			if (json.code) {
+			if (!json || json.code) {
 				appInfoList[app] = undefined;
-				onRequestError(btn, json.error);
+				onRequestError(btn, json && json.error, true);
 			} else {
 				appInfoList[app] = json;
 				if (json.has_update) {
-					btn.disabled = false;
+					setButtonDisabled(btn, false);
 					btn.value = clickToUpdateText;
 					btn.placeholder = clickToUpdateText;
 
@@ -110,7 +136,7 @@ local com = self.com
 						ckeckDetailElm.innerHTML = urlNode;
 					}
 				} else {
-					btn.disabled = true;
+					setButtonDisabled(btn, true);
 					btn.value = noUpdateText;
 					var forceBtn = document.getElementById('_' + app + '-force_btn');
 					if (forceBtn) {
@@ -122,46 +148,108 @@ local com = self.com
 	}
 
 	function doUpdate(btn, app) {
-		btn.disabled = true;
+		if (luciUpdating || (app === appname && componentUpdates > 0)) return;
+		var appInfo = appInfoList[app];
+		if (!appInfo || !appInfo.data) {
+			onRequestError(btn, updateFailedText);
+			return;
+		}
+		var downloadList = [appInfo.data];
+		if (app === appname && Array.isArray(appInfo.i18n)) downloadList = downloadList.concat(appInfo.i18n);
+		for (var i = 0; i < downloadList.length; i++) {
+			if (!downloadList[i] || !downloadList[i].browser_download_url) {
+				onRequestError(btn, updateFailedText);
+				return;
+			}
+		}
+
+		if (app === appname) luciUpdating = true;
+		else componentUpdates++;
+		setButtonDisabled(btn, true);
 		btn.value = downloadingText;
 
 		addPageNotice();
 
 		var appUpdateUrl = '<%=api.url("update_")%>' + app;
-		var appInfo = appInfoList[app];
-		// Download file
-		XHR.get(appUpdateUrl, {
-			token: tokenStr,
-			url: appInfo ? appInfo.data.browser_download_url : '',
-			size: appInfo ? appInfo.data.size / 1024 : null
-		}, function (x, json) {
-			if (json.code) {
-				removePageNotice();
-				onRequestError(btn, json.error);
-			} else if (json.zip) {
-				btn.value = decompressioningText;
+		var downloadId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+		var totalSize = 0;
+		for (var i = 0; i < downloadList.length; i++) totalSize += Number(downloadList[i].size) || 0;
+		if (!isFinite(totalSize) || totalSize <= 0) {
+			totalSize = 0;
+		}
+		var downloadProgressActive = true;
+		var downloadProgressPending = false;
+		var progressTimer = null;
 
-				// Extract file
-				XHR.get(appUpdateUrl, {
-					token: tokenStr,
-					task: 'extract',
-					file: json.file,
-					subfix: appInfo ? appInfo.type : ''
-				}, function (x, json) {
-					if (json.code) {
-						removePageNotice();
-						onRequestError(btn, json.error);
-					} else {
-						move(btn, appUpdateUrl, json.file);
-					}
-				}, 300)
-			} else {
-				move(btn, appUpdateUrl, json.file);
+		function stopDownloadProgress() {
+			downloadProgressActive = false;
+			if (progressTimer) {
+				clearInterval(progressTimer);
+				progressTimer = null;
 			}
-		}, 300)
+		}
+
+		function updateDownloadProgress() {
+			if (!downloadProgressActive || downloadProgressPending || totalSize <= 0) {
+				return;
+			}
+			downloadProgressPending = true;
+			XHR.get(appUpdateUrl, {
+				token: tokenStr,
+				task: 'progress',
+				id: downloadId,
+				total_size: totalSize
+			}, function (x, json) {
+				downloadProgressPending = false;
+				if (downloadProgressActive && json && !json.code && typeof json.percent === 'number') {
+					btn.value = downloadingText + ' ' + json.percent + '%';
+				}
+			}, 300);
+		}
+
+		if (totalSize > 0) {
+			updateDownloadProgress();
+			progressTimer = setInterval(updateDownloadProgress, 1000);
+		}
+
+		function download(part) {
+			var asset = downloadList[part - 1];
+			XHR.get(appUpdateUrl, {
+				token: tokenStr, url: asset.browser_download_url,
+				size: (app === appname && part === 1 ? totalSize : asset.size) / 1024,
+				id: downloadId, part: part
+			}, function (x, json) {
+				if (json && !json.code && app === appname && part < downloadList.length) {
+					download(part + 1);
+					return;
+				}
+				stopDownloadProgress();
+				if (!json || json.code) {
+					removePageNotice(app);
+					onRequestError(btn, json && (json.error || updateFailedText));
+				} else if (app === appname) {
+					installLuci(btn, appUpdateUrl, downloadId);
+				} else if (json.zip) {
+					btn.value = decompressioningText;
+					XHR.get(appUpdateUrl, {
+						token: tokenStr, task: 'extract', file: json.file, subfix: appInfo.type || ''
+					}, function (x, json) {
+						if (!json || json.code) {
+							removePageNotice(app);
+							onRequestError(btn, json && json.error);
+						} else {
+							move(btn, app, appUpdateUrl, json.file);
+						}
+					}, 300);
+				} else {
+					move(btn, app, appUpdateUrl, json.file);
+				}
+			}, 300);
+		}
+		download(1);
 	}
 
-	function move(btn, url, file) {
+	function move(btn, app, url, file) {
 		btn.value = movingText;
 
 		// Move file to target dir
@@ -170,40 +258,122 @@ local com = self.com
 			task: 'move',
 			file: file
 		}, function (x, json) {
-			removePageNotice();
-			if (json.code) {
-				onRequestError(btn, json.error);
+			removePageNotice(app);
+			if (!json || json.code) {
+				onRequestError(btn, json && json.error);
 			} else {
 				onUpdateSuccess(btn);
 			}
 		}, 300)
 	}
+	function installLuci(btn, url, id) {
+		btn.value = installingText;
+		var detail = document.getElementById(appname + '-check_btn-detail');
+		detail.textContent = installingNotice;
+		// Read the tiny result file even if rpcd restart invalidates the session.
+		var pending = false, finished = false;
+		function finishInstall(code) {
+			if (finished) return;
+			finished = true;
+			clearInterval(timer);
+			removePageNotice(appname);
+			if (code) onRequestError(btn, updateFailedText);
+			else {
+				window.onbeforeunload = undefined;
+				window.location.reload();
+			}
+		}
+		var timer = setInterval(function() {
+			if (pending) return;
+			pending = true;
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', '<%=resource%>/' + appname + '-update/' + id + '.json?_=' + Date.now(), true);
+			xhr.timeout = 5000;
+			xhr.onerror = xhr.ontimeout = function() { pending = false; };
+			xhr.onload = function() {
+				pending = false;
+				if (finished) return;
+				var json;
+				try { json = JSON.parse(xhr.responseText); } catch (e) { return; }
+				if (!json || typeof json.code !== 'number') return;
+				finishInstall(json.code);
+			};
+			xhr.send();
+		}, 1000);
+		// Legacy LuCI has no static XHR.post(), and its instance callback has no JSON argument.
+		var request = new XMLHttpRequest();
+		request.open('POST', url, true);
+		request.timeout = 300000;
+		request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+		request.onerror = request.ontimeout = function() { finishInstall(1); };
+		request.onload = function() {
+			if (finished) return;
+			var json;
+			try { json = JSON.parse(request.responseText); } catch (e) {}
+			if (request.status < 200 || request.status >= 300 || !json ||
+				typeof json.code !== 'number' || json.code) {
+				finishInstall(1);
+			}
+		};
+		request.send('token=' + encodeURIComponent(tokenStr) + '&task=install&id=' + encodeURIComponent(id) +
+			'&force=' + (appInfoList[appname].has_update ? '0' : '1') +
+			'&languages=' + encodeURIComponent(appInfoList[appname].languages || ''));
+	}
+
 //]]>
 </script>
 
+<style>
+	#app_version > .cbi-value {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		margin-top: 0;
+		margin-bottom: 0;
+		padding-top: .25rem;
+		padding-bottom: .25rem;
+	}
+	#app_version > .cbi-value > .cbi-value-title {
+		padding-top: 0;
+		padding-bottom: 0;
+		line-height: 1.2;
+	}
+	#app_version .app-version-sub {
+		display: block;
+		font-size: .85em;
+		font-weight: normal;
+		opacity: .7;
+	}
+</style>
+
 <div class="cbi-value">
-	<label class="cbi-value-title">Passwall2 <%:Version%></label>
+	<label class="cbi-value-title">Passwall2 <%:Version%>
+		<span class="app-version-sub"><%=api.get_version()%></span>
+	</label>
 	<div class="cbi-value-field">
 		<div class="cbi-value-description">
-			<span>【 <%=api.get_version()%> 】</span>
-			<input class="btn cbi-button cbi-button-apply" type="button" id="passwall2-check_btn"
-				onclick="onBtnClick(this,'passwall2');" value="<%:Check update%>" />
-			<span id="passwall2-check_btn-detail"></span>
+			<input class="btn cbi-button cbi-button-apply" type="button" id="<%=api.appname%>-check_btn" data-update-app="<%=api.appname%>"
+				onclick="onBtnClick(this, appname);" value="<%:Check update%>" />
+			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=api.appname%>-force_btn" data-update-app="<%=api.appname%>"
+				onclick="doUpdate(this, appname);" value="<%:Force update%>" style="display:none" />
+			<span id="<%=api.appname%>-check_btn-detail"></span>
 		</div>
 	</div>
 </div>
 
-<%for k, v in pairs(com) do%>
+<%for _, k in ipairs(com.order) do
+	local v = com[k]
+%>
 <div class="cbi-value">
 	<label class="cbi-value-title"><%=v.name%>
 		<%:Version%>
+		<span class="app-version-sub"><span class="com_version" key="<%=k%>"><%=translate("Null")%></span></span>
 	</label>
 	<div class="cbi-value-field">
 		<div class="cbi-value-description">
-			<span>【 <span class="com_version" key="<%=k%>"><%=translate("Null")%></span> 】</span>
-			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-check_btn"
+			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-check_btn" data-update-app="<%=k%>"
 				onclick="onBtnClick(this,'<%=k%>');" value="<%:Check update%>" />
-			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-force_btn"
+			<input class="btn cbi-button cbi-button-apply" type="button" id="_<%=k%>-force_btn" data-update-app="<%=k%>"
 				onclick="doUpdate(this,'<%=k%>');" value="<%:Force update%>" style="display:none"/>
 			<span id="_<%=k%>-check_btn-detail"></span>
 		</div>
@@ -220,7 +390,7 @@ local com = self.com
 				let key = coms[i].getAttribute("key");
 				coms[i].innerHTML = "<%=translate("Collecting data...")%>";
 				XHR.get('<%=api.url("version_")%>' + key, null, function(x, result) {
-					if (x.status == 200 && result.code == 1) {
+					if (x && x.status == 200 && result && result.code == 1) {
 						let data = result.data;
 						let t = "<%=translate("Null")%>";
 						if (data && data != "")

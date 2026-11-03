@@ -6,6 +6,7 @@
 --	Description: Passwall(2) UI template
 
 local json = require "luci.jsonc"
+local api = self.map.api
 
 -- 读取值（keylist/vallist/group）
 local values = {{key = "", label = translate("-- Please choose --")}}
@@ -56,6 +57,30 @@ if not current_key_added and current_key and current_key ~= "" then
 	table.insert(ungrouped, {key = current_key, label = current_key})
 end
 
+-- 仅共享候选分组，各控件的自定义地址仍保留在自己的 ungrouped 中
+local group_cache = self.map._v_group_cache
+if not group_cache then
+	group_cache = {}
+	self.map._v_group_cache = group_cache
+end
+local group_refs = {}
+local new_groups = {}
+for i, g in ipairs(group_order) do
+	-- 组名、节点 key/label 及顺序完全相同才复用，不与 ListValue 缓存混用
+	local signature = {g}
+	for _, item in ipairs(groups[g]) do
+		signature[#signature + 1] = {item.key, item.label}
+	end
+	local cache_key = json.stringify(signature)
+	local ref = group_cache[cache_key]
+	if not ref then
+		ref = cbid .. ".v-group." .. i
+		group_cache[cache_key] = ref
+		new_groups[ref] = groups[g]
+	end
+	group_refs[i] = ref
+end
+
 -- 如果没有配置值，默认取第一个（优先无组第一项，否则第一组第一项）
 if not current_key then
 	if #ungrouped > 0 then
@@ -81,19 +106,28 @@ local function find_label_by_key(k)
 end
 local current_label = find_label_by_key(current_key) or ""
 
--- 打包数据给 JS
+-- 控件只携带分组引用，重复的候选数据在页面中仅输出一次
 local dropdown_data = {
+	appname = api.appname,
 	current_key = current_key,
 	current_label = current_label,
 	ungrouped = ungrouped,
-	groups = groups,
+	group_refs = group_refs,
 	group_order = group_order,
 	cbid = cbid,
 }
 %>
 <script>
-window.v_dropdown_data = window.v_dropdown_data || {};
-window.v_dropdown_data["<%=cbid%>"] = <%=json.stringify(dropdown_data)%>;
+(function() {
+	const appname = <%=json.stringify(api.appname)%>;
+	window.v_groups_pool = window.v_groups_pool || Object.create(null);
+	const pool = window.v_groups_pool[appname] || (window.v_groups_pool[appname] = Object.create(null));
+<% if next(new_groups) then %>
+	Object.assign(pool, <%=json.stringify(new_groups)%>);
+<% end %>
+	window.v_dropdown_data = window.v_dropdown_data || {};
+	window.v_dropdown_data[<%=json.stringify(cbid)%>] = <%=json.stringify(dropdown_data)%>;
+})();
 </script>
 
 <div id="<%=cbid%>.v-main" class="v-dropdown-container">
@@ -103,7 +137,7 @@ window.v_dropdown_data["<%=cbid%>"] = <%=json.stringify(dropdown_data)%>;
 		</select>
 	</div>
 	<!-- 隐藏 input（保存实际配置值） -->
- 	<input type="text" id="<%=cbid%>" name="<%=cbid%>" value="<%=current_key%>" data-update="change" style="display:none !important;" />
+	<input type="text" id="<%=cbid%>" name="<%=cbid%>" value="<%=current_key%>" data-update="change" style="display:none !important;" />
 	<!-- 模拟 ListValue 控件外观 -->
 	<div class="cbi-input-value cbi-input-select v-dropdown-display" id="<%=cbid%>.display" tabindex="0">
 		<span id="<%=cbid%>.label" class="v-dropdown-label" title="<%=pcdata(current_label)%>">
