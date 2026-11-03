@@ -258,9 +258,39 @@ function add_rule(var)
 		end
 	end
 
+	local fwd_dns = LOCAL_DNS
+	-- Always use physical WAN upstream DNS / gateway to resolve node domain names
+	-- Prevents proxy bootstrap deadlock when LOCAL_DNS or SmartDNS relies on proxy tunnel
+	local wan_dns_list = {}
+	local seen = {}
+	local function add_dns(ip)
+		if ip and ip ~= "" and not seen[ip] and ip ~= "127.0.0.1" and ip ~= "::1" then
+			seen[ip] = true
+			table.insert(wan_dns_list, ip)
+		end
+	end
+	-- Discover default WAN gateway
+	local wan_gw = sys.exec("ip route show default 2>/dev/null | awk '/default/ {print $3}' | head -n 1"):gsub("%s+", "")
+	if wan_gw ~= "" then add_dns(wan_gw) end
+	-- Discover WAN upstream DNS from auto resolv configurations
+	local files = {"/tmp/resolv.conf.d/resolv.conf.auto", "/tmp/resolv.conf.auto"}
+	for _, path in ipairs(files) do
+		local rf = io.open(path, "r")
+		if rf then
+			for line in rf:lines() do
+				local ns = line:match("^nameserver%s+([%d%.]+)")
+				if ns and #wan_dns_list < 3 then add_dns(ns) end
+			end
+			rf:close()
+		end
+	end
+	if #wan_dns_list > 0 then
+		fwd_dns = table.concat(wan_dns_list, ",")
+	end
+
 	local cache_text = ""
 	local nodes_address_md5 = sys.exec("echo -n $(uci show %s | grep '\\.address') | md5sum" % c_config)
-	local new_text = TMP_DNSMASQ_PATH .. DNSMASQ_CONF_FILE .. DEFAULT_DNS .. LOCAL_DNS .. TUN_DNS .. nodes_address_md5 .. NFTFLAG
+	local new_text = TMP_DNSMASQ_PATH .. DNSMASQ_CONF_FILE .. DEFAULT_DNS .. LOCAL_DNS .. TUN_DNS .. fwd_dns .. nodes_address_md5 .. NFTFLAG
 	if fs.access(CACHE_TEXT_FILE) then
 		for line in io.lines(CACHE_TEXT_FILE) do
 			cache_text = line
@@ -279,11 +309,8 @@ function add_rule(var)
 	if not fs.access(CACHE_DNS_PATH) then
 		fs.mkdir(CACHE_DNS_PATH)
 
-		local fwd_dns
-
-		-- Always use domestic DNS to resolve node domain names
+		-- Resolve node domain names via physical WAN DNS
 		if true then
-			fwd_dns = LOCAL_DNS
 			api.uci_foreach_c("nodes", function(t)
 				local function process_address(address)
 					address = (address or ""):lower()
