@@ -65,7 +65,7 @@ function gen_outbound(flag, node, tag, proxy_table)
 			noise = (proxy_table.noise and not node.hysteria2_realms) and true or nil
 		end
 
-		if node.type ~= "Xray" then
+		if node.type ~= "Xray" or node.protocol == "_custom" then
 			local new_port
 			local run_socks_instance = true
 			if NO_RUN then
@@ -1030,6 +1030,22 @@ function gen_config(var)
 	end
 
 	local node = node_id and api.uci_get_c(node_id) or nil
+	if node and node.protocol == "_custom" and not redir_port and not dns_listen_port then
+		local path = api.trim(sys.exec("mktemp /tmp/passwall2-json.XXXXXX") or "")
+		if not path:match("^/tmp/passwall2%-json%.[%w]+$") then
+			error("Unable to create private Xray configuration file")
+		end
+		if not fs.writefile(path, node.custom_config or "") then
+			fs.unlink(path)
+			error("Unable to write private Xray configuration file")
+		end
+		var.asset_location = api.uci_get_c("@global_rules[0]", "v2ray_location_asset") or "/usr/share/v2ray/"
+		local status, result = api.exec_call("ucode /usr/share/passwall2/xray_json.uc generate " ..
+			api.util.shellquote(path) .. " " .. api.util.shellquote(jsonc.stringify(var)))
+		fs.unlink(path)
+		if status ~= 0 then error("Invalid Xray JSON client configuration") end
+		return result
+	end
 	local balancers = {}
 	local rules = {}
 

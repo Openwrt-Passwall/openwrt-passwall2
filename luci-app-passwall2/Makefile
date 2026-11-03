@@ -26,7 +26,7 @@ LUCI_PKGARCH:=all
 LUCI_DEPENDS:=+coreutils +coreutils-base64 +coreutils-nohup +coreutils-timeout +curl \
 	+ip-full +libuci-lua +lua +luci-compat +luci-lib-jsonc +lyaml +resolveip +tcping \
 	+geoview +v2ray-geoip +v2ray-geosite \
-	+unzip
+	+unzip +ucode +ucode-mod-fs
 
 define Package/$(PKG_NAME)/config
 menu "Configuration"
