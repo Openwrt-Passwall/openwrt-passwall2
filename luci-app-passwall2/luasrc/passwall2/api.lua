@@ -670,15 +670,31 @@ function get_node_name(node_id)
 	end
 	if e then
 		if e.type and e.remarks then
-			if e.protocol and (e.protocol == "_balancing" or e.protocol == "_shunt" or e.protocol == "_iface") then
+			if e.protocol and (e.protocol == "_balancing" or e.protocol == "_shunt" or e.protocol == "_iface" or e.protocol == "_custom") then
 				local type_name = e.type
 				if e.type == "sing-box" then type_name = "Sing-Box" end
-				local remark = "%s：[%s] " % {type_name .. " " .. i18n.translatef(e.protocol), e.remarks}
+				local protocol = e.protocol == "_custom" and "JSON" or i18n.translatef(e.protocol)
+				local remark = "%s：[%s] " % {type_name .. " " .. protocol, e.remarks}
 				return remark
 			end
 		end
 	end
 	return ""
+end
+
+function is_xray_custom_config(value)
+	if type(value) ~= "string" or value == "" then return false end
+	local ok, config = pcall(jsonc.parse, value)
+	if not ok or type(config) ~= "table" or type(config.outbounds) ~= "table" or
+		type(config.outbounds[1]) ~= "table" or type(config.inbounds) ~= "table" then
+		return false
+	end
+	for _, inbound in ipairs(config.inbounds) do
+		if type(inbound) == "table" and inbound.protocol == "socks" then
+			return true
+		end
+	end
+	return false
 end
 
 function get_valid_nodes()
@@ -691,6 +707,18 @@ function get_valid_nodes()
 		if e.type and e.remarks then
 			local type_name = e.type
 			if e.type == "sing-box" then type_name = "Sing-Box" end
+			if e.protocol == "_custom" then
+				if e.type == "Xray" and is_xray_custom_config(e.custom_config) then
+					e.remark = trim("%s：[%s]" % {"Xray JSON", e.remarks})
+					e.node_type = "normal"
+					if not e.group or e.group == "" then
+						default_nodes[#default_nodes + 1] = e
+					else
+						other_nodes[#other_nodes + 1] = e
+					end
+				end
+				return
+			end
 			if e.protocol and (e.protocol == "_balancing" or e.protocol == "_shunt" or e.protocol == "_iface" or e.protocol == "_urltest") then
 				e["remark"] = trim("%s：[%s]" % {type_name .. " " .. i18n.translatef(e.protocol), e.remarks})
 				e["node_type"] = "special"
@@ -769,7 +797,7 @@ function get_node_list()
 		end
 	end)
 	for k, e in ipairs(get_valid_nodes()) do
-		if e.node_type == "normal" then
+		if e.node_type == "normal" and e.protocol ~= "_custom" then
 			node_list.normal_list[#node_list.normal_list + 1] = {
 				id = e[".name"],
 				remark = e["remark"],
@@ -822,6 +850,8 @@ function get_node_remarks(n)
 					protocol = "AnyTLS"
 				elseif protocol == "ssh" then
 					protocol = "SSH"
+				elseif protocol == "_custom" then
+					protocol = "JSON"
 				else
 					protocol = protocol:gsub("^%l",string.upper)
 				end
@@ -2058,7 +2088,7 @@ local normal_nodes = {}
 function get_batch_nodes(node)
 	if #normal_nodes == 0 then
 		for k, e in ipairs(get_valid_nodes()) do
-			if e.node_type == "normal" and (not e.chain_proxy or e.chain_proxy == "") then
+			if e.node_type == "normal" and e.protocol ~= "_custom" and (not e.chain_proxy or e.chain_proxy == "") then
 				normal_nodes[#normal_nodes + 1] = {
 					id = e[".name"],
 					remarks = e["remarks"],

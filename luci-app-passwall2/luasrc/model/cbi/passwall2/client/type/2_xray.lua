@@ -44,11 +44,24 @@ o:value("masque", "MASQUE")
 o:value("_balancing", translate("Balancing"))
 o:value("_shunt", translate("Shunt"))
 o:value("_iface", translate("Custom Interface"))
+o:value("_custom", "Xray JSON")
 
 local protocol_val = m:get(s.section, "protocol")
 local formvalue_proto = s.fields["protocol"]:formvalue(s.section)
 if formvalue_proto then
 	protocol_val = formvalue_proto
+end
+
+if protocol_val == "_custom" then
+	o = s:option(TextValue, "custom_config", "Xray JSON")
+	o.rows = 20
+	o.wrap = "off"
+	o.rmempty = false
+	o.validate = function(self, value)
+		if api.is_xray_custom_config(value) then return value end
+		return nil, translate("Xray JSON must contain outbounds and a SOCKS inbound.")
+	end
+	return
 end
 
 local load_balancing_options = protocol_val == "_balancing"
