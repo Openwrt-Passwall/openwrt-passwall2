@@ -2155,6 +2155,9 @@ local function curl(url, file, ua, mode, hwid)
 	local curl_args = {
 		"-fsSL", "--compressed", "--http1.1", "-w %{http_code}", "--retry 3", "--connect-timeout 3", "-H 'Accept: */*'"
 	}
+	if url:lower():match("^https://") then
+		curl_args[#curl_args + 1] = "--proto-redir '=https'"
+	end
 	if ua and ua ~= "" and ua ~= "curl" then
 		ua = (ua == "passwall2") and ("passwall2/" .. (api.get_version():match("^([^-]+)") or "")) or ua
 		curl_args[#curl_args + 1] = '--user-agent "' .. ua .. '"'
@@ -2569,7 +2572,8 @@ local function parse_xray_json(raw)
 	local nodes
 	if fs.writefile(path, raw) == #raw then
 		local assets = uci_get("@global_rules[0]", "v2ray_location_asset") or "/usr/share/v2ray/"
-		local rc, output = api.exec_call("ucode /usr/share/passwall2/xray_json.uc parse " .. luci.util.shellquote(path) .. " " .. luci.util.shellquote(assets) .. " 2>/dev/null")
+		local core = api.get_app_path("xray")
+		local rc, output = api.exec_call("ucode /usr/share/passwall2/xray_json.uc parse " .. luci.util.shellquote(path) .. " " .. luci.util.shellquote(assets) .. " " .. luci.util.shellquote(core) .. " 2>/dev/null")
 		if rc == 0 then nodes = jsonParse(output) end
 	end
 	fs.unlink(path)
