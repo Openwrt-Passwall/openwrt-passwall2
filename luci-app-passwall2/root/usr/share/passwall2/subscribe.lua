@@ -2153,8 +2153,11 @@ end
 local function curl(url, file, ua, mode, hwid)
 	if not url or url == "" then return 22, 404 end
 	local curl_args = {
-		"-fskL", "-w %{http_code}", "--retry 3", "--connect-timeout 3", "-H 'Accept: */*'", "-H 'Accept-Encoding: identity'"
+		"-fsSL", "--compressed", "--http1.1", "-w %{http_code}", "--retry 3", "--connect-timeout 3", "-H 'Accept: */*'"
 	}
+	if url:lower():match("^https://") then
+		curl_args[#curl_args + 1] = "--proto-redir '=https'"
+	end
 	if ua and ua ~= "" and ua ~= "curl" then
 		ua = (ua == "passwall2") and ("passwall2/" .. (api.get_version():match("^([^-]+)") or "")) or ua
 		curl_args[#curl_args + 1] = '--user-agent "' .. ua .. '"'
@@ -2299,6 +2302,15 @@ local function select_node(nodes, config, parentConfig)
 				end
 			end
 		end
+		if not server and config.currentNode.protocol == "_custom" then
+			for _, node in ipairs(nodes) do
+				if node.type == config.currentNode.type and node.protocol == "_custom" and
+					node.group == config.currentNode.group and node.remarks == config.currentNode.remarks then
+					server = node[".name"]
+					break
+				end
+			end
+		end
 		-- First priority: Type + Notes + IP + Port + Group
 		if not server then
 			for index, node in pairs(nodes) do
@@ -2364,7 +2376,7 @@ local function select_node(nodes, config, parentConfig)
 			end
 		end
 		-- Fifth priority: remarks + Group
-		if not server then
+		if not server and config.currentNode.protocol ~= "_custom" then
 			for index, node in pairs(nodes) do
 				if config.currentNode.remarks then
 					if node.remarks then
@@ -2376,6 +2388,14 @@ local function select_node(nodes, config, parentConfig)
 							break
 						end
 					end
+				end
+			end
+		end
+		if not server and config.currentNode.protocol == "_custom" then
+			for _, node in ipairs(nodes) do
+				if node.type == config.currentNode.type and node.protocol == "_custom" and node.group == config.currentNode.group then
+					server = node[".name"]
+					break
 				end
 			end
 		end
@@ -2480,7 +2500,7 @@ local function update_node(manual)
 						uci_set(cfgid, kkk, vvv)
 					end
 					-- Sing-Box Node Domain resolver
-					if kkk == "type" and (vvv == "Xray" or vvv == "sing-box") then
+					if vv.protocol ~= "_custom" and kkk == "type" and (vvv == "Xray" or vvv == "sing-box") then
 						if domain_resolver then
 							uci_set(cfgid, "domain_resolver", domain_resolver)
 							if domain_resolver_dns then
@@ -2497,7 +2517,7 @@ local function update_node(manual)
 						end
 					end
 					-- Subscription Group Chain Agent
-					if chain_node_type ~= "" and kkk == "type" and (vvv == "Xray" or vvv == "sing-box") then
+					if vv.protocol ~= "_custom" and chain_node_type ~= "" and kkk == "type" and (vvv == "Xray" or vvv == "sing-box") then
 						if preproxy_node_group ~="" then
 							uci_set(cfgid, "chain_proxy", "1")
 							uci_set(cfgid, "preproxy_node", preproxy_node_group)
@@ -2515,9 +2535,15 @@ local function update_node(manual)
 	end
 	if next(CONFIG) then
 		local nodes = {}
+		nodes_table = {}
 		uci_foreach("nodes", function(node)
 			nodes[#nodes + 1] = node
 		end)
+		for _, node in ipairs(api.get_valid_nodes()) do
+			if node.node_type == "normal" then
+				nodes_table[#nodes_table + 1] = node
+			end
+		end
 
 		for _, config in pairs(CONFIG) do
 			if config.currentNodes and #config.currentNodes > 0 then
@@ -2540,6 +2566,20 @@ local function update_node(manual)
 	return true
 end
 
+local function parse_xray_json(raw)
+	local path = api.trim(luci.sys.exec("mktemp /tmp/passwall2-xray-json.XXXXXX") or "")
+	if path == "" then return nil end
+	local nodes
+	if fs.writefile(path, raw) == #raw then
+		local assets = uci_get("@global_rules[0]", "v2ray_location_asset") or "/usr/share/v2ray/"
+		local core = api.get_app_path("xray")
+		local rc, output = api.exec_call("ucode /usr/share/passwall2/xray_json.uc parse " .. luci.util.shellquote(path) .. " " .. luci.util.shellquote(assets) .. " " .. luci.util.shellquote(core) .. " 2>/dev/null")
+		if rc == 0 then nodes = jsonParse(output) end
+	end
+	fs.unlink(path)
+	return nodes
+end
+
 local function parse_link(raw, add_mode, group, sub_cfg)
 	if raw and #raw > 0 then
 		local cfgid
@@ -2549,8 +2589,25 @@ local function parse_link(raw, add_mode, group, sub_cfg)
 		local keyword_filter = add_mode == "2" and prepare_keyword_filter(sub_cfg)
 		local nodes, szType, clashTable
 		local node_list = {}
-		-- ssd appear to be in this format, starting with ssd://.
-		if raw:find('ssd://') then
+		if raw:match("^%s*[%[{]") then
+			local document = jsonParse(raw)
+			if type(document) == "table" and document.proxies and not document.outbounds then
+				szType = "clash"
+				clashTable = document
+			else
+				nodes = parse_xray_json(raw)
+				if type(nodes) ~= "table" or #nodes == 0 or not has_xray then
+					log(2, i18n.translatef("Unable to import Xray JSON subscription [%s]. Existing nodes are retained.", group))
+					return {}
+				end
+				szType = "xray-json"
+				for _, node in ipairs(nodes) do
+					node.add_mode = add_mode
+					node.group = group
+				end
+			end
+		elseif raw:find('ssd://') then
+			-- ssd appear to be in this format, starting with ssd://.
 			szType = 'ssd'
 			local nEnd = select(2, raw:find('ssd://'))
 			nodes = base64Decode(raw:sub(nEnd + 1, #raw))
@@ -2584,14 +2641,15 @@ local function parse_link(raw, add_mode, group, sub_cfg)
 			end
 		end
 
-		function nodeFilter(node)
+		local function nodeFilter(node)
 			if node then
 				if node.error_msg then
 					log(2, i18n.translatef("Discard node: %s, Reason:", node.remarks) .. " " .. node.error_msg)
 				elseif not node.type then
 					log(2, i18n.translatef("Discard node: %s, Reason:", node.remarks) .. " " .. i18n.translatef("No usable binary was found."))
-				elseif (add_mode == "2" and is_filter_keyword(keyword_filter, node.remarks)) or not node.address or node.remarks == "NULL" or node.address == "127.0.0.1" or
-						(not datatypes.hostname(node.address) and not (api.is_ip(node.address))) then
+				elseif (add_mode == "2" and is_filter_keyword(keyword_filter, node.remarks)) or node.remarks == "NULL" or
+						(node.protocol ~= "_custom" and (not node.address or node.address == "127.0.0.1" or
+						(not datatypes.hostname(node.address) and not (api.is_ip(node.address))))) then
 					log(2, i18n.translatef("Discard filter nodes: %s type node %s", node.type, node.remarks))
 				else
 					tinsert(node_list, node)
@@ -2602,7 +2660,10 @@ local function parse_link(raw, add_mode, group, sub_cfg)
 			end
 		end
 
-		if szType == "clash" and clashTable then
+		if szType == "xray-json" then
+			for _, node in ipairs(nodes) do nodeFilter(node) end
+			nodes = {}
+		elseif szType == "clash" and clashTable then
 			nodes = {}
 			local clashNodes = processClashData(clashTable, add_mode, group, sub_cfg)
 			for _, v in ipairs(clashNodes) do
