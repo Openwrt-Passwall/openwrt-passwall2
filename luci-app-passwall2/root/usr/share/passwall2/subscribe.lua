@@ -705,7 +705,8 @@ local function parseClashNode(node, add_mode, group, sub_cfg)
 		result.protocol = "vless"
 		result.uuid = node.uuid
 		result.tcp_fast_open = node.tfo
-		result.encryption = node.cipher or "none"
+		-- VLESS has no encryption; clash configs often carry cipher="auto" (a vmess leftover).
+		result.encryption = "none"
 		result.flow = node.flow
 		result.tls = "0"
 		if node.tls then
@@ -716,6 +717,10 @@ local function parseClashNode(node, add_mode, group, sub_cfg)
 			if sub_allowinsecure then
 				result.tls_allowInsecure = "1"
 			end
+		end
+		if node["client-fingerprint"] then
+			result.utls = "1"
+			result.fingerprint = node["client-fingerprint"]
 		end
 		if node.tls and node["reality-opts"] and node["reality-opts"]["public-key"] then
 			result.reality = "1"
@@ -810,6 +815,28 @@ local function parseClashNode(node, add_mode, group, sub_cfg)
 		end
 		if node["disable-reuse"] then
 			result.anytls_disable_reuse = "1"
+		end
+	elseif node.type == 'hysteria2' then
+		if (sub_hysteria2_type == "sing-box" and has_singbox) or (sub_hysteria2_type == "xray" and has_xray) then
+			local is_singbox = sub_hysteria2_type == "sing-box" and has_singbox
+			result.type = is_singbox and 'sing-box' or 'Xray'
+			result.protocol = "hysteria2"
+		else
+			log(2, i18n.translatef("Skipping the %s node is due to incompatibility with the %s core program or incorrect node usage type settings.", "Hysteria2", "Hysteria2"))
+			return nil
+		end
+		result.hysteria2_auth_password = node.password
+		result.tls_serverName = node.sni
+		local insecure = node["skip-cert-verify"]
+		result.tls_allowInsecure = insecure and "1" or "0"
+		if sub_allowinsecure then
+			result.tls_allowInsecure = "1"
+		end
+		result.hysteria2_up_mbps = node.up or sub_hy_up_mbps
+		result.hysteria2_down_mbps = node.down or sub_hy_down_mbps
+		if node.obfs and node["obfs-password"] then
+			result.hysteria2_obfs_type = node.obfs
+			result.hysteria2_obfs_password = node["obfs-password"]
 		end
 	elseif node.type == 'snell' then
 		if has_singbox then
