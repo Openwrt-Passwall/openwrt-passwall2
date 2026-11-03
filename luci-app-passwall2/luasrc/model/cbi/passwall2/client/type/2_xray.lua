@@ -61,6 +61,7 @@ if protocol_val == "_custom" then
 		if api.is_xray_custom_config(value) then return value end
 		return nil, translate("Xray JSON must contain outbounds and a SOCKS inbound.")
 	end
+	api.type_cbi_section(s1, s)
 	return
 end
 
