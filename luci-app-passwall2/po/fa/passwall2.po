@@ -2617,3 +2617,6 @@ msgstr ""
 
 msgid "Cannot record the adblock rule source, please check the free space of /usr/share/passwall2."
 msgstr ""
+
+msgid "Invalid adblock rule URL: only plain http:// and https:// URLs are supported."
+msgstr "نشانی اینترنتی قوانین مسدودسازی تبلیغات نامعتبر است: فقط نشانی‌های http:// و https:// پشتیبانی می‌شوند."

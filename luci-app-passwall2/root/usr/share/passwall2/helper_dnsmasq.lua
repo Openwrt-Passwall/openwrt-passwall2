@@ -264,7 +264,9 @@ function add_rule(var)
 	local nodes_address_md5 = sys.exec("echo -n $(uci show %s | grep '\\.address') | md5sum" % c_config)
 	local adblock_md5 = ""
 	if ADBLOCK == "1" and fs.access(ADBLOCK_CONF) then
-		adblock_md5 = sys.exec("md5sum " .. ADBLOCK_CONF .. " | awk '{print $1}'")
+		-- sys.exec keeps the trailing newline; strip it so the fingerprint is a
+		-- single line and the value cached below actually matches on the next run.
+		adblock_md5 = sys.exec("md5sum " .. ADBLOCK_CONF .. " | awk '{print $1}'"):gsub("%s+$", "")
 	end
 	local new_text = TMP_DNSMASQ_PATH .. DNSMASQ_CONF_FILE .. DEFAULT_DNS .. LOCAL_DNS .. TUN_DNS .. nodes_address_md5 .. NFTFLAG .. ADBLOCK .. adblock_md5
 	if fs.access(CACHE_TEXT_FILE) then

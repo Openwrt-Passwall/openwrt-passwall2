@@ -2618,3 +2618,6 @@ msgstr "Источник правил блокировки рекламы изм
 
 msgid "Cannot record the adblock rule source, please check the free space of /usr/share/passwall2."
 msgstr "Не удалось сохранить источник правил блокировки рекламы, проверьте свободное место в /usr/share/passwall2."
+
+msgid "Invalid adblock rule URL: only plain http:// and https:// URLs are supported."
+msgstr "Недопустимый URL правил блокировки рекламы: поддерживаются только адреса http:// и https://."

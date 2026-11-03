@@ -2609,3 +2609,6 @@ msgstr "廣告過濾規則來源已變更或尚未下載，正在背景取得…
 
 msgid "Cannot record the adblock rule source, please check the free space of /usr/share/passwall2."
 msgstr "無法記錄廣告過濾規則來源，請檢查 /usr/share/passwall2 的剩餘空間。"
+
+msgid "Invalid adblock rule URL: only plain http:// and https:// URLs are supported."
+msgstr "廣告過濾規則 URL 無效：僅支援 http:// 與 https:// 位址。"

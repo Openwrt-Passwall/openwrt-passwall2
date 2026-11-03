@@ -302,6 +302,14 @@ local function get_adblock_url()
 	if not url or url == "" or url:match("^[01]$") then
 		return nil
 	end
+	-- The value ends up in a curl command line built by api.curl_base(), which
+	-- wraps the URL in double quotes but does not escape shell metacharacters
+	-- inside them. This field is free text in LuCI, so keep it to a plain
+	-- http(s) URL and refuse anything that could leave the quoted argument.
+	if not url:match("^https?://") or url:find('[%s"`$\\]') then
+		log(1, api.i18n.translate("Invalid adblock rule URL: only plain http:// and https:// URLs are supported."))
+		return nil
+	end
 	return url
 end
 
