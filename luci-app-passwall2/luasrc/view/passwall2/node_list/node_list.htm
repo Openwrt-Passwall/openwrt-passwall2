@@ -1397,6 +1397,8 @@ table td, .table .td {
 				p = "<%:Shunt%>";
 			} else if (protocol == "_iface") {
 				p = "<%:Interface%>";
+			} else if (protocol == "_custom") {
+				p = "JSON";
 			} else if (protocol == "vmess") {
 				p = "VMess";
 			} else if (protocol == "vless") {
@@ -1488,7 +1490,7 @@ table td, .table .td {
 						} else {
 							innerHTML = innerHTML.split("{{tcping}}").join('<span class="tcping_value" cbiid="{{id}}"><a href="javascript:void(0)" style="color:inherit">---</a></span>');
 						}
-						if (o["address"] && o["port"]) {
+						if ((o["address"] && o["port"]) || (o.type == "Xray" && o.protocol == "_custom")) {
 							innerHTML = innerHTML.split("{{url_test}}").join('<span class="ping"><a href="javascript:void(0)" onclick="javascript:urltest_node(\'{{id}}\', this)"><%:Test%></a></span>');
 						} else {
 							innerHTML = innerHTML.split("{{url_test}}").join('<span class="ping_value"><a href="javascript:void(0)" style="color:inherit">---</a></span>');
