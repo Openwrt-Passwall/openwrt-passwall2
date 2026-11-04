@@ -150,6 +150,16 @@ o.rmempty = false
 o.description = translate("Whether unsafe connections are allowed. When checked, Certificate validation will be skipped.") .. "<br>" ..
 		translate("Used when the node link does not include this parameter.")
 
+o = s:option(Value, "ech_query", translate("ECH DoH Query"))
+o.default = ""
+o.rmempty = true
+o:value("", translate("Close(Not use)"))
+o:value("https://sky.rethinkdns.com/dns-query", "sky.rethinkdns.com")
+o:value("https://cloudflare-dns.com/dns-query", "cloudflare-dns.com")
+o:value("https://1.1.1.1/dns-query", "1.1.1.1")
+o.description = translate("When set, TLS nodes without an ECH parameter in the link use SNI+this DoH URL as ECH Config.") .. "<br>" ..
+		translate("The DoH hostname is resolved via direct DNS like node addresses.")
+
 o = s:option(ListValue, "filter_keyword_mode", translate("Filter keyword Mode"))
 o.default = "5"
 o:value("0", translate("Close"))
