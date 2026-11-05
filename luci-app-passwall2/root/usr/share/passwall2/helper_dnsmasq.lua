@@ -259,9 +259,6 @@ function add_rule(var)
 	end
 
 	local cache_text = ""
-	-- sys.exec() keeps the trailing newline of md5sum's output. Without stripping it the
-	-- fingerprint spans two lines, while the value read back below keeps only the last
-	-- line, so the two could never be equal and the cache dir was rebuilt on every call.
 	local nodes_address_md5 = sys.exec("echo -n $(uci show %s | grep '\\.address') | md5sum" % c_config):gsub("%s+$", "")
 	local new_text = TMP_DNSMASQ_PATH .. DNSMASQ_CONF_FILE .. DEFAULT_DNS .. LOCAL_DNS .. TUN_DNS .. nodes_address_md5 .. NFTFLAG
 	if fs.access(CACHE_TEXT_FILE) then
