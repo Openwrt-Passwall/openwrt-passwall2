@@ -390,7 +390,7 @@ run_socks() {
 
 	if [ "$type" == "sing-box" ] || [ "$type" == "xray" ]; then
 		local protocol=$(config_n_get $node protocol)
-		if [ "$protocol" == "_balancing" ] || [ "$protocol" == "_shunt" ] || [ "$protocol" == "_iface" ] || [ "$protocol" == "_urltest" ]; then
+		if [ "$protocol" == "_balancing" ] || [ "$protocol" == "_shunt" ] || [ "$protocol" == "_iface" ] || [ "$protocol" == "_urltest" ] || [ "$protocol" == "_custom" ]; then
 			unset error_msg
 		fi
 	fi
