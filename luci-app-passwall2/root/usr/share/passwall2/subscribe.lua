@@ -853,6 +853,19 @@ local function processClashData(content, add_mode, group, sub_cfg)
 	return results
 end
 
+-- Split URI hosts and ports, support IPv6 without a port, and strip paths.
+local function parse_host_port(host_port, default_port)
+	local authority = (host_port or ""):gsub("/.*$", "")
+	local address, port = authority:match("^%[([^%]]+)%]:(.*)$")
+	if not address then
+		address = authority:match("^%[([^%]]+)%]$")
+	end
+	if not address then
+		address, port = authority:match("^([^:]+):(.*)$")
+	end
+	return address or authority, (port and port ~= "") and port or default_port
+end
+
 -- Processing data
 local function processData(szType, content, add_mode, group, sub_cfg)
 	--log(2, content, add_mode, group)
@@ -948,17 +961,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 				info.security = (#id_info > 1 and id_info[1] ~= "") and id_info[1] or "auto"
 				info.id = id_info[#id_info]
 
-				local addr, port = sp[2], "443"
-				if api.is_ipv6addrport(addr) then
-					local a, p = addr:match("^%[(.+)%]:(%d+)$")
-					if a then addr, port = a, p end
-					addr = api.get_ipv6_only(addr)
-				else
-					local host_port = split(addr, ":")
-					addr = host_port[1]
-					if #host_port > 1 then port = host_port[#host_port] end
-				end
-				info.add, info.port = addr, port
+				info.add, info.port = parse_host_port(sp[2], "443")
 
 				local params = {}
 				for _, v in pairs(split(Info[2], '&')) do
@@ -1165,19 +1168,8 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 		local hostInfo = split(base64Decode(UrlDecode(info)), "@")
 		if hostInfo and #hostInfo > 0 then
 			local host_port = hostInfo[#hostInfo]
-			-- [2001:4860:4860::8888]:443
-			-- 8.8.8.8:443
-			if host_port:find(":") then
-				local sp = split(host_port, ":")
-				result.port = sp[#sp]
-				if api.is_ipv6addrport(host_port) then
-					result.address = api.get_ipv6_only(host_port)
-				else
-					result.address = sp[1]
-				end
-			else
-				result.address = host_port
-			end
+			-- SIP002 requires an explicit port, so do not supply a default.
+			result.address, result.port = parse_host_port(host_port)
 
 			local userinfo = nil
 			if #hostInfo > 2 then
@@ -1455,19 +1447,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 					params[v:sub(1, s - 1)] = UrlDecode(v:sub(s + 1))
 				end
 			end
-			-- [2001:4860:4860::8888]:443
-			-- 8.8.8.8:443
-			if host_port:find(":") then
-				local sp = split(host_port, ":")
-				port = sp[#sp]
-				if api.is_ipv6addrport(host_port) then
-					result.address = api.get_ipv6_only(host_port)
-				else
-					result.address = sp[1]
-				end
-			else
-				result.address = host_port
-			end
+			result.address, port = parse_host_port(host_port, port)
 
 			result.port = port
 
@@ -1619,19 +1599,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 					params[v:sub(1, s - 1)] = UrlDecode(v:sub(s + 1))
 				end
 			end
-			-- [2001:4860:4860::8888]:443
-			-- 8.8.8.8:443
-			if host_port:find(":") then
-				local sp = split(host_port, ":")
-				port = sp[#sp]
-				if api.is_ipv6addrport(host_port) then
-					result.address = api.get_ipv6_only(host_port)
-				else
-					result.address = sp[1]
-				end
-			else
-				result.address = host_port
-			end
+			result.address, port = parse_host_port(host_port, port)
 
 			if not params.type then params.type = "tcp" end
 			params.type = string.lower(params.type)
@@ -1787,19 +1755,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 				params[v:sub(1, s - 1)] = v:sub(s + 1)
 			end
 		end
-		-- [2001:4860:4860::8888]:443
-		-- 8.8.8.8:443
-		if host_port:find(":") then
-			local sp = split(host_port, ":")
-			result.port = sp[#sp]
-			if api.is_ipv6addrport(host_port) then
-				result.address = api.get_ipv6_only(host_port)
-			else
-				result.address = sp[1]
-			end
-		else
-			result.address = host_port
-		end
+		result.address, result.port = parse_host_port(host_port, "443")
 		result.hysteria_obfs = params.obfsParam
 		result.hysteria_auth_type = "string"
 		result.hysteria_auth_password = params.auth
@@ -1835,19 +1791,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 				params[v:sub(1, s - 1):lower()] = UrlDecode(v:sub(s + 1))
 			end
 		end
-		-- [2001:4860:4860::8888]:443
-		-- 8.8.8.8:443
-		if host_port:find(":") then
-			local sp = split(host_port, ":")
-			result.port = sp[#sp]
-			if api.is_ipv6addrport(host_port) then
-				result.address = api.get_ipv6_only(host_port)
-			else
-				result.address = sp[1]
-			end
-		else
-			result.address = host_port
-		end
+		result.address, result.port = parse_host_port(host_port, "443")
 		result.tls_serverName = params.sni
 		result.tls_pinSHA256 = params.pcs or params.pinsha256
 		result.tls_CertByName = params.vcn
@@ -1915,17 +1859,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 				params[v:sub(1, s - 1):lower()] = UrlDecode(v:sub(s + 1))
 			end
 		end
-		if host_port:find(":") then
-			local sp = split(host_port, ":")
-			result.port = sp[#sp]
-			if api.is_ipv6addrport(host_port) then
-				result.address = api.get_ipv6_only(host_port)
-			else
-				result.address = sp[1]
-			end
-		else
-			result.address = host_port
-		end
+		result.address, result.port = parse_host_port(host_port, "443")
 		result.tls_serverName = params.sni
 		result.tls_disable_sni = params.disable_sni
 		result.tls_pinSHA256 = params.pcs or params.pinsha256
@@ -1964,19 +1898,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 					params[v:sub(1, s - 1):lower()] = UrlDecode(v:sub(s + 1))
 				end
 			end
-			-- [2001:4860:4860::8888]:443
-			-- 8.8.8.8:443
-			if host_port:find(":") then
-				local sp = split(host_port, ":")
-				port = sp[#sp]
-				if api.is_ipv6addrport(host_port) then
-					result.address = api.get_ipv6_only(host_port)
-				else
-					result.address = sp[1]
-				end
-			else
-				result.address = host_port
-			end
+			result.address, port = parse_host_port(host_port, port)
 			result.tls = "0"
 			if not params.security or params.security == "" then
 				params.security = "tls"
@@ -2044,17 +1966,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 				params[v:sub(1, s - 1)] = UrlDecode(v:sub(s + 1))
 			end
 		end
-		if host_port:find(":") then
-			local sp = split(host_port, ":")
-			result.port = sp[#sp]
-			if api.is_ipv6addrport(host_port) then
-				result.address = api.get_ipv6_only(host_port)
-			else
-				result.address = sp[1]
-			end
-		else
-			result.address = host_port
-		end
+		result.address, result.port = parse_host_port(host_port, "443")
 		result.tls_serverName = params.sni
 		result.uot = params.uot
 		result.naive_insecure_concurrency = params["insecure-concurrency"] or "0"
@@ -2098,20 +2010,7 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 				params[UrlDecode(v:sub(1, s - 1)):lower()] = UrlDecode(v:sub(s + 1))
 			end
 		end
-		-- [2001:4860:4860::8888]:443
-		-- 8.8.8.8:443
-		result.port = "443"
-		if host_port:find(":") then
-			local sp = split(host_port, ":")
-			result.port = sp[#sp]
-			if api.is_ipv6addrport(host_port) then
-				result.address = api.get_ipv6_only(host_port)
-			else
-				result.address = sp[1]
-			end
-		else
-			result.address = host_port
-		end
+		result.address, result.port = parse_host_port(host_port, "443")
 		result.snell_psk = params.psk or result.snell_psk
 		result.password = params.userkey
 		result.snell_version = params.version or "4"
