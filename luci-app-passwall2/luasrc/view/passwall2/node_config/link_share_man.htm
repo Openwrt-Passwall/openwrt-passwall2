@@ -961,19 +961,6 @@ local current_node = map:get(section)
 				}
 			}
 
-			// Determine if the password is URL encoded
-			const isURLEncodedPassword = function(pwd) {
-				if (!/%[0-9A-Fa-f]{2}/.test(pwd)) return false;
-				try {
-					const decoded = decodeURIComponent(pwd.replace(/\+/g, "%20"));
-					const reencoded = encodeURIComponent(decoded);
-					return reencoded === pwd;
-				} catch (e) {
-					return false;
-				}
-			}
-			password = isURLEncodedPassword(password) ? decodeURIComponent(password) : password;
-
 			if (queryParam.plugin) {
 				var pluginParams = decodeURIComponent(queryParam.plugin).split(";");
 				plugin = pluginParams.shift();
@@ -1821,13 +1808,10 @@ local current_node = map:get(section)
 			var port = _parsedUrl.port;
 			var search = _parsedUrl.search;
 			var hash = _parsedUrl.hash;
-			if (!username || !password) {  //某些链接会把username和password之间的:进行编码
-				const decoded = decodeURIComponent(username || password || "");
-				const i = decoded.indexOf(":");
-				if (i > -1) {
-					username = decoded.slice(0, i);
-					password = decoded.slice(i + 1);
-				}
+			// URL splits on literal colons; without a separator, the entire userinfo is the password.
+			if (link_split[1].split("@", 1)[0].indexOf(":") === -1) {
+				password = username;
+				username = "";
 			}
 			opt.set(dom_prefix + 'username', decodeURIComponent(username));
 			opt.set(dom_prefix + 'password', decodeURIComponent(password));

@@ -1197,20 +1197,6 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 				password = hostInfo[1]  -- Some links use plaintext UUIDs as passwords.
 			end
 
-			-- Determine if the password is URL encoded
-			local function isURLEncodedPassword(pwd)
-				if not pwd:find("%%[0-9A-Fa-f][0-9A-Fa-f]") then
-					return false
-				end
-				local ok, decoded = pcall(UrlDecode, pwd)
-				return ok and UrlEncode(decoded) == pwd
-			end
-
-			local decoded = UrlDecode(password)
-			if isURLEncodedPassword(password) and decoded then
-				password = decoded
-			end
-
 			local _method = (method or "none"):lower()
 			method = (_method == "chacha20-poly1305" and "chacha20-ietf-poly1305") or
 				(_method == "xchacha20-poly1305" and "xchacha20-ietf-poly1305") or _method
@@ -2039,13 +2025,13 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 			local contents = split(content, "@")
 			local auth = contents[1] or ""
 			local idx = auth:find(":", 1, true)
-			if not idx then -- Fixed some links that encode the colon between username and password.
-				auth = UrlDecode(auth)
-				idx = auth:find(":", 1, true)
-			end
+			-- Split on the literal colon before decoding; without a separator, the entire userinfo is the password.
 			if idx then
 				result.username = UrlDecode(auth:sub(1, idx - 1))
 				result.password = UrlDecode(auth:sub(idx + 1))
+			else
+				result.username = ""
+				result.password = UrlDecode(auth)
 			end
 			Info = (contents[2] or ""):gsub("/%?", "?")
 		end
