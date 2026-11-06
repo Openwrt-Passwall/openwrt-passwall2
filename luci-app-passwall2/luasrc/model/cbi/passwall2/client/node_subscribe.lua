@@ -39,6 +39,7 @@ function m.on_before_save(self)
 	self:foreach("subscribe_list", function(e)
 		self:del(e[".name"], "md5")
 	end)
+	luci.sys.call("rm -f " .. api.CACHE_PATH .. "/sub_curl_headers*")
 end
 
 -- [[ Subscribe Settings ]]--

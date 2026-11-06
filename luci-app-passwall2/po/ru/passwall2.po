@@ -1805,6 +1805,18 @@ msgstr "При включении этой опции во время обнов
 msgid "This may reveal limited hardware information. Enable only if you trust your provider."
 msgstr "Это может раскрыть ограниченную информацию об оборудовании. Включайте эту опцию только в том случае, если доверяете своему поставщику."
 
+msgid "Custom HWID"
+msgstr "Пользовательский HWID"
+
+msgid "Leave empty to use the auto-generated HWID."
+msgstr "Оставьте пустым, чтобы использовать автоматически созданный HWID."
+
+msgid "Custom HWID is too long (maximum 128 characters)."
+msgstr "Пользовательский HWID слишком длинный (максимум 128 символов)."
+
+msgid "Custom HWID contains invalid characters. Only alphanumeric, hyphen, underscore, colon, and period are allowed."
+msgstr "Пользовательский HWID содержит недопустимые символы. Разрешены только буквы, цифры, дефис, подчеркивание, двоеточие и точка."
+
 msgid ""
 "Chained proxy works only with Xray or Sing-box nodes.<br>"
 "You can only use manual or imported nodes as chained nodes."

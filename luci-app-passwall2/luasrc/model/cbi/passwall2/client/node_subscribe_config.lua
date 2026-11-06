@@ -10,6 +10,7 @@ end
 
 function m.on_before_save(self)
 	self:del(arg[1], "md5")
+	luci.sys.call("rm -f " .. api.CACHE_PATH .. "/sub_curl_headers*")
 end
 
 m:appendTemplate("/cbi/nodes_listvalue_com")
@@ -322,5 +323,23 @@ o.default = 0
 o.description = translate("Some subscription providers may require a hardware identifier (HWID) for authentication.") .. "<br>" ..
 		translate("Enabling this option will send a hashed HWID when updating subscriptions.") .. "<br>" ..
 		translate("This may reveal limited hardware information. Enable only if you trust your provider.")
+
+o = s:option(Value, "custom_hwid", translate("Custom HWID"))
+o:depends("hwid", "1")
+o.rmempty = true
+o.description = translate("Leave empty to use the auto-generated HWID.")
+o.validate = function(self, value)
+	if not value or value == "" then
+		return ""
+	end
+	value = api.trim(value)
+	if #value > 128 then
+		return nil, translate("Custom HWID is too long (maximum 128 characters).")
+	end
+	if value:match("[^%w%-%_%.%:]") then
+		return nil, translate("Custom HWID contains invalid characters. Only alphanumeric, hyphen, underscore, colon, and period are allowed.")
+	end
+	return value
+end
 
 return api.return_map(m)
