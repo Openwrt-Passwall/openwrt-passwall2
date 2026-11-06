@@ -2039,13 +2039,13 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 			local contents = split(content, "@")
 			local auth = contents[1] or ""
 			local idx = auth:find(":", 1, true)
-			if not idx then -- Fixed some links that encode the colon between username and password.
-				auth = UrlDecode(auth)
-				idx = auth:find(":", 1, true)
-			end
+			-- Split on the literal colon before decoding; without a separator, the entire userinfo is the password.
 			if idx then
 				result.username = UrlDecode(auth:sub(1, idx - 1))
 				result.password = UrlDecode(auth:sub(idx + 1))
+			else
+				result.username = ""
+				result.password = UrlDecode(auth)
 			end
 			Info = (contents[2] or ""):gsub("/%?", "?")
 		end
