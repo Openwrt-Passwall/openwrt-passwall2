@@ -2570,3 +2570,57 @@ msgstr "显示全部行"
 
 msgid "The filter only hides rows on this page and changes nothing on the router. Select all skips hidden rows."
 msgstr "筛选只在本页隐藏行，不会改动路由器上的设置。全选会跳过隐藏行。"
+
+msgid "Subscription conversion: discard SS node %s, unsupported cipher: %s"
+msgstr "订阅转换：丢弃 SS 节点 %s，不支持的加密方式：%s"
+
+msgid "Subscription conversion: discard SS node %s, unsupported plugin: %s"
+msgstr "订阅转换：丢弃 SS 节点 %s，不支持的插件：%s"
+
+msgid "Subscription conversion: discard Hysteria node %s, unsupported transport: %s"
+msgstr "订阅转换：丢弃 Hysteria 节点 %s，不支持的传输：%s"
+
+msgid "Subscription conversion: discard TUIC node %s, TUIC v4 is not supported."
+msgstr "订阅转换：丢弃 TUIC 节点 %s，不支持 TUIC v4。"
+
+msgid "Subscription conversion: discard TUIC node %s, authentication information is incomplete."
+msgstr "订阅转换：丢弃 TUIC 节点 %s，认证信息不完整。"
+
+msgid "Subscription conversion: discard AnyTLS node %s, Sing-Box does not support AnyTLS + %s"
+msgstr "订阅转换：丢弃 AnyTLS 节点 %s，Sing-Box 不支持 AnyTLS + %s"
+
+msgid "Subscription conversion: discard Snell node %s, Sing-Box does not support Snell + %s"
+msgstr "订阅转换：丢弃 Snell 节点 %s，Sing-Box 不支持 Snell + %s"
+
+msgid "Subscription conversion: discard Snell node %s, Sing-Box does not support Snell versions below 4."
+msgstr "订阅转换：丢弃 Snell 节点 %s，Sing-Box 不支持低于 4 的 Snell 版本。"
+
+msgid "Subscription conversion: skip a malformed node."
+msgstr "订阅转换：跳过格式不完整的节点。"
+
+msgid "Subscription conversion: discard node %s, node information is incomplete."
+msgstr "订阅转换：丢弃节点 %s，节点信息不完整。"
+
+msgid "Subscription conversion: discard node %s, invalid bandwidth format."
+msgstr "订阅转换：丢弃节点 %s，带宽格式不正确。"
+
+msgid "Subscription conversion: discard unsupported node %s, node type: %s"
+msgstr "订阅转换：丢弃不支持的节点 %s，节点类型：%s"
+
+msgid "Subscription conversion: extracted node domain DNS: %s"
+msgstr "订阅转换：已提取节点域名 DNS：%s"
+
+msgid "Subscription conversion: YAML parsing failed: %s"
+msgstr "订阅转换：YAML 解析失败：%s"
+
+msgid "Subscription conversion: Clash subscription detected, converting..."
+msgstr "订阅转换：检测到 Clash 订阅，正在转换……"
+
+msgid "Subscription conversion: discard node %s, conversion failed."
+msgstr "订阅转换：丢弃节点 %s，转换失败。"
+
+msgid "Note: Auto tries to extract node DNS from Clash subscriptions. Disable skips extraction."
+msgstr "注意：自动尝试提取 Clash 订阅中的节点 DNS，禁用则不提取。"
+
+msgid "Never expires"
+msgstr "长期有效"

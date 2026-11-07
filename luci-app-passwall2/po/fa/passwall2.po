@@ -2584,3 +2584,57 @@ msgstr "نمایش همه ردیف‌ها"
 
 msgid "The filter only hides rows on this page and changes nothing on the router. Select all skips hidden rows."
 msgstr "فیلتر فقط ردیف‌ها را در این صفحه پنهان می‌کند و چیزی را روی روتر تغییر نمی‌دهد. انتخاب همه، ردیف‌های پنهان را رد می‌کند."
+
+msgid "Subscription conversion: discard SS node %s, unsupported cipher: %s"
+msgstr "تبدیل اشتراک: گره SS %s کنار گذاشته شد؛ رمز پشتیبانی‌نشده: %s"
+
+msgid "Subscription conversion: discard SS node %s, unsupported plugin: %s"
+msgstr "تبدیل اشتراک: گره SS %s کنار گذاشته شد؛ افزونه پشتیبانی‌نشده: %s"
+
+msgid "Subscription conversion: discard Hysteria node %s, unsupported transport: %s"
+msgstr "تبدیل اشتراک: گره Hysteria %s کنار گذاشته شد؛ انتقال پشتیبانی‌نشده: %s"
+
+msgid "Subscription conversion: discard TUIC node %s, TUIC v4 is not supported."
+msgstr "تبدیل اشتراک: گره TUIC %s کنار گذاشته شد؛ TUIC v4 پشتیبانی نمی‌شود."
+
+msgid "Subscription conversion: discard TUIC node %s, authentication information is incomplete."
+msgstr "تبدیل اشتراک: گره TUIC %s کنار گذاشته شد؛ اطلاعات احراز هویت ناقص است."
+
+msgid "Subscription conversion: discard AnyTLS node %s, Sing-Box does not support AnyTLS + %s"
+msgstr "تبدیل اشتراک: گره AnyTLS %s کنار گذاشته شد؛ Sing-Box از AnyTLS + %s پشتیبانی نمی‌کند"
+
+msgid "Subscription conversion: discard Snell node %s, Sing-Box does not support Snell + %s"
+msgstr "تبدیل اشتراک: گره Snell %s کنار گذاشته شد؛ Sing-Box از Snell + %s پشتیبانی نمی‌کند"
+
+msgid "Subscription conversion: discard Snell node %s, Sing-Box does not support Snell versions below 4."
+msgstr "تبدیل اشتراک: گره Snell %s کنار گذاشته شد؛ Sing-Box نسخه‌های Snell پایین‌تر از 4 را پشتیبانی نمی‌کند."
+
+msgid "Subscription conversion: skip a malformed node."
+msgstr "تبدیل اشتراک: گره با قالب ناقص رد شد."
+
+msgid "Subscription conversion: discard node %s, node information is incomplete."
+msgstr "تبدیل اشتراک: گره %s کنار گذاشته شد؛ اطلاعات گره ناقص است."
+
+msgid "Subscription conversion: discard node %s, invalid bandwidth format."
+msgstr "تبدیل اشتراک: گره %s کنار گذاشته شد؛ قالب پهنای باند نامعتبر است."
+
+msgid "Subscription conversion: discard unsupported node %s, node type: %s"
+msgstr "تبدیل اشتراک: گره پشتیبانی‌نشده %s کنار گذاشته شد؛ نوع گره: %s"
+
+msgid "Subscription conversion: extracted node domain DNS: %s"
+msgstr "تبدیل اشتراک: DNS دامنه گره استخراج شد: %s"
+
+msgid "Subscription conversion: YAML parsing failed: %s"
+msgstr "تبدیل اشتراک: تجزیه YAML ناموفق بود: %s"
+
+msgid "Subscription conversion: Clash subscription detected, converting..."
+msgstr "تبدیل اشتراک: اشتراک Clash شناسایی شد؛ در حال تبدیل..."
+
+msgid "Subscription conversion: discard node %s, conversion failed."
+msgstr "تبدیل اشتراک: گره %s کنار گذاشته شد؛ تبدیل ناموفق بود."
+
+msgid "Note: Auto tries to extract node DNS from Clash subscriptions. Disable skips extraction."
+msgstr "توجه: حالت خودکار تلاش می‌کند DNS گره را از اشتراک Clash استخراج کند. غیرفعال کردن، استخراج را متوقف می‌کند."
+
+msgid "Never expires"
+msgstr "بدون انقضا"

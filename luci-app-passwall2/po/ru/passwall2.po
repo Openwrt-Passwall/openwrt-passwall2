@@ -2585,3 +2585,57 @@ msgstr "Показать все строки"
 
 msgid "The filter only hides rows on this page and changes nothing on the router. Select all skips hidden rows."
 msgstr "Фильтр только скрывает строки на этой странице и ничего не меняет на роутере. «Выделить все» пропускает скрытые строки."
+
+msgid "Subscription conversion: discard SS node %s, unsupported cipher: %s"
+msgstr "Преобразование подписки: узел SS %s пропущен, неподдерживаемый шифр: %s"
+
+msgid "Subscription conversion: discard SS node %s, unsupported plugin: %s"
+msgstr "Преобразование подписки: узел SS %s пропущен, неподдерживаемый плагин: %s"
+
+msgid "Subscription conversion: discard Hysteria node %s, unsupported transport: %s"
+msgstr "Преобразование подписки: узел Hysteria %s пропущен, неподдерживаемый транспорт: %s"
+
+msgid "Subscription conversion: discard TUIC node %s, TUIC v4 is not supported."
+msgstr "Преобразование подписки: узел TUIC %s пропущен, TUIC v4 не поддерживается."
+
+msgid "Subscription conversion: discard TUIC node %s, authentication information is incomplete."
+msgstr "Преобразование подписки: узел TUIC %s пропущен, неполные данные аутентификации."
+
+msgid "Subscription conversion: discard AnyTLS node %s, Sing-Box does not support AnyTLS + %s"
+msgstr "Преобразование подписки: узел AnyTLS %s пропущен, Sing-Box не поддерживает AnyTLS + %s"
+
+msgid "Subscription conversion: discard Snell node %s, Sing-Box does not support Snell + %s"
+msgstr "Преобразование подписки: узел Snell %s пропущен, Sing-Box не поддерживает Snell + %s"
+
+msgid "Subscription conversion: discard Snell node %s, Sing-Box does not support Snell versions below 4."
+msgstr "Преобразование подписки: узел Snell %s пропущен, Sing-Box не поддерживает версии Snell ниже 4."
+
+msgid "Subscription conversion: skip a malformed node."
+msgstr "Преобразование подписки: узел с неполным форматом пропущен."
+
+msgid "Subscription conversion: discard node %s, node information is incomplete."
+msgstr "Преобразование подписки: узел %s пропущен, неполные данные узла."
+
+msgid "Subscription conversion: discard node %s, invalid bandwidth format."
+msgstr "Преобразование подписки: узел %s пропущен, неверный формат пропускной способности."
+
+msgid "Subscription conversion: discard unsupported node %s, node type: %s"
+msgstr "Преобразование подписки: неподдерживаемый узел %s пропущен, тип узла: %s"
+
+msgid "Subscription conversion: extracted node domain DNS: %s"
+msgstr "Преобразование подписки: получен DNS для доменов узлов: %s"
+
+msgid "Subscription conversion: YAML parsing failed: %s"
+msgstr "Преобразование подписки: ошибка разбора YAML: %s"
+
+msgid "Subscription conversion: Clash subscription detected, converting..."
+msgstr "Преобразование подписки: обнаружена подписка Clash, выполняется преобразование..."
+
+msgid "Subscription conversion: discard node %s, conversion failed."
+msgstr "Преобразование подписки: узел %s пропущен, ошибка преобразования."
+
+msgid "Note: Auto tries to extract node DNS from Clash subscriptions. Disable skips extraction."
+msgstr "Примечание: в режиме «Авто» выполняется извлечение DNS узлов из подписок Clash. «Отключить» отменяет извлечение."
+
+msgid "Never expires"
+msgstr "Бессрочно"
