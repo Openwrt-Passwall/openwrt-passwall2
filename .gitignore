@@ -1,0 +1,29 @@
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+*.swp
+*~
+.idea/
+.vscode/
+
+# Build and Packaging Artifacts
+*.ipk
+*.apk
+*.lmo
+*.tar.gz
+build/
+bin/
+
+# Temporary & Verification Receipts
+*.log
+.ai/receipts/*
+!.ai/receipts/.gitkeep
+.ai/local_dev.db
+
+# Python cache (hooks and tooling)
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
