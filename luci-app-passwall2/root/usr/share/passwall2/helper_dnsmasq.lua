@@ -339,7 +339,11 @@ function add_rule(var)
 			if ad_src then
 				local ad_out = io.open(CACHE_DNS_PATH .. "/002-address.conf", "w")
 				if ad_out then
-					ad_out:write(ad_src:read("*a"))
+					-- Copy line by line so a large rule set never has to live
+					-- in memory as a single string (a 300k-line source is ~10MB).
+					for ad_line in ad_src:lines() do
+						ad_out:write(ad_line, "\n")
+					end
 					ad_out:close()
 				end
 				ad_src:close()
