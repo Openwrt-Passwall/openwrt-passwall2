@@ -380,7 +380,7 @@ local function fetch_adblock()
 		end
 		-- Count how many non comment lines use a rule syntax we understand
 		local tline = line:match("^%s*(.-)%s*$")
-		if tline ~= "" and not tline:match("^[!\[@#]") then
+		if tline ~= "" and not tline:match("^[!@#]") and not tline:find("^%[") and not tline:find("#[#@%%]") then
 			cand_lines = cand_lines + 1
 			if is_rule_line(tline) then
 				rule_lines = rule_lines + 1
@@ -434,10 +434,14 @@ local function fetch_adblock()
 		-- Skip comment lines, AdBlock exception rules and pure IP matches
 		local seen = {}
 		for line in raw:gmatch("[^\r\n]+") do
-			-- Known limit: only whole-line comments are skipped, so a trailing comment
-			-- can still yield junk tokens; the quality gate below rejects such sources.
-			if not line:match("^[!\\[@#]") and line:find("^@@") ~= 1 then
-				for domain in line:gmatch("([%w%-%_]+%.[%w%.%-%_]+)") do
+			-- Trim first so indented comments are recognised as comments, not
+			-- mined for look-alike domains. Skip AdGuard element-hiding / CSS /
+			-- exception rules (##, #@# or #%# markers) and plain comments
+			-- (!, @, #, [) so their bodies never become block targets.
+			local t = line:match("^%s*(.-)%s*$")
+			if t ~= "" and not t:match("^[!@#]") and not t:find("^%[")
+			   and not t:find("#[#@%%]") then
+				for domain in t:gmatch("([%w%-%_]+%.[%w%.%-%_]+)") do
 					domain = domain:lower()
 					if not domain:match("^%d+%.%d+%.%d+%.%d+$") and not seen[domain] then
 						seen[domain] = true
