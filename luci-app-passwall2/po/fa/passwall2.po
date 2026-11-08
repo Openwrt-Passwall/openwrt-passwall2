@@ -2664,10 +2664,10 @@ msgid "adblock"
 msgstr "قوانین مسدودسازی تبلیغات"
 
 msgid "Adblock rule source changed or not downloaded yet, fetching in the background..."
-msgstr ""
+msgstr "منبع قوانین مسدودسازی تبلیغات تغییر کرده یا هنوز دانلود نشده است، در حال دریافت در پس‌زمینه..."
 
 msgid "Cannot record the adblock rule source, please check the free space of /usr/share/passwall2."
-msgstr ""
+msgstr "امکان ثبت منبع قوانین مسدودسازی تبلیغات وجود ندارد، لطفاً فضای خالی /usr/share/passwall2 را بررسی کنید."
 
 msgid "Invalid adblock rule URL: only plain http:// and https:// URLs are supported."
 msgstr "نشانی اینترنتی قوانین مسدودسازی تبلیغات نامعتبر است: فقط نشانی‌های http:// و https:// پشتیبانی می‌شوند."
