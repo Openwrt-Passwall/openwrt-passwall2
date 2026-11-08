@@ -148,18 +148,19 @@ end
 -- read/write the global @global_rules[0] so the backend (app.sh detect_adblock /
 -- helper_dnsmasq.lua) is unchanged.
 o = add_option(Value, "enable_adblock", translate("Adblock"))
-o:value("", translate("Close"))
+o:value("0", translate("Close"))
 o:value("https://raw.githubusercontent.com/neodevpro/neodevhost/master/dnsmasq.conf", "NEO DEV HOST")
 o:value("https://anti-ad.net/anti-ad-for-dnsmasq.conf", "anti-AD")
 o:value("https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt", "AdGuard DNS Filter")
-o.default = ""
+o.default = "0"
 o.rmempty = false
 o.description = translate("Select a rule source to enable ad blocking at the DNS stage, effective for both domestic and foreign traffic; select 'Close' to disable. Supports AdGuardHome and DNSMASQ formats, you can fill in other rule source URLs.")
 o.cfgvalue = function(self, section) return m:get("@global_rules[0]", "enable_adblock") end
 o.write = function(self, section, value) m:set("@global_rules[0]", "enable_adblock", value) end
 -- This option is only hosted on this tab, but it writes a GLOBAL setting.
 -- Deleting it when the hosting node is removed would silently reset that
--- global config, so removal is a no-op; writing "" already means "disabled".
+-- global config, so removal is a no-op; detect_adblock() treats "0" (and a
+-- missing value) as disabled already.
 o.remove = function(self, section) end
 
 shunt_group = add_option(ListValue, "shunt_group", translate("Shunt Rule Group"))
