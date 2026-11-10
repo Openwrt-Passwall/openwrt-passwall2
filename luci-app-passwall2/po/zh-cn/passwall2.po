@@ -596,6 +596,9 @@ msgstr "QUIC 连接接收窗口"
 msgid "QUIC concurrent bidirectional streams"
 msgstr "QUIC 并发双向流的最大数量"
 
+msgid "Keep Alive"
+msgstr "保持连接"
+
 msgid "QUIC KeepAlive interval"
 msgstr "QUIC KeepAlive 间隔"
 
@@ -1360,6 +1363,9 @@ msgstr "当节点链接未包含该参数时，将使用此设置。"
 
 msgid "%s Node Use Type"
 msgstr "%s 节点使用类型"
+
+msgid "Other"
+msgstr "其他"
 
 msgid "UDP relay mode"
 msgstr "UDP中继模式"

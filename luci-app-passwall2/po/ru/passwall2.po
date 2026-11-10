@@ -605,6 +605,9 @@ msgstr "Размер окна приёма соединения QUIC"
 msgid "QUIC concurrent bidirectional streams"
 msgstr "Макс. количество одновременных двунаправленных потоков QUIC"
 
+msgid "Keep Alive"
+msgstr "Поддержание соединения"
+
 msgid "QUIC KeepAlive interval"
 msgstr "Интервал QUIC KeepAlive"
 
@@ -1369,6 +1372,9 @@ msgstr "Используется, если в ссылке на узел это�
 
 msgid "%s Node Use Type"
 msgstr "Тип использования сервера %s"
+
+msgid "Other"
+msgstr "Другие"
 
 msgid "UDP relay mode"
 msgstr "Режим ретрансляции UDP"
