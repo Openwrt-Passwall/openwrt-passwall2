@@ -459,6 +459,10 @@ o:depends({ transport = "ws" })
 o = s:option(Value, "ws_path", translate("WebSocket Path"))
 o:depends({ transport = "ws" })
 
+o = s:option(Value, "ws_earlyDataHeaderName", translate("Early data header name"), translate("Recommended value: Sec-WebSocket-Protocol"))
+o.placeholder = "Sec-WebSocket-Protocol"
+o:depends({ transport = "ws" })
+
 -- [[ HTTPUpgrade ]]--
 
 o = s:option(Value, "httpupgrade_host", translate("HTTPUpgrade Host"))

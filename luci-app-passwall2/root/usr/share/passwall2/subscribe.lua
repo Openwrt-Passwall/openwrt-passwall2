@@ -679,21 +679,6 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 		if info.net == 'ws' then
 			result.ws_host = info.host
 			result.ws_path = info.path
-			if result.type == "sing-box" and info.path then
-				local ws_path_dat = split(info.path, "?")
-				local ws_path = ws_path_dat[1]
-				local ws_path_params = {}
-				for _, v in pairs(split(ws_path_dat[2], '&')) do
-					local t = split(v, '=')
-					ws_path_params[t[1]] = t[2]
-				end
-				if ws_path_params.ed and tonumber(ws_path_params.ed) then
-					result.ws_path = ws_path
-					result.ws_enableEarlyData = "1"
-					result.ws_maxEarlyData = tonumber(ws_path_params.ed)
-					result.ws_earlyDataHeaderName = "Sec-WebSocket-Protocol"
-				end
-			end
 		end
 		if info.net == "http" then
 			if result.type == "Xray" then
@@ -936,21 +921,6 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 					if params.type == 'ws' then
 						result.ws_host = params.host
 						result.ws_path = params.path
-						if result.type == "sing-box" and params.path then
-							local ws_path_dat = split(params.path, "%?")
-							local ws_path = ws_path_dat[1]
-							local ws_path_params = {}
-							for _, v in pairs(split(ws_path_dat[2], '&')) do
-								local t = split(v, '=')
-								ws_path_params[t[1]] = t[2]
-							end
-							if ws_path_params.ed and tonumber(ws_path_params.ed) then
-								result.ws_path = ws_path
-								result.ws_enableEarlyData = "1"
-								result.ws_maxEarlyData = tonumber(ws_path_params.ed)
-								result.ws_earlyDataHeaderName = "Sec-WebSocket-Protocol"
-							end
-						end
 					end
 					if params.type == "http" then
 						if result.type == "sing-box" then
@@ -1152,21 +1122,6 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 			if params.type == 'ws' then
 				result.ws_host = params.host
 				result.ws_path = params.path
-				if result.type == "sing-box" and params.path then
-					local ws_path_dat = split(params.path, "%?")
-					local ws_path = ws_path_dat[1]
-					local ws_path_params = {}
-					for _, v in pairs(split(ws_path_dat[2], '&')) do
-						local t = split(v, '=')
-						ws_path_params[t[1]] = t[2]
-					end
-					if ws_path_params.ed and tonumber(ws_path_params.ed) then
-						result.ws_path = ws_path
-						result.ws_enableEarlyData = "1"
-						result.ws_maxEarlyData = tonumber(ws_path_params.ed)
-						result.ws_earlyDataHeaderName = "Sec-WebSocket-Protocol"
-					end
-				end
 			end
 			if params.type == "http" then
 				if result.type == "sing-box" then
@@ -1281,21 +1236,6 @@ local function processData(szType, content, add_mode, group, sub_cfg)
 			if params.type == 'ws' then
 				result.ws_host = params.host
 				result.ws_path = params.path
-				if result.type == "sing-box" and params.path then
-					local ws_path_dat = split(params.path, "%?")
-					local ws_path = ws_path_dat[1]
-					local ws_path_params = {}
-					for _, v in pairs(split(ws_path_dat[2], '&')) do
-						local t = split(v, '=')
-						ws_path_params[t[1]] = t[2]
-					end
-					if ws_path_params.ed and tonumber(ws_path_params.ed) then
-						result.ws_path = ws_path
-						result.ws_enableEarlyData = "1"
-						result.ws_maxEarlyData = tonumber(ws_path_params.ed)
-						result.ws_earlyDataHeaderName = "Sec-WebSocket-Protocol"
-					end
-				end
 			end
 			if params.type == "http" then
 				if result.type == "sing-box" then

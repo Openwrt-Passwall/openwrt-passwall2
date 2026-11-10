@@ -1585,12 +1585,6 @@ msgstr "همزمانی XUDP Mux"
 msgid "Padding"
 msgstr "پدینگ (Padding)"
 
-msgid "Enable early data"
-msgstr "فعال‌سازی داده‌های اولیه (Early Data)"
-
-msgid "Early data length"
-msgstr "طول داده‌های اولیه"
-
 msgid "Early data header name"
 msgstr "نام هدر داده‌های اولیه"
 

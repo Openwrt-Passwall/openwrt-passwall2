@@ -1586,12 +1586,6 @@ msgstr "Макс. параллельных соединений XUDP"
 msgid "Padding"
 msgstr "Заполнение"
 
-msgid "Enable early data"
-msgstr "Включить 0-RTT данные"
-
-msgid "Early data length"
-msgstr "Макс. длина 0-RTT данных"
-
 msgid "Early data header name"
 msgstr "Имя HTTP-заголовка для 0-RTT"
 

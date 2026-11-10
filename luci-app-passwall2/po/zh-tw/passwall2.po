@@ -1577,12 +1577,6 @@ msgstr "XUDP 最大並發連接數"
 msgid "Padding"
 msgstr "填充"
 
-msgid "Enable early data"
-msgstr "啟用前置數据"
-
-msgid "Early data length"
-msgstr "前置數据最大长度"
-
 msgid "Early data header name"
 msgstr "前置數据 HTTP 头名"
 
