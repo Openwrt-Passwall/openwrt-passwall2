@@ -51,6 +51,8 @@ url_test_node() {
 		local curlx="socks5h://127.0.0.1:${_tmp_port}"
 		sleep 2s
 		local probeUrl=$(config_n_get @global_other[0] url_test_url https://www.google.com/generate_204)
+		# Warm up the proxy connection to reduce cold-start effects on latency tests.
+		curl --connect-timeout 3 --max-time 5 -o /dev/null -I -sk -x "$curlx" "$probeUrl" >/dev/null 2>&1
 		result=$(curl --connect-timeout 3 --max-time 5 -o /dev/null -I -skL -w "%{http_code}:%{time_pretransfer}" -x ${curlx} "${probeUrl}")
 		# End the SS plugin process
 		local pid_file="${TMP_PATH}/url_test_${node_id}_plugin.pid"
