@@ -2585,6 +2585,7 @@ msgstr "نمایش همه ردیف‌ها"
 msgid "The filter only hides rows on this page and changes nothing on the router. Select all skips hidden rows."
 msgstr "فیلتر فقط ردیف‌ها را در این صفحه پنهان می‌کند و چیزی را روی روتر تغییر نمی‌دهد. انتخاب همه، ردیف‌های پنهان را رد می‌کند."
 
+
 msgid "Subscription conversion: discard SS node %s, unsupported cipher: %s"
 msgstr "تبدیل اشتراک: گره SS %s کنار گذاشته شد؛ رمز پشتیبانی‌نشده: %s"
 
@@ -2638,3 +2639,35 @@ msgstr "توجه: حالت خودکار تلاش می‌کند DNS گره را �
 
 msgid "Never expires"
 msgstr "بدون انقضا"
+msgid "Adblock"
+msgstr "مسدودسازی تبلیغات"
+
+msgid "Select a rule source to enable ad blocking at the DNS stage, effective for both domestic and foreign traffic; select 'Close' to disable. Supports AdGuardHome and DNSMASQ formats, you can fill in other rule source URLs."
+msgstr "انتخاب منبع قوانین، مسدودسازی تبلیغات در مرحله DNS را برای ترافیک داخلی و خارجی فعال می‌کند؛ برای غیرفعال‌سازی «بستن» را انتخاب کنید. از فرمت‌های AdGuardHome و DNSMASQ پشتیبانی می‌شود و می‌توانید URL منبع قوانین را سفارشی کنید."
+
+msgid "No adblock rule URL configured, skip."
+msgstr "URL منبع قوانین تبلیغات پیکربندی نشده، رد شدن."
+
+msgid "Failed to update the adblock rules, please try again later or change the URL."
+msgstr "به‌روزرسانی قوانین مسدودسازی تبلیغات ناموفق بود، لطفاً بعداً دوباره امتحان کنید یا URL را تغییر دهید."
+
+msgid "The adblock rule source may be invalid, please modify it and try again."
+msgstr "ممکن است منبع قوانین مسدودسازی تبلیغات نامعتبر باشد، لطفاً آن را اصلاح کرده و دوباره امتحان کنید."
+
+msgid "The adblock rules are already up to date, no update needed."
+msgstr "قوانین مسدودسازی تبلیغات در حال حاضر به‌روز هستند و نیازی به به‌روزرسانی نیست."
+
+msgid "The adblock rules have been updated successfully."
+msgstr "قوانین مسدودسازی تبلیغات با موفقیت به‌روزرسانی شد."
+
+msgid "adblock"
+msgstr "قوانین مسدودسازی تبلیغات"
+
+msgid "Adblock rule source changed or not downloaded yet, fetching in the background..."
+msgstr "منبع قوانین مسدودسازی تبلیغات تغییر کرده یا هنوز دانلود نشده است، در حال دریافت در پس‌زمینه..."
+
+msgid "Cannot record the adblock rule source, please check the free space of /usr/share/passwall2."
+msgstr "امکان ثبت منبع قوانین مسدودسازی تبلیغات وجود ندارد، لطفاً فضای خالی /usr/share/passwall2 را بررسی کنید."
+
+msgid "Invalid adblock rule URL: only plain http:// and https:// URLs are supported."
+msgstr "نشانی اینترنتی قوانین مسدودسازی تبلیغات نامعتبر است: فقط نشانی‌های http:// و https:// پشتیبانی می‌شوند."

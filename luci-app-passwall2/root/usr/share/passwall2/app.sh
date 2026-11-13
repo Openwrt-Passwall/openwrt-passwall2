@@ -738,6 +738,64 @@ start_haproxy() {
 	ln_run 0 "$(first_type haproxy)" haproxy "/dev/null" -f "${haproxy_path}/${haproxy_conf}"
 }
 
+detect_adblock() {
+	# Adblock is a global setting, it is not tied to any node.
+	# Echo 1 only when a rule source is selected, the rule file is present and
+	# that file was really produced by the source currently configured. Without
+	# the URL comparison a source switch would keep serving the old rules.
+	local __url __saved
+	__url=$(uci -q get "passwall2.@global_rules[0].enable_adblock")
+	case "${__url}" in
+		""|0|1)
+			# Disabled: report 0 and leave adblock.conf/adblock.url alone. The
+			# ADBLOCK value is part of the cache fingerprint, so the conf-dir is
+			# rebuilt without 002-address.conf and the stale rules are never
+			# loaded. Keeping the file makes re-enabling instant instead of
+			# requiring another download.
+			echo "0"
+			;;
+		*)
+			__saved=$(cat "/usr/share/passwall2/adblock.url" 2>/dev/null)
+			if [ -n "${__saved}" ] && [ "${__saved}" = "${__url}" ] && [ -f "/usr/share/passwall2/adblock.conf" ]; then
+				echo "1"
+			else
+				echo "0"
+			fi
+			;;
+	esac
+}
+
+auto_adblock_update() {
+	# Mirror the helloworld behaviour: when a rule source is configured but the
+	# cached file was produced by a different source (or is missing entirely),
+	# trigger a background download so a source switch / first enable takes
+	# effect without a manual click. On a content change fetch_adblock() records
+	# the source URL and rule_update.lua restarts the service itself; flush_set=1
+	# only tells the stop path to flush the ipset and the geo temp files
+	# (iptables.sh / nftables.sh), it does not restart anything.
+	local __url
+	__url=$(uci -q get "passwall2.@global_rules[0].enable_adblock")
+	case "${__url}" in
+		""|0|1) return 0 ;;
+	esac
+	local __saved=$(cat "/usr/share/passwall2/adblock.url" 2>/dev/null)
+	if [ -z "${__saved}" ] || [ "${__saved}" != "${__url}" ] || [ ! -f "/usr/share/passwall2/adblock.conf" ]; then
+		log_i18n 1 "Adblock rule source changed or not downloaded yet, fetching in the background..."
+		# The fetch runs detached and restarts the service as soon as it is done,
+		# so hold it back until the running start() is finished: start() raises
+		# ${TMP_PATH}/adblock_starting and drops it on its way out. The timeout
+		# only covers a start() that died and left the marker behind.
+		(
+			__waited=0
+			while [ -e "${TMP_PATH}/adblock_starting" ] && [ ${__waited} -lt 90 ]; do
+				sleep 1
+				__waited=$((__waited + 1))
+			done
+			lua $APP_PATH/rule_update.lua log adblock > /dev/null 2>&1
+		) &
+	fi
+}
+
 run_copy_dnsmasq() {
 	local flag listen_port local_dns tun_dns default_dns
 	eval_set_val $@
@@ -760,6 +818,7 @@ run_copy_dnsmasq() {
 	json_add_string "TUN_DNS" "${tun_dns}"
 	json_add_string "NFTFLAG" "${nftflag:-0}"
 	json_add_string "NO_LOGIC_LOG" "${NO_LOGIC_LOG:-0}"
+	json_add_string "ADBLOCK" "$(detect_adblock)"
 	lua $APP_PATH/helper_dnsmasq.lua add_rule "$(json_dump)"
 
 	ln_run 0 "$(first_type dnsmasq)" "dnsmasq_${flag}" "/dev/null" -C ${dnsmasq_conf} -x ${dnsmasq_pid}
@@ -880,6 +939,7 @@ acl_node() {
 				json_add_string "TUN_DNS" "${DNSMASQ_TUN_DNS}"
 				json_add_string "NFTFLAG" "${nftflag:-0}"
 				json_add_string "NO_LOGIC_LOG" "${NO_LOGIC_LOG:-0}"
+				json_add_string "ADBLOCK" "$(detect_adblock)"
 				lua $APP_PATH/helper_dnsmasq.lua add_rule "$(json_dump)"
 				uci -q add_list dhcp.@dnsmasq[0].addnmount=${DEFAULT_DNSMASQ_CONF_PATH}
 				uci -q commit dhcp
@@ -906,6 +966,10 @@ start() {
 		sleep 2
 	}
 	mkdir -p /tmp/etc /tmp/log $TMP_PATH $TMP_BIN_PATH $TMP_SCRIPT_FUNC_PATH $TMP_ROUTE_PATH $TMP_ACL_PATH $TMP_PATH2
+	# Barrier for auto_adblock_update(): its detached fetch would otherwise be
+	# free to restart the service while this start is still running. Dropped at
+	# the end of start().
+	touch ${TMP_PATH}/adblock_starting
 	get_config
 	export V2RAY_LOCATION_ASSET=$(config_n_get @global_rules[0] v2ray_location_asset "/usr/share/v2ray/")
 	export XRAY_LOCATION_ASSET=$V2RAY_LOCATION_ASSET
@@ -944,6 +1008,12 @@ start() {
 		}
 	fi
 	run_process_queue
+	# Called at the end of the startup so the fetch only ever runs when there is
+	# something to fetch; the detached worker itself is held back by the
+	# adblock_starting marker until this start() is done.
+	if [ "$ENABLED_DEFAULT_ACL" == 1 ] || [ "$ENABLED_ACLS" == 1 ]; then
+		auto_adblock_update
+	fi
 	start_crontab "$1"
 	log_i18n 0 "Running complete!"
 	echolog "\n"
@@ -960,6 +1030,7 @@ start() {
 			lua $APP_PATH/subscribe.lua start $cfgids cron > /dev/null 2>&1 &
 		}
 	}
+	rm -f ${TMP_PATH}/adblock_starting
 	return 0
 }
 
