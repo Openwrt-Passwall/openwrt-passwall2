@@ -191,7 +191,7 @@ run_xray() {
 	test_log_file=$log_file
 	[ "$test_log_file" = "/dev/null" ] && test_log_file="${TMP_PATH}/test.log"
 
-	$XRAY_BIN run -test -c "$config_file" > $test_log_file; local status=$?
+	$XRAY_BIN run -test -c "$config_file" > $test_log_file 2>&1; local status=$?
 	if [ "${status}" == 0 ]; then
 		ln_run ${QUEUE_RUN} "$XRAY_BIN" xray $log_file run -c "$config_file"
 		[ -n "${log_out}" ] && log 2 ${log_out}
@@ -803,7 +803,7 @@ run_ipset_chinadns_ng() {
 		group-upstream ${proto}://${server_dns}
 		group-ipset ${vps_set_names}
 	EOF
-	ln_run 0 "$(first_type chinadns-ng)" "chinadns-ng" "/dev/null" -C $config_file -v
+	ln_run ${QUEUE_RUN} "$(first_type chinadns-ng)" "chinadns-ng" "/dev/null" -C $config_file -v
 }
 
 run_ipset_dnsmasq() {
@@ -822,7 +822,44 @@ run_ipset_dnsmasq() {
 	done
 	[ -n "${ipset}" ] && echo "ipset=${ipset}" >> $config_file
 	[ -n "${nftset}" ] && echo "nftset=${nftset}" >> $config_file
-	ln_run 0 "$(first_type dnsmasq)" "dnsmasq" "/dev/null" -C $config_file
+	ln_run ${QUEUE_RUN} "$(first_type dnsmasq)" "dnsmasq" "/dev/null" -C $config_file
+}
+
+prepare_acl_node() {
+	local run_func
+	[ -n "${XRAY_BIN}" ] && run_func="run_xray"
+	[ -n "${SINGBOX_BIN}" ] && run_func="run_singbox"
+	[ -n "${run_func}" ] || {
+		log_i18n 0 "No available proxy core was found. Startup cancelled."
+		return 1
+	}
+	for nid in $(jsonfilter -s "${ACL_JSON}" -e '$.node_order[*]'); do
+		[ -s "${TMP_ACL_PATH}/acl_node_${nid}" ] || {
+			log_i18n 0 "[%s] access control configuration is missing. Startup cancelled." "${nid}"
+			return 1
+		}
+		local _var=$(cat ${TMP_ACL_PATH}/acl_node_${nid} 2>/dev/null)
+		eval local ${_var}
+		local type=$(echo $(config_n_get $node type) | tr 'A-Z' 'a-z')
+		[ -n "${type}" ] || {
+			log_i18n 0 "[%s] node type is missing. Startup cancelled." "${node}"
+			return 1
+		}
+		if [ "${type}" = "xray" ] && [ -n "${XRAY_BIN}" ]; then
+			run_func="run_xray"
+		elif [ "${type}" = "sing-box" ] && [ -n "${SINGBOX_BIN}" ]; then
+			run_func="run_singbox"
+		fi
+		${run_func} ${_var}
+		local status=$?
+		if [ "$status" != 0 ]; then
+			log_i18n 0 "[%s] process %s error. Startup cancelled." "${node}" "${config_file}"
+			[ -n "${_error_log_file}" ] && cat "${_error_log_file}" >> "${LOG_FILE}"
+			unset _error_log_file
+			return 1
+		fi
+	done
+	return 0
 }
 
 acl_node() {
@@ -836,28 +873,9 @@ acl_node() {
 		json_add_string "LOG" "0"
 		lua $APP_PATH/helper_dnsmasq.lua restart "$(json_dump)"
 	}
-	local run_func
-	[ -n "${XRAY_BIN}" ] && run_func="run_xray"
-	[ -n "${SINGBOX_BIN}" ] && run_func="run_singbox"
 	for nid in $(jsonfilter -s "${ACL_JSON}" -e '$.node_order[*]'); do
-		[ ! -f ${TMP_ACL_PATH}/acl_node_${nid} ] && continue
 		local _var=$(cat ${TMP_ACL_PATH}/acl_node_${nid} 2>/dev/null)
 		eval local ${_var}
-		local type=$(echo $(config_n_get $node type) | tr 'A-Z' 'a-z')
-		[ -n "${type}" ] || continue
-		if [ "${type}" = "xray" ] && [ -n "${XRAY_BIN}" ]; then
-			run_func="run_xray"
-		elif [ "${type}" = "sing-box" ] && [ -n "${SINGBOX_BIN}" ]; then
-			run_func="run_singbox"
-		fi
-		${run_func} ${_var}
-		local status=$?
-		if [ "$status" != 0 ]; then
-			log_i18n 2 "[%s] process %s error, skip this transparent proxy!" "${node}" "${config_file}"
-			cat ${_error_log_file} >> ${LOG_FILE}
-			unset _error_log_file
-			continue
-		fi
 		local run_new_dnsmasq=1
 		local DNSMASQ_TUN_DNS="127.0.0.1#${dns_listen_port}"
 		local DNSMASQ_DEFAULT_DNS="${AUTO_DNS}"
@@ -913,23 +931,31 @@ start() {
 	export ENABLE_DEPRECATED_GEOIP=true
 	export SS_SYSTEM_DNS_RESOLVER_FORCE_BUILTIN=1
 	ulimit -n 65535
-	start_haproxy
-	start_socks
 	nftflag=0
 	USE_TABLES=""
 	check_run_environment
+	local acl_node_num=0
 	[ -n "$USE_TABLES" ] && {
-		ACL_JSON=$(lua $APP_PATH/app_acl.lua)
+		ACL_JSON=$(lua $APP_PATH/app_acl.lua) || {
+			log_i18n 0 "Unable to prepare access control configuration. Startup cancelled."
+			(stop "$1")
+			return 1
+		}
 		[ ! -f ${TMP_ACL_PATH}/acl_node_acl_default ] && ENABLED_DEFAULT_ACL=0
-		local acl_node_num=$(jsonfilter -s "${ACL_JSON}" -e '$.node_order[*]' | wc -l)
+		acl_node_num=$(jsonfilter -s "${ACL_JSON}" -e '$.node_order[*]' | wc -l)
 
 		if [ "${acl_node_num}" == 0 ]; then
 			ENABLED_DEFAULT_ACL=0
 			ENABLED_ACLS=0
 		else
-			source $APP_PATH/${USE_TABLES}.sh start
-			set_cache_var "USE_TABLES" "$USE_TABLES"
+			prepare_acl_node || { (stop "$1"); return 1; }
 		fi
+	}
+	start_haproxy
+	start_socks
+	[ "$acl_node_num" -gt 0 ] && {
+		source $APP_PATH/${USE_TABLES}.sh start
+		set_cache_var "USE_TABLES" "$USE_TABLES"
 	}
 	set_cache_var "ENABLED_DEFAULT_ACL" "$ENABLED_DEFAULT_ACL"
 	set_cache_var "ENABLED_ACLS" "$ENABLED_ACLS"
