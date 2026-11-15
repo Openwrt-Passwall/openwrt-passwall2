@@ -41,27 +41,38 @@ test_proxy() {
 	echo $result
 }
 
-url_test_node() {
-	result=0
+url_test_node() (
+	local result=0
 	local node_id=$1
+	local test_flag="url_test_${node_id}_$$"
+	local _tmp_port
 	local _type=$(echo $(config_n_get ${node_id} type) | tr 'A-Z' 'a-z')
 	[ -n "${_type}" ] && {
-		local _tmp_port=$(get_new_port 48900 tcp,udp)
-		NO_REC_PROCESS=1 /usr/share/${CONFIG}/app.sh run_socks flag="url_test_${node_id}" node=${node_id} bind=127.0.0.1 socks_port=${_tmp_port} config_file=url_test_${node_id}.json
+		# Serialize port selection and startup with other temporary node tests.
+		exec 8>"${LOCK_PATH}/${CONFIG}_socks_auto_switch_test.lock"
+		flock -x 8 || { echo 0; return 1; }
+		_tmp_port=$(get_new_port 48900 tcp,udp) || { echo 0; return 1; }
+		NO_REC_PROCESS=1 /usr/share/${CONFIG}/app.sh run_socks flag="$test_flag" node="$node_id" bind=127.0.0.1 socks_port="$_tmp_port" config_file="${test_flag}.json" 8>&-
 		local curlx="socks5h://127.0.0.1:${_tmp_port}"
-		sleep 2s
+		sleep 2s 8>&-
+		# Once listening, the socket itself prevents the next test from reusing the port.
+		# Keep the lock through cleanup if startup is still pending or has failed.
+		if [ "$(check_port_exists "$_tmp_port" tcp)" -gt 0 ]; then
+			flock -u 8
+			exec 8>&-
+		fi
 		local probeUrl=$(config_n_get @global_other[0] url_test_url https://www.google.com/generate_204)
 		# Warm up the proxy connection to reduce cold-start effects on latency tests.
 		curl --connect-timeout 3 --max-time 5 -o /dev/null -I -sk -x "$curlx" "$probeUrl" >/dev/null 2>&1
 		result=$(curl --connect-timeout 3 --max-time 5 -o /dev/null -I -skL -w "%{http_code}:%{time_pretransfer}" -x ${curlx} "${probeUrl}")
 		# End the SS plugin process
-		local pid_file="${TMP_PATH}/url_test_${node_id}_plugin.pid"
+		local pid_file="${TMP_PATH}/${test_flag}_plugin.pid"
 		[ -s "$pid_file" ] && kill -9 "$(head -n 1 "$pid_file")" >/dev/null 2>&1
-		busybox pgrep -af "url_test_${node_id}" | awk '! /test\.sh/{print $1}' | xargs kill -9 >/dev/null 2>&1
-		rm -rf ${TMP_PATH}/*url_test_${node_id}*.*
+		busybox pgrep -af "${TMP_PATH}/${test_flag}[._]" | awk '! /test\.sh/{print $1}' | xargs -r kill -9 >/dev/null 2>&1
+		rm -f "$TMP_PATH/${test_flag}"*.*
 	}
 	echo $result
-}
+)
 
 arg1=$1
 shift

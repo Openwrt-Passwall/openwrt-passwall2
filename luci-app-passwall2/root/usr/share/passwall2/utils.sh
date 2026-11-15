@@ -282,45 +282,41 @@ get_new_port() {
 	local default_start_port=2001
 	local min_port=1025
 	local max_port=49151
-	local port=$1 #Required parameter; please pass "auto" if you want it to be automatic.
-	local last_get_new_port_auto
-	if [ "$1" == "auto" ]; then
-		last_get_new_port_auto=$(get_cache_var "last_get_new_port_auto")
+	local port="$1" # Required parameter; please pass "auto" if you want it to be automatic.
+	local protocol=$(echo "$2" | tr 'A-Z' 'a-z')
+	local is_auto
+	if [ "$port" = "auto" ]; then
+		is_auto=1
+		local last_get_new_port_auto=$(get_cache_var "last_get_new_port_auto")
 		if [ -n "$last_get_new_port_auto" ]; then
-			port=$last_get_new_port_auto
-			port=$(expr $port + 1)
+			port=$(expr "$last_get_new_port_auto" + 1)
 		else
 			port=$default_start_port
 		fi
 	fi
-	[ "$port" -lt $min_port -o "$port" -gt $max_port ] && port=$default_start_port
-	local protocol=$(echo $2 | tr 'A-Z' 'a-z')
-	local result=$(check_port_exists $port $protocol)
-	[ -n "$(get_cache_var "get_port_${port}")" ] && {
-		# exist, continue get.
-		# Make the following result logic true.
-		result=1
-	}
-	if [ "$result" != 0 ]; then
-		local temp=
-		if [ "$port" -lt $max_port ]; then
-			# If the port is smaller than the maximum port, then increment by 1 and continue.
-			temp=$(expr $port + 1)
-		elif [ "$port" -gt $min_port ]; then
-			# If the port is greater than the minimum port, then decrement by 1 and continue.
-			temp=$(expr $port - 1)
-		else
-			# Otherwise, reassign the default starting port.
-			temp=$default_start_port
+	([ "$port" -lt "$min_port" ] || [ "$port" -gt "$max_port" ]) && port=$default_start_port
+	local start_port=$port
+	while :; do
+		local result=$(check_port_exists "$port" "$protocol")
+		if [ "$is_auto" = "1" ] && [ -n "$(get_cache_var "get_port_${port}")" ]; then
+			# The port has already been allocated, continue to the next port.
+			result=1
 		fi
-		# Recursion, until it obtains an unused port.
-		get_new_port $temp $protocol
-	else
-		# Set cache, mark this port as already obtained, so it should not be obtained again.
+		[ "$result" = "0" ] && break
+		if [ "$port" -lt "$max_port" ]; then
+			# If the port is smaller than the maximum port, increment by 1 and continue.
+			port=$(expr "$port" + 1)
+		else
+			port=$min_port
+		fi
+		[ "$port" -eq "$start_port" ] && return 1
+	done
+	if [ "$is_auto" = "1" ]; then
+		# Set cache to prevent the port from being allocated again.
 		set_cache_var "get_port_${port}" "1"
-		[ "$1" == "auto" ] && set_cache_var "last_get_new_port_auto" "$port"
-		echo $port
+		set_cache_var "last_get_new_port_auto" "$port"
 	fi
+	echo "$port"
 }
 
 has_1_65535() {
