@@ -109,6 +109,9 @@ msgstr "Socks 節點"
 msgid "Current Node"
 msgstr "當前節點"
 
+msgid "Port Status"
+msgstr "連接埠狀態"
+
 msgid "Listen Port"
 msgstr "監聽端口"
 

@@ -349,12 +349,6 @@ function s2.create(e, t)
 	luci.http.redirect(e.extedit:format(uid))
 end
 
-o = s2:option(DummyValue, "status", translate("Status"))
-o.rawhtml = true
-o.cfgvalue = function(t, n)
-	return string.format('<div class="_status" socks_id="%s"></div>', n)
-end
-
 ---- Enable
 o = s2:option(Flag, "enabled", translate("Enable"))
 o.default = 1
@@ -376,26 +370,19 @@ o.cfgvalue = function(_, n)
 	end
 end
 
-local n = 1
-m:foreach("socks", function(s)
-	if s[".name"] == section then
-		return false
-	end
-	n = n + 1
-end)
-
-o = s2:option(Value, "port", "Socks " .. translate("Listen Port"))
-o.default = n + 1080
-o.datatype = "port"
-o.rmempty = false
-
---[[
-if has_singbox or has_xray then
-	o = s2:option(Value, "http_port", "HTTP " .. translate("Listen Port") .. " " .. translate("0 is not use"))
-	o.default = 0
-	o.datatype = "port"
+o = s2:option(DummyValue, "port_status", translate("Port Status"))
+o.rawhtml = true
+o.cfgvalue = function(t, n)
+	local socks = m:get(n, "port") or "0"
+	local http = m:get(n, "http_port") or "0"
+	return string.format([[
+	<div class="_socks_status" socks_id="%s">
+		<span class="_socks"></span> SOCKS: %s
+		<br>
+		<span class="_http"></span> HTTP: %s
+	</div>
+	]], n, socks, http)
 end
-]]--
 
 local o_node = s.fields["node"]
 local o_socks = s2.fields["node"]

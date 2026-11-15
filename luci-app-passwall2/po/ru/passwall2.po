@@ -109,6 +109,9 @@ msgstr "SOCKS-сервер"
 msgid "Current Node"
 msgstr "Активный сервер"
 
+msgid "Port Status"
+msgstr "Состояние портов"
+
 msgid "Listen Port"
 msgstr "Порт прослушивания"
 

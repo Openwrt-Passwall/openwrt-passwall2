@@ -112,6 +112,9 @@ msgstr "گره Socks"
 msgid "Current Node"
 msgstr "گره فعلی"
 
+msgid "Port Status"
+msgstr "وضعیت پورت‌ها"
+
 msgid "Listen Port"
 msgstr "پورت شنود"
 

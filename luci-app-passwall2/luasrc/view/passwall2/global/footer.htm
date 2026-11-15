@@ -65,16 +65,6 @@ local sid = "@global[0]"
 		min-width: 0;
 	}
 }
-
-@media screen and (min-width: 1153px) {
-	#cbi-<%=appname%>-socks input[id*=".<%=appname%>."][id$=".port"],
-	#cbi-<%=appname%>-socks input[id*=".<%=appname%>."][id$=".http_port"] {
-		width: 100px !important;
-		min-width: unset !important;
-		max-width: unset !important;
-		text-align: center !important;
-	}
-}
 </style>
 <script type="text/javascript">
 	//<![CDATA[
@@ -108,7 +98,7 @@ local sid = "@global[0]"
 	const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 	async function go() {
-		const _status = document.getElementsByClassName('_status');
+		const _status = document.getElementsByClassName('_socks_status');
 		for (let i = 0; i < _status.length; i++) {
 			const id = _status[i].getAttribute("socks_id");
 			XHR.get('<%=api.url("socks_status")%>', {
@@ -116,24 +106,18 @@ local sid = "@global[0]"
 					id: id
 				},
 				function(x, result) {
-					const index = result.index;
-					let div = '';
-					const div1 = '<font style="font-weight:bold;" color="green">✓</font>&nbsp';
-					const div2 = '<font style="font-weight:bold;" color="red">X</font>&nbsp';
-
-					if (result.socks_status) {
-						div += div1;
-					} else {
-						div += div2;
+					const socks = _status[i].querySelector('._socks');
+					const http = _status[i].querySelector('._http');
+					if (socks) {
+						socks.textContent = result.socks_status ? "✓" : "X";
+						socks.style.fontWeight = "bold";
+						socks.style.color = result.socks_status ? "green" : "red";
 					}
-					if (result.use_http) {
-						if (result.http_status) {
-							div += div1;
-						} else {
-							div += div2;
-						}
+					if (http) {
+						http.textContent = result.http_status ? "✓" : "X";
+						http.style.fontWeight = "bold";
+						http.style.color = result.http_status ? "green" : "red";
 					}
-					_status[index].innerHTML = div;
 				}
 			);
 		}
