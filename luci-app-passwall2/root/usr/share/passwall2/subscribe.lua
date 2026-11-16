@@ -230,6 +230,7 @@ do
 	if true then
 		local i = 0
 		local option = "lbss"
+		local usedNodes = {}
 		local function is_ip_port(str)
 			if type(str) ~= "string" then return false end
 			local ip, port = str:match("^([%d%.]+):(%d+)$")
@@ -238,9 +239,13 @@ do
 		uci_foreach("haproxy_config", function(t)
 			i = i + 1
 			local node_id = t[option]
+			-- Share selected nodes within each listening port to avoid duplicate backends.
+			local port = t.haproxy_port or ""
+			usedNodes[port] = usedNodes[port] or {}
 			CONFIG[#CONFIG + 1] = {
 				log = true,
 				id = t[".name"],
+				usedNodes = usedNodes[port],
 				remarks = i18n.translatef("HAProxy node list [%s]", i),
 				currentNode = node_id and uci_get(node_id) or nil,
 				set = function(o, server)
@@ -1893,6 +1898,20 @@ local function select_node(nodes, config, parentConfig)
 	end
 	if config.currentNode then
 		local server
+		if parentConfig and not parentConfig.usedNodes then parentConfig.usedNodes = {} end
+		local usedNodes = parentConfig and parentConfig.usedNodes or config.usedNodes
+		local current_id = config.currentNode[".name"] or config.currentNode.Socks
+		-- Exclude candidates already used to replace other old nodes in this list.
+		if usedNodes then
+			local available_nodes = {}
+			for _, node in pairs(nodes) do
+				local used_by = usedNodes[node[".name"]]
+				if not used_by or used_by == current_id then
+					available_nodes[#available_nodes + 1] = node
+				end
+			end
+			nodes = available_nodes
+		end
 		-- Load balancing, keeping the original ID of the Socks [port] node in urltest.
 		if config.currentNode["Socks"] then
 			server = config.currentNode.Socks
@@ -1989,7 +2008,7 @@ local function select_node(nodes, config, parentConfig)
 				end
 			end
 		end
-		if not parentConfig then
+		if not parentConfig and not usedNodes then
 			-- If that doesn't work, just find one.
 			if not server then
 				if #nodes_table > 0 then
@@ -2001,11 +2020,15 @@ local function select_node(nodes, config, parentConfig)
 			end
 		end
 		if server then
+			if usedNodes then usedNodes[server] = current_id end
 			if parentConfig then
 				config.set(parentConfig, server)
 			else
 				config.set(config, server)
 			end
+		elseif usedNodes and config.delete then
+			-- Delete stale HAProxy references when no matching candidates remain.
+			config.delete(config)
 		end
 	else
 		if not parentConfig then

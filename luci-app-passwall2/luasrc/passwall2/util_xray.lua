@@ -1151,26 +1151,28 @@ function gen_config(var)
 			blc_nodes = _node.balancing_node
 		end
 		local valid_nodes = {}
+		local valid_node_tags = {}
 		for i = 1, #(blc_nodes or {}) do
 			local blc_node_id = blc_nodes[i]
 			local blc_node_tag = "blc-" .. blc_node_id
-			local is_new_blc_node = true
+			local outboundTag
 			for _, outbound in ipairs(outbounds) do
 				if string.sub(outbound.tag, 1, #blc_node_tag) == blc_node_tag then
-					is_new_blc_node = false
-					valid_nodes[#valid_nodes + 1] = outbound.tag
+					outboundTag = outbound.tag
 					break
 				end
 			end
-			if is_new_blc_node then
-				local outboundTag = gen_outbound_get_tag(flag, blc_node_id, blc_node_tag, { fragment = xray_settings.fragment == "1" or nil, noise = xray_settings.noise == "1" or nil })
-				if outboundTag then
-					valid_nodes[#valid_nodes + 1] = outboundTag
-				end
-				-- Check if balancing node duplicates fallback node
-				if _node.fallback_node == blc_node_id then
-					_node.fallback_node = nil
-				end
+			if not outboundTag then
+				outboundTag = gen_outbound_get_tag(flag, blc_node_id, blc_node_tag, { fragment = xray_settings.fragment == "1" or nil, noise = xray_settings.noise == "1" or nil })
+			end
+			-- Keep each member tag only once, including reused outbounds.
+			if outboundTag and not valid_node_tags[outboundTag] then
+				valid_node_tags[outboundTag] = true
+				valid_nodes[#valid_nodes + 1] = outboundTag
+			end
+			-- Check if balancing node duplicates fallback node
+			if _node.fallback_node == blc_node_id then
+				_node.fallback_node = nil
 			end
 		end
 		if #valid_nodes == 0 then return nil end
