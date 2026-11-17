@@ -685,11 +685,25 @@ update_wan_sets() {
 	) 9>"${LOCK_PATH}/${CONFIG}_update_wan_sets.lock"
 }
 
+set_tproxy_sysctl() {
+	# Disable IPv4 rp_filter for TPROXY compatibility.
+	sysctl -w net.ipv4.conf.all.rp_filter=0 >/dev/null 2>&1
+	sysctl -w net.ipv4.conf.default.rp_filter=0 >/dev/null 2>&1
+	# Tailscale may enable mark-based source validation, which conflicts with TPROXY routing.
+	sysctl -w net.ipv4.conf.all.src_valid_mark=0 >/dev/null 2>&1
+	sysctl -w net.ipv4.conf.default.src_valid_mark=0 >/dev/null 2>&1
+	local f
+	for f in /proc/sys/net/ipv4/conf/*/rp_filter /proc/sys/net/ipv4/conf/*/src_valid_mark; do
+		echo 0 > "$f" 2>/dev/null
+	done
+}
+
 add_firewall_rule() {
 	log_i18n 0 "Starting to load %s firewall rules..." "nftables"
 	gen_nft_tables
 	add_script_mwan3
 	mwan3_start
+	set_tproxy_sysctl
 
 	gen_nftset $NFTSET_LOCAL ipv4_addr 0 "-1"
 	gen_nftset $NFTSET_DIRECT ipv4_addr 0 "-1"
