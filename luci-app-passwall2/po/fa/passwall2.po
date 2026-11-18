@@ -2612,6 +2612,12 @@ msgstr "تبدیل اشتراک: گره Snell %s کنار گذاشته شد؛ Si
 msgid "Subscription conversion: discard Snell node %s, Sing-Box does not support Snell versions below 4."
 msgstr "تبدیل اشتراک: گره Snell %s کنار گذاشته شد؛ Sing-Box نسخه‌های Snell پایین‌تر از 4 را پشتیبانی نمی‌کند."
 
+msgid "Subscription conversion: discard WireGuard node %s, the current core does not support AmneziaWG."
+msgstr "تبدیل اشتراک: گره WireGuard %s کنار گذاشته شد؛ هسته فعلی از AmneziaWG پشتیبانی نمی‌کند."
+
+msgid "Subscription conversion: discard MASQUE node %s, the current core does not support h3-l4proxy transport."
+msgstr "تبدیل اشتراک: گره MASQUE %s کنار گذاشته شد؛ هسته فعلی از انتقال h3-l4proxy پشتیبانی نمی‌کند."
+
 msgid "Subscription conversion: skip a malformed node."
 msgstr "تبدیل اشتراک: گره با قالب ناقص رد شد."
 

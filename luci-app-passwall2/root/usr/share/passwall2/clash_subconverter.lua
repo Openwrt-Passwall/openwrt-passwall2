@@ -591,14 +591,73 @@ local function encode_snell(node)
 	return 0, link .. "#" .. urlencode(node.name or "")
 end
 
+local function build_local_address(node)
+	local addresses = {}
+	for _, field in ipairs({ "ip", "ipv6" }) do
+		local value = node[field]
+		if value and value ~= "" then
+			addresses[#addresses + 1] = value:find("/", 1, true) and value or value .. (field == "ip" and "/32" or "/128")
+		end
+	end
+	return table.concat(addresses, ",")
+end
+
+-- WireGuard
+local function encode_wireguard(node)
+	if node["amnezia-wg-option"] then
+		return 1, i18n.translatef("Subscription conversion: discard WireGuard node %s, the current core does not support AmneziaWG.", node.name)
+	end
+	local link = "wireguard://" .. urlencode(node["private-key"]) .. "@" .. host_format(node.server) .. ":" .. node.port
+	local p = {}
+
+	add_param(p, "publickey", node["public-key"])
+	add_param(p, "presharedkey", node["pre-shared-key"])
+	add_param(p, "address", build_local_address(node))
+	add_param(p, "reserved", type(node.reserved) == "table" and table.concat(node.reserved, ",") or node.reserved)
+	add_param(p, "mtu", tonumber(node.mtu) ~= 0 and node.mtu or 1408)
+	add_param(p, "persistent-keepalive", node["persistent-keepalive"])
+
+	if #p > 0 then
+		link = link .. "?" .. table.concat(p, "&")
+	end
+
+	return 0, link .. "#" .. urlencode(node.name or "")
+end
+
+-- MASQUE
+local function encode_masque(node)
+	if node.network == "h3-l4proxy" then
+		return 1, i18n.translatef("Subscription conversion: discard MASQUE node %s, the current core does not support h3-l4proxy transport.", node.name)
+	end
+	local link = "masque://" .. urlencode(node["private-key"]) .. "@" .. host_format(node.server) .. ":" .. node.port
+	local p = {}
+
+	add_param(p, "publickey", node["public-key"])
+	add_param(p, "address", build_local_address(node))
+	add_param(p, "alpn", node.network == "h2" and "h2" or "h3")
+	add_param(p, "sni", node.sni ~= "" and node.sni or "consumer-masque.cloudflareclient.com")
+	add_param(p, "path", node.uri and node.uri:match("^https?://[^/]+(/.*)$"))
+
+	if #p > 0 then
+		link = link .. "?" .. table.concat(p, "&")
+	end
+
+	return 0, link .. "#" .. urlencode(node.name or "")
+end
+
 local function encode_node(node)
 	if type(node) ~= "table" or not node.type or not node.name then
 		return 1, i18n.translate("Subscription conversion: skip a malformed node.")
 	end
+	node = inherit(node)
+	if node.type == "wireguard" and node.peers and #node.peers > 0 then
+		local peer = node.peers[1]
+		node.server, node.port = peer.server, peer.port
+		node["public-key"], node["pre-shared-key"], node.reserved = peer["public-key"], peer["pre-shared-key"], peer.reserved
+	end
 	if not node.server or node.server == "" or not (node.port or (node.type == "hysteria2" and node.ports)) then
 		return 1, i18n.translatef("Subscription conversion: discard node %s, node information is incomplete.", tostring(node.name))
 	end
-	node = inherit(node)
 
 	local t = node.type
 	if t == "hysteria" or t == "hysteria2" then
@@ -621,6 +680,8 @@ local function encode_node(node)
 	elseif t == "anytls" then return encode_anytls(node)
 	elseif t == "ssr" then return encode_ssr(node)
 	elseif t == "snell" then return encode_snell(node)
+	elseif t == "wireguard" then return encode_wireguard(node)
+	elseif t == "masque" then return encode_masque(node)
 	else api.log(2, i18n.translatef("Subscription conversion: discard unsupported node %s, node type: %s", node.name, t))
 	end
 end

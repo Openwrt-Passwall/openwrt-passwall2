@@ -2604,6 +2604,12 @@ msgstr "訂閱轉換：捨棄 Snell 節點 %s，Sing-Box 不支援 Snell + %s"
 msgid "Subscription conversion: discard Snell node %s, Sing-Box does not support Snell versions below 4."
 msgstr "訂閱轉換：捨棄 Snell 節點 %s，Sing-Box 不支援低於 4 的 Snell 版本。"
 
+msgid "Subscription conversion: discard WireGuard node %s, the current core does not support AmneziaWG."
+msgstr "訂閱轉換：捨棄 WireGuard 節點 %s，目前核心不支援 AmneziaWG。"
+
+msgid "Subscription conversion: discard MASQUE node %s, the current core does not support h3-l4proxy transport."
+msgstr "訂閱轉換：捨棄 MASQUE 節點 %s，目前核心不支援 h3-l4proxy 傳輸。"
+
 msgid "Subscription conversion: skip a malformed node."
 msgstr "訂閱轉換：略過格式不完整的節點。"
 

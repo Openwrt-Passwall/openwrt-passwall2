@@ -2613,6 +2613,12 @@ msgstr "Преобразование подписки: узел Snell %s про�
 msgid "Subscription conversion: discard Snell node %s, Sing-Box does not support Snell versions below 4."
 msgstr "Преобразование подписки: узел Snell %s пропущен, Sing-Box не поддерживает версии Snell ниже 4."
 
+msgid "Subscription conversion: discard WireGuard node %s, the current core does not support AmneziaWG."
+msgstr "Преобразование подписки: узел WireGuard %s пропущен, текущее ядро не поддерживает AmneziaWG."
+
+msgid "Subscription conversion: discard MASQUE node %s, the current core does not support h3-l4proxy transport."
+msgstr "Преобразование подписки: узел MASQUE %s пропущен, текущее ядро не поддерживает транспорт h3-l4proxy."
+
 msgid "Subscription conversion: skip a malformed node."
 msgstr "Преобразование подписки: узел с неполным форматом пропущен."
 
