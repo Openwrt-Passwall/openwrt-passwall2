@@ -2176,46 +2176,55 @@ local function update_node(manual)
 			chain_node_type = (outbound_iface_group ~= "") and "iface" or chain_node_type
 		end
 		for _, vv in ipairs(list) do
-			local cfgid = uci:section(c_config, "nodes", api.gen_random_char())
-			for kkk, vvv in pairs(vv) do
-				if type(vvv) == "table" and next(vvv) ~= nil then
-					uci_set(cfgid, kkk, vvv)
-				else
-					if kkk ~= "group" or vvv ~= "default" then
-						uci_set(cfgid, kkk, vvv)
+			-- Copy node fields before applying subscription DNS, domain strategy and chain proxy settings.
+			-- Omit the default group; normalize numbers, empty values and lists after all overrides.
+			local values = {}
+			for key, value in pairs(vv) do
+				if key ~= "group" or value ~= "default" then
+					values[key] = value
+				end
+			end
+			local node_type = vv.type
+			if node_type == "Xray" or node_type == "sing-box" then
+				-- Node domain resolution for sing-box and Xray.
+				if domain_resolver and domain_resolver ~= "" and domain_resolver ~= "disable" then
+					values.domain_resolver = domain_resolver
+					if domain_resolver == "https" and domain_resolver_dns_https then
+						values.domain_resolver_dns_https = domain_resolver_dns_https
+					elseif (domain_resolver == "udp" or domain_resolver == "tcp") and domain_resolver_dns then
+						values.domain_resolver_dns = domain_resolver_dns
 					end
-					-- Sing-Box Node Domain resolver
-					if kkk == "type" and (vvv == "Xray" or vvv == "sing-box") then
-						if domain_resolver and domain_resolver ~= "" and domain_resolver ~= "disable" then
-							uci_set(cfgid, "domain_resolver", domain_resolver)
-							if domain_resolver == "https" and domain_resolver_dns_https then
-								uci_set(cfgid, "domain_resolver_dns_https", domain_resolver_dns_https)
-							elseif (domain_resolver == "udp" or domain_resolver == "tcp") and domain_resolver_dns then
-								uci_set(cfgid, "domain_resolver_dns", domain_resolver_dns)
-							end
-						end
-						if domain_strategy then
-							if vvv == "sing-box" then
-								domain_strategy = (domain_strategy == "UseIPv4" and "ipv4_only") or (domain_strategy == "UseIPv6" and "ipv6_only") or domain_strategy
-							end
-							uci_set(cfgid, "domain_strategy", domain_strategy)
-						end
+				end
+				if domain_strategy then
+					local ds = domain_strategy
+					if node_type == "sing-box" then
+						local map = { UseIPv4 = "ipv4_only", UseIPv6 = "ipv6_only" }
+						ds = map[ds] or ""
 					end
-					-- Subscription Group Chain Agent
-					if chain_node_type ~= "" and kkk == "type" and (vvv == "Xray" or vvv == "sing-box") then
-						if preproxy_node_group ~="" then
-							uci_set(cfgid, "chain_proxy", "1")
-							uci_set(cfgid, "preproxy_node", preproxy_node_group)
-						elseif to_node_group ~= "" then
-							uci_set(cfgid, "chain_proxy", "2")
-							uci_set(cfgid, "to_node", to_node_group)
-						elseif outbound_iface_group ~= "" then
-							uci_set(cfgid, "chain_proxy", "3")
-							uci_set(cfgid, "outbound_iface", outbound_iface_group)
-						end
+					values.domain_strategy = ds
+				end
+				-- Subscription group chain proxy.
+				if chain_node_type ~= "" then
+					if preproxy_node_group ~="" then
+						values.chain_proxy = "1"
+						values.preproxy_node = preproxy_node_group
+					elseif to_node_group ~= "" then
+						values.chain_proxy = "2"
+						values.to_node = to_node_group
+					elseif outbound_iface_group ~= "" then
+						values.chain_proxy = "3"
+						values.outbound_iface = outbound_iface_group
 					end
 				end
 			end
+			-- Match uci_set: stringify numbers, omit empty strings and lists, and preserve nonempty lists.
+			-- Filter after overrides so empty subscription settings can clear matching node fields.
+			for key, value in pairs(values) do
+				if type(value) == "number" then value = value .. "" end
+				values[key] = #value > 0 and value or nil
+			end
+			-- Create each node with one values table; both ubus and native UCI support this interface.
+			uci:section(c_config, "nodes", api.gen_random_char(), values)
 		end
 	end
 	if next(CONFIG) then
