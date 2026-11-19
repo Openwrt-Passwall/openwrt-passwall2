@@ -272,6 +272,13 @@ function gen_outbound(flag, node, tag, proxy_table)
 								extra = parsed.extra or parsed
 							end
 						end
+						-- The download channel does not inherit the upload sockopt; set DNS strategy and the loop prevention mark.
+						if type(extra.downloadSettings) == "table" then
+							local sockopt = extra.downloadSettings.sockopt or {}
+							sockopt.domainStrategy = sockopt.domainStrategy or node.domain_strategy or "UseIP"
+							sockopt.mark = sockopt.mark or 255
+							extra.downloadSettings.sockopt = sockopt
+						end
 						-- Handling User-Agent
 						if node.user_agent and node.user_agent ~= "" then
 							extra.headers = extra.headers or {}
@@ -488,7 +495,12 @@ function gen_outbound(flag, node, tag, proxy_table)
 			end
 		end
 
-		if api.datatypes.hostname(node.address) and node.domain_resolver and (node.domain_resolver_dns or node.domain_resolver_dns_https) then
+		local node_domains = {}
+		for _, address in ipairs({node.address, node.transport == "xhttp" and node.download_address or nil}) do
+			address = address:lower()
+			if api.datatypes.hostname(address) then table.insert(node_domains, address) end
+		end
+		if #node_domains > 0 and node.domain_resolver and (node.domain_resolver_dns or node.domain_resolver_dns_https) then
 			local dns_tag = node_id .. "_dns"
 			local dns_proto = node.domain_resolver
 			local config_address
@@ -526,11 +538,19 @@ function gen_outbound(flag, node, tag, proxy_table)
 				queryStrategy = node.domain_strategy or "UseIP",
 				address = config_address,
 				port = config_port,
-				domains = {"full:" .. node.address},
+				domains = {},
 				finalQuery = true,
 				disableCache = false,
 				serveStale = true,
 			}
+			for _, address in ipairs(node_domains) do
+				local exists
+				local domain = "full:" .. address
+				for _, d in ipairs(GLOBAL.DNS_SERVER[node_id].domains) do
+					if d == domain then exists = true; break end
+				end
+				if not exists then table.insert(GLOBAL.DNS_SERVER[node_id].domains, domain) end
+			end
 		end
 
 	end
