@@ -716,12 +716,11 @@ local function is_unspecified_dns(host)
 	return host == "0.0.0.0" or host:match("^[0:]+$")
 end
 
-local function extract_clash_dns(data)
+local function extract_clash_dns(data, nodes)
 	local dns = data.dns
 	if type(dns) ~= "table" or not dns["proxy-server-nameserver"] then return nil end
-	-- A subscription-wide resolver cannot represent per-domain node DNS policies.
-	local node_policy = dns["proxy-server-nameserver-policy"]
-	if type(node_policy) == "table" and next(node_policy) then return nil end
+	local nameservers = dns["proxy-server-nameserver"]
+	if (type(nameservers) ~= "table" or #nameservers == 0) and (type(nameservers) ~= "string" or api.trim(nameservers) == "") then return nil end
 	local listener = parse_dns_endpoint(dns.listen)
 	local resolving = {}
 	local policy = dns["nameserver-policy"]
@@ -754,11 +753,47 @@ local function extract_clash_dns(data)
 			end
 		end
 	end
-	local resolver = pick(dns["proxy-server-nameserver"], 0)
-	if resolver then
+	local logged = {}
+	local function log_resolver(resolver)
+		if not resolver then return end
 		local address = resolver.domain_resolver_dns_https or resolver.domain_resolver .. "://" .. resolver.domain_resolver_dns
-		api.log(1, i18n.translatef("Subscription conversion: extracted node domain DNS: %s", address))
+		if not logged[address] then
+			api.log(1, i18n.translatef("Subscription conversion: extracted node domain DNS: %s", address))
+			logged[address] = true
+		end
 	end
+	local resolver = pick(nameservers, 0)
+	local node_policy = dns["proxy-server-nameserver-policy"]
+	if node_policy ~= nil and type(node_policy) ~= "table" then return nil end
+	if type(node_policy) == "table" and next(node_policy) then
+		local exact, wildcard = {}, {}
+		for pattern, candidates in pairs(node_policy) do
+			if type(pattern) ~= "string" then return nil end
+			pattern = api.trim(pattern):lower():gsub("%.$", "")
+			local suffix = pattern:match("^%*%.(.+)$")
+			local domain, rules = suffix or pattern, suffix and wildcard or exact
+			-- Skip automatic DNS extraction for unsupported policies such as rule sets or geosite.
+			if not api.datatypes.hostname(domain) or domain:find("[*+:]") or rules[domain] then return nil end
+			rules[domain] = { resolver = pick(candidates, 0) }
+		end
+		local node_resolvers = {}
+		for _, node in ipairs(nodes) do
+			local host = node.type == "wireguard" and node.peers and node.peers[1] and node.peers[1].server or node.server
+			if type(host) == "string" then
+				host = (domain_redir[host] or host):lower():gsub("%.$", "")
+				if not api.is_ip(host) then
+					-- Prefer exact domains; '*' matches only one subdomain level.
+					local rule = exact[host] or wildcard[host:match("^[^.]+%.(.+)$")]
+					local selected = resolver
+					if rule then selected = rule.resolver end
+					node_resolvers[host] = selected
+					log_resolver(selected)
+				end
+			end
+		end
+		return next(node_resolvers) and { nodes = node_resolvers } or nil
+	end
+	log_resolver(resolver)
 	return resolver
 end
 
@@ -787,7 +822,7 @@ function parseClashNode(raw, remark, auto_dns)
 		end
 	end
 
-	local links = {}
+	local links, nodes = {}, {}
 	for _, node in ipairs(data.proxies) do
 		local converted, err, link = pcall(encode_node, node)
 		if not converted then
@@ -797,10 +832,11 @@ function parseClashNode(raw, remark, auto_dns)
 			api.log(2, link)
 		elseif link then
 			table.insert(links, link)
+			table.insert(nodes, node)
 		end
 	end
 
-	local resolver = #links > 0 and auto_dns and extract_clash_dns(data) or nil
+	local resolver = #links > 0 and auto_dns and extract_clash_dns(data, nodes) or nil
 	return #links > 0 and table.concat(links, "\n") or "", resolver
 end
 

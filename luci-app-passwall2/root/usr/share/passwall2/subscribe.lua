@@ -2413,6 +2413,16 @@ local execute = function()
 					-- Buffer parsing details until the parsed nodes are known to have changed.
 					log_buffer = {}
 					local parsed_nodes = parse_link(raw_data, "2", remark, value)
+					if auto_dns and resolver and resolver.nodes then
+						for _, node in ipairs(parsed_nodes) do
+							local dns = resolver.nodes[node.address:lower():gsub("%.$", "")]
+							if dns and (node.type == "Xray" or node.type == "sing-box") then
+								node.domain_resolver = dns.domain_resolver
+								node.domain_resolver_dns = dns.domain_resolver_dns
+								node.domain_resolver_dns_https = dns.domain_resolver_dns_https
+							end
+						end
+					end
 					local old_md5 = value.md5 or ""
 					local md5_content = jsonStringify(parsed_nodes)
 					if value.domain_resolver and value.domain_resolver ~= "" and value.domain_resolver ~= "disable" then
