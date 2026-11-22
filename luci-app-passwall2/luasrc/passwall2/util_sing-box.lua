@@ -329,14 +329,13 @@ function gen_outbound(flag, node, tag, proxy_table)
 
 		local v2ray_transport = nil
 
-		if node.transport == "tcp" and node.tcp_guise == "http" and (node.tcp_guise_http_host or "") ~= "" then  -- Simulate X-ray Raw (TCP) transmission
+		if node.transport == "tcp" and node.tcp_guise == "http" then  -- Simulate X-ray Raw (TCP) transmission
+			local path = node.tcp_guise_http_path
+			if type(path) == "table" then path = path[1] end
 			v2ray_transport = {
 				type = "http",
-				host = node.tcp_guise_http_host,
-				path = node.tcp_guise_http_path and (function()
-						local first = node.tcp_guise_http_path[1]
-						return (first == "" or not first) and "/" or first
-					end)() or "/",
+				host = (node.tcp_guise_http_host ~= "") and node.tcp_guise_http_host or nil,
+				path = (path and path ~= "") and path or "/",
 				headers = node.user_agent and {
 					["User-Agent"] = node.user_agent
 				} or nil,
