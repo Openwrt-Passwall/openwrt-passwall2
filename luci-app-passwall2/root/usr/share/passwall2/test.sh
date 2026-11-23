@@ -63,8 +63,8 @@ url_test_node() (
 		fi
 		local probeUrl=$(config_n_get @global_other[0] url_test_url https://www.google.com/generate_204)
 		# Warm up the proxy connection to reduce cold-start effects on latency tests.
-		curl --connect-timeout 3 --max-time 5 -o /dev/null -I -sk -x "$curlx" "$probeUrl" >/dev/null 2>&1
-		result=$(curl --connect-timeout 3 --max-time 5 -o /dev/null -I -skL -w "%{http_code}:%{time_pretransfer}" -x ${curlx} "${probeUrl}")
+		curl --connect-timeout 3 --max-time 5 -o /dev/null -I -sk -A 'Mozilla/5.0' -x "$curlx" "$probeUrl" >/dev/null 2>&1
+		result=$(curl --connect-timeout 3 --max-time 5 -o /dev/null -I -skL -A 'Mozilla/5.0' -w "%{http_code}:%{time_pretransfer}" -x ${curlx} "${probeUrl}")
 		# End the SS plugin process
 		local pid_file="${TMP_PATH}/${test_flag}_plugin.pid"
 		[ -s "$pid_file" ] && kill -9 "$(head -n 1 "$pid_file")" >/dev/null 2>&1

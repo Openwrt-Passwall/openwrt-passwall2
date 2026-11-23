@@ -133,6 +133,10 @@ if arg[1] then
 			local f = io.open(plugin_sh, "w")
 			f:write("#!/bin/sh\n")
 			f:write("export PATH=/usr/sbin:/usr/bin:/sbin:/bin:/root/bin:$PATH\n")
+			-- Reduce high CPU usage in the Shadow-TLS plugin.
+			if plugin_bin == "shadow-tls" then
+				f:write("export MONOIO_FORCE_LEGACY_DRIVER=1\n")
+			end
 			f:write(plugin_bin .. " $@ &\n")
 			f:write("echo $! > " .. plugin_sh:gsub("%.sh$", ".pid") .. "\n")
 			f:write("wait\n")
