@@ -130,15 +130,7 @@ if (has_singbox or has_xray) and #nodes_table > 0 then
 	end
 end
 
----- Check the transparent proxy component
-local handle = io.popen("lsmod")
-local mods = ""
-if handle then
-	mods = handle:read("*a") or ""
-	handle:close()
-end
-
-if (mods:find("REDIRECT") and mods:find("TPROXY")) or (mods:find("nft_redir") and mods:find("nft_tproxy")) then
+if api.get_transparent_proxy_support() then
 	o = s:taboption("Main", Flag, "localhost_proxy", translate("Localhost Proxy"), translate("When selected, localhost can transparent proxy."))
 	o.default = "1"
 	o.rmempty = false
