@@ -112,7 +112,7 @@ o.default = "1"
 o:value("0", "Iptables")
 o:value("1", "Nftables")
 
-local has_tproxy, has_ipv6_tproxy = api.get_transparent_proxy_support()
+local has_tproxy, has_ipv6_tproxy = api.get_transparent_proxy_support(true)
 if has_tproxy then
 	o = s:option(ListValue, "tcp_proxy_way", translate("TCP Proxy Way"))
 	o.default = "redirect"
