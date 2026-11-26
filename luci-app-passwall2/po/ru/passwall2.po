@@ -512,6 +512,9 @@ msgstr "Экспорт в ссылку"
 msgid "Generate QRCode"
 msgstr "Сгенерировать QR-код"
 
+msgid "Share URL is too long to generate a QR code."
+msgstr "Ссылка для обмена слишком длинная для создания QR-кода."
+
 msgid "Export Config File"
 msgstr "Экспорт конфигурации"
 

@@ -517,6 +517,9 @@ msgstr "ساخت لینک اشتراک‌گذاری"
 msgid "Generate QRCode"
 msgstr "تولید کد QR"
 
+msgid "Share URL is too long to generate a QR code."
+msgstr "لینک اشتراک‌گذاری برای تولید کد QR بیش از حد طولانی است."
+
 msgid "Export Config File"
 msgstr "خروجی فایل پیکربندی"
 
