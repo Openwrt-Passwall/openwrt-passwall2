@@ -84,13 +84,6 @@ add_port_rules() {
 	done
 }
 
-destroy_ipset() {
-	for i in "$@"; do
-		ipset -q -F $i
-		ipset -q -X $i
-	done
-}
-
 insert_rule_before() {
 	[ $# -ge 3 ] || {
 		return 1
@@ -873,18 +866,53 @@ add_firewall_rule() {
 	log_i18n 0 "%s firewall rules load complete!" "iptables"
 }
 
+delete_iptables_batch() {
+	local ipt_bin="$1"
+	local rules batch
+	rules=$("${ipt_bin}-save") || return 1
+	batch=$(printf '%s\n' "$rules" | awk '
+		function emit(command) {
+			if (!changed) print table
+			changed = 1
+			print command
+		}
+		BEGIN { psw_chain = "PSW2(_(OUTPUT|DNS|RULE))?" }
+		/^\*/ {
+			table = $1
+			chain_count = changed = 0
+			next
+		}
+		table ~ /^\*(nat|mangle)$/ && $1 ~ ("^:" psw_chain "$") && $2 == "-" {
+			chains[++chain_count] = substr($1, 2)
+		}
+		table ~ /^\*(nat|mangle)$/ && $1 == "-A" && $2 ~ /^(PREROUTING|OUTPUT)$/ {
+			if ($0 ~ (" -(j|g) " psw_chain "$") || / -m comment --comment "?(PSW2|PSW2_DNS|PSW2_DIRECT|mangle-OUTPUT-PSW2)"?( |$)/)
+				emit("-D" substr($0, 3))
+		}
+		$0 == "COMMIT" {
+			# Flush all PassWall2 chains before deleting any of them to remove references between chains.
+			for (i = 1; i <= chain_count; i++) emit("-F " chains[i])
+			for (i = 1; i <= chain_count; i++) emit("-X " chains[i])
+			if (changed) print "COMMIT"
+		}
+	') || return 1
+	[ -z "$batch" ] || printf '%s\n' "$batch" | "${ipt_bin}-restore" -w -n
+}
+
+delete_ipset_batch() {
+	local names batch
+	names=$(ipset list -name) || return 1
+	batch=$(printf '%s\n' "$names" | awk '/^psw2_[^[:space:]]+$/ { print "destroy", $0 }') || return 1
+	[ -z "$batch" ] || printf '%s\n' "$batch" | ipset restore
+}
+
 del_firewall_rule() {
-	for ipt in "$ipt_n" "$ipt_m" "$ip6t_n" "$ip6t_m"; do
-		for chain in "PREROUTING" "OUTPUT"; do
-			for i in $(seq 1 $($ipt -nL $chain | grep -c PSW2)); do
-				local index=$($ipt --line-number -nL $chain | grep PSW2 | head -1 | awk '{print $1}')
-				$ipt -D $chain $index 2>/dev/null
-			done
-		done
-		for chain in "PSW2" "PSW2_OUTPUT" "PSW2_DNS" "PSW2_RULE"; do
-			$ipt -F $chain 2>/dev/null
-			$ipt -X $chain 2>/dev/null
-		done
+	local ipt_bin status=0
+	for ipt_bin in "$ipt" "$ip6t"; do
+		[ -n "$ipt_bin" ] || continue
+		if ! delete_iptables_batch "$ipt_bin" 2>/dev/null && ! delete_iptables_batch "$ipt_bin" 2>/dev/null; then
+			status=1
+		fi
 	done
 
 	ip rule del fwmark ${FWMARK} 2>/dev/null
@@ -893,14 +921,11 @@ del_firewall_rule() {
 	ip -6 rule del fwmark ${FWMARK} 2>/dev/null
 	ip -6 route del local ::/0 dev lo table 999 2>/dev/null
 
-	log_i18n 0 "Delete %s rules is complete." "iptables"
-}
-
-flush_ipset() {
-	log_i18n 0 "Clear %s." "IPSet"
-	for _name in $(ipset list | grep "Name: " | grep "psw2_" | awk '{print $2}'); do
-		destroy_ipset ${_name}
-	done
+	if [ "$1" = "1" ] && ! delete_ipset_batch 2>/dev/null && ! delete_ipset_batch 2>/dev/null; then
+		status=1
+	fi
+	[ "$status" = "0" ] && log_i18n 0 "Delete %s rules is complete." "iptables"
+	return "$status"
 }
 
 flush_include() {
@@ -981,15 +1006,18 @@ start() {
 
 stop() {
 	[ -z "$(command -v log_i18n)" ] && . "$UTILS_PATH"
-	del_firewall_rule
-	[ $(config_n_get @global[0] flush_set "0") = "1" ] && {
+	local flush_sets=0
+	if [ "$(config_n_get @global[0] flush_set 0)" = "1" ]; then
+		flush_sets=1
+	fi
+	if del_firewall_rule "$flush_sets" && [ "$flush_sets" = "1" ]; then
+		log_i18n 0 "Clear %s." "IPSet"
 		uci -q delete ${CONFIG}.@global[0].flush_set
 		uci -q commit ${CONFIG}
-		flush_ipset
 		rm -rf $TMP_PATH2/singbox*
 		rm -rf $TMP_PATH2/geo_output
-	}
-	flush_include
+	fi
+	flush_include 2>/dev/null || :
 }
 
 arg1=$1

@@ -119,13 +119,6 @@ REDIRECT() {
 	echo $s
 }
 
-destroy_nftset() {
-	for i in "$@"; do
-		nft flush set $NFTABLE_NAME $i 2>/dev/null
-		nft delete set $NFTABLE_NAME $i 2>/dev/null
-	done
-}
-
 gen_nft_tables() {
 	if ! nft list table "$NFTABLE_NAME" >/dev/null 2>&1; then
 		nft -f - <<-EOF
@@ -904,20 +897,59 @@ add_firewall_rule() {
 	log_i18n 0 "%s firewall rules load complete!" "nftables"
 }
 
+delete_nftables_batch() {
+	local flush_sets="$1"
+	local rules tables batch
+	if ! rules=$(nft -t -a list table $NFTABLE_NAME 2>&1); then
+		if tables=$(nft list tables) && ! printf '%s\n' "$tables" | grep -Fxq "table $NFTABLE_NAME"; then
+			return 0
+		fi
+		printf '%s\n' "$rules" >&2
+		return 1
+	fi
+
+	local sets="$NFTSET_LOCAL $NFTSET_WAN $NFTSET_DIRECT $NFTSET_VPS"
+	sets="$sets $NFTSET_LOCAL6 $NFTSET_WAN6 $NFTSET_DIRECT6 $NFTSET_VPS6"
+	batch=$(printf '%s\n' "$rules" | awk -v table="$NFTABLE_NAME" -v sets="$sets" -v flush_sets="$flush_sets" '
+		BEGIN {
+			count = split(sets, names, /[[:space:]]+/)
+			for (i = 1; i <= count; i++) delete_set[names[i]] = 1
+		}
+		$1 == "chain" && $3 == "{" {
+			chain = $2
+			if (chain ~ /^PSW2_[[:alnum:]_]+$/)
+				chains[++chain_count] = chain
+			next
+		}
+		$1 == "}" { chain = "" }
+		chain ~ /^(dstnat|srcnat|nat_output|mangle_prerouting|mangle_output)$/ && /# handle [0-9]+$/ {
+			if (/[[:space:]](jump|goto) PSW2_[[:alnum:]_]+( comment ".*")?[[:space:]]+# handle / ||
+			    /[[:space:]]comment "PSW2_[[:alnum:]_]+"[[:space:]]+# handle /)
+				print "delete rule", table, chain, "handle", $NF
+		}
+		$1 == "set" && $3 == "{" && $2 ~ /^psw2_[[:alnum:]_]+$/ {
+			if (flush_sets == 1 || $2 in delete_set)
+				sets_to_delete[++set_count] = $2
+		}
+		END {
+			# Flush all PassWall2 chains before deleting any of them to remove references between chains.
+			for (i = 1; i <= chain_count; i++)
+				print "flush chain", table, chains[i]
+			for (i = 1; i <= chain_count; i++)
+				print "delete chain", table, chains[i]
+			for (i = 1; i <= set_count; i++)
+				print "delete set", table, sets_to_delete[i]
+		}
+	') || return 1
+	[ -z "$batch" ] || printf '%s\n' "$batch" | nft -f -
+}
+
 del_firewall_rule() {
-	for nft in "dstnat" "srcnat" "nat_output" "mangle_prerouting" "mangle_output"; do
-		local handles=$(nft -a list chain $NFTABLE_NAME ${nft} 2>/dev/null | grep -E "PSW2_" | awk -F '# handle ' '{print$2}')
-		for handle in $handles; do
-			nft delete rule $NFTABLE_NAME ${nft} handle ${handle} 2>/dev/null
-		done
-	done
-
-	for handle in $(nft -a list chains | grep -E "chain PSW2_" | grep -v "PSW2_RULE" | awk -F '# handle ' '{print$2}'); do
-		nft delete chain $NFTABLE_NAME handle ${handle} 2>/dev/null
-	done
-
-	# Need to be removed at the end, otherwise it will show "Resource busy"
-	nft delete chain $NFTABLE_NAME handle $(nft -a list chains | grep -E "PSW2_RULE" | awk -F '# handle ' '{print$2}') 2>/dev/null
+	local status=0
+	# Reload the rules and retry if the firewall changes after the snapshot.
+	if ! delete_nftables_batch "$1" 2>/dev/null && ! delete_nftables_batch "$1" 2>/dev/null; then
+		status=1
+	fi
 
 	ip rule del fwmark ${FWMARK} 2>/dev/null
 	ip route del local 0.0.0.0/0 dev lo table 999 2>/dev/null
@@ -925,31 +957,10 @@ del_firewall_rule() {
 	ip -6 rule del fwmark ${FWMARK} 2>/dev/null
 	ip -6 route del local ::/0 dev lo table 999 2>/dev/null
 
-	destroy_nftset $NFTSET_LOCAL
-	destroy_nftset $NFTSET_WAN
-	destroy_nftset $NFTSET_DIRECT
-	destroy_nftset $NFTSET_VPS
-
-	destroy_nftset $NFTSET_LOCAL6
-	destroy_nftset $NFTSET_WAN6
-	destroy_nftset $NFTSET_DIRECT6
-	destroy_nftset $NFTSET_VPS6
-
 	del_script_mwan3
 
-	log_i18n 0 "Delete %s rules is complete." "nftables"
-}
-
-flush_nftset() {
-	log_i18n 0 "Clear %s." "NFTSet"
-	for _name in $(nft -a list sets | grep -E "psw2_" | awk -F 'set ' '{print $2}' | awk '{print $1}'); do
-		destroy_nftset ${_name}
-	done
-}
-
-flush_table() {
-	nft flush table $NFTABLE_NAME
-	nft delete table $NFTABLE_NAME
+	[ "$status" = "0" ] && log_i18n 0 "Delete %s rules is complete." "nftables"
+	return "$status"
 }
 
 flush_include() {
@@ -986,16 +997,18 @@ start() {
 
 stop() {
 	[ -z "$(command -v log_i18n)" ] && . "$UTILS_PATH"
-	del_firewall_rule
-	[ $(config_n_get @global[0] flush_set "0") = "1" ] && {
+	local flush_sets=0
+	if [ "$(config_n_get @global[0] flush_set 0)" = "1" ]; then
+		flush_sets=1
+	fi
+	if del_firewall_rule "$flush_sets" && [ "$flush_sets" = "1" ]; then
+		log_i18n 0 "Clear %s." "NFTSet"
 		uci -q delete ${CONFIG}.@global[0].flush_set
 		uci -q commit ${CONFIG}
-		#flush_table
-		flush_nftset
 		rm -rf $TMP_PATH2/singbox*
 		rm -rf $TMP_PATH2/geo_output
-	}
-	flush_include
+	fi
+	flush_include 2>/dev/null || :
 }
 
 arg1=$1
